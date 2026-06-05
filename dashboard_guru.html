@@ -695,8 +695,17 @@ function tampilSesiAktif() {
 function tampilHasilGenerate(resp) {
   document.getElementById('hasil-generate').style.display = 'block';
   document.getElementById('gen-token').textContent = resp.token_siswa;
-  var link = window.location.origin + window.location.pathname.replace('dashboard_guru.html', URL_UJIAN)
-    + '?sesi=' + encodeURIComponent(resp.id_sesi) + '&server=' + encodeURIComponent(URL_SERVER);
+  // Bangun link ujian siswa secara aman — hindari URL dobel
+  var base;
+  if (URL_UJIAN.startsWith('http://') || URL_UJIAN.startsWith('https://')) {
+    // URL_UJIAN sudah berupa URL lengkap
+    base = URL_UJIAN;
+  } else {
+    // URL_UJIAN berupa nama file relatif — gabung dengan folder saat ini
+    var folder = window.location.href.replace(/\/[^\/]*$/, '/');
+    base = folder + URL_UJIAN;
+  }
+  var link = base + '?sesi=' + encodeURIComponent(resp.id_sesi) + '&server=' + encodeURIComponent(URL_SERVER);
   document.getElementById('gen-link').textContent  = link;
   document.getElementById('gen-link').dataset.link = link;
 }
