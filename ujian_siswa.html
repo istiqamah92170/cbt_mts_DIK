@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>CBT Sekolah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --blue-deep:#0A3566; --blue-main:#1058B0; --blue-mid:#1A73E8;
+  --blue-light:#E8F1FD; --blue-pale:#F0F6FF;
+  --green:#1B8A4C; --green-light:#E6F7EE;
+  --red:#C0392B; --red-light:#FDECEA;
+  --orange:#D4550A; --orange-light:#FFF3E8;
+  --yellow:#B8860B; --yellow-light:#FFFBEA;
+  --gray-dark:#1E2B3A; --gray-mid:#4A5568; --gray-soft:#8896A5;
+  --gray-line:#DDE3EC; --gray-bg:#F3F6FA; --white:#FFFFFF;
+  --r-sm:6px; --r-md:10px; --r-lg:16px;
+  --sh-sm:0 1px 4px rgba(10,53,102,.08);
+  --sh-md:0 4px 16px rgba(10,53,102,.10);
+  --sh-lg:0 8px 32px rgba(10,53,102,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--gray-bg);color:var(--gray-dark);min-height:100vh;display:flex;justify-content:center;padding:24px 16px;}
+
+/* ── LOGIN ─────────────────────────────────── */
+.login-wrap{width:100%;max-width:440px;margin:40px auto 0;}
+.login-card{background:var(--white);border-radius:var(--r-lg);box-shadow:var(--sh-lg);overflow:hidden;position:relative;}
+.login-head{background:linear-gradient(135deg,var(--blue-deep),var(--blue-mid));padding:28px 32px 22px;text-align:center;color:white;}
+.login-head .ico{font-size:44px;display:block;margin-bottom:8px;}
+.login-head h1{font-size:20px;font-weight:800;margin-bottom:4px;}
+.login-head p{font-size:12px;opacity:.8;font-weight:500;}
+.login-body{padding:28px 32px 32px;}
+.status-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--r-sm);font-size:12px;font-weight:600;margin-bottom:20px;border:1px solid transparent;transition:all .3s;}
+.status-bar.loading{background:#FFF8E1;border-color:#FFE082;color:var(--yellow);}
+.status-bar.ok{background:var(--green-light);border-color:#A8D5BB;color:var(--green);}
+.status-bar.error{background:var(--red-light);border-color:#F5B7B1;color:var(--red);}
+.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:pulse 1.5s infinite;}
+.status-bar.loading .sdot{background:var(--yellow);}
+.status-bar.ok .sdot{background:var(--green);animation:none;}
+.status-bar.error .sdot{background:var(--red);animation:none;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.load-overlay{position:absolute;inset:0;background:rgba(243,246,250,.9);border-radius:var(--r-lg);z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+.load-overlay.hide{display:none;}
+.spin{width:36px;height:36px;border:3px solid var(--blue-light);border-top-color:var(--blue-mid);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-overlay p{font-size:13px;font-weight:600;color:var(--gray-mid);text-align:center;padding:0 20px;}
+.btn-refresh{margin-top:4px;padding:8px 18px;background:var(--blue-main);color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+.sudah-banner{background:var(--orange-light);border:1.5px solid #F5C6A0;border-radius:var(--r-md);padding:16px 18px;margin-bottom:20px;display:none;}
+.sudah-banner h4{font-size:14px;font-weight:800;color:var(--orange);margin-bottom:6px;}
+.sudah-banner p{font-size:12px;color:var(--gray-mid);line-height:1.5;margin-bottom:10px;}
+.btn-lihat-hasil{width:100%;padding:11px;background:var(--blue-main);color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.fg{margin-bottom:16px;}
+.fg label{display:block;font-size:12px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.fg input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-line);border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--gray-dark);background:var(--white);transition:border-color .2s;}
+.fg input:focus{outline:none;border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(26,115,232,.15);}
+.info-sesi{background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--blue-main);margin-bottom:16px;font-weight:600;}
+.btn-login{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue-main),var(--blue-mid));color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s,transform .1s;}
+.btn-login:hover{opacity:.92;transform:translateY(-1px);}
+.btn-login:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+/* ── EXAM ─────────────────────────────────── */
+.exam-wrap{display:none;width:100%;max-width:1120px;gap:20px;align-items:flex-start;}
+.left-panel{flex:1;min-width:0;background:var(--white);border-radius:var(--r-lg);box-shadow:var(--sh-md);padding:24px;}
+.exam-hdr{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:2px solid var(--blue-light);margin-bottom:20px;}
+.exam-ttl{font-size:16px;font-weight:800;color:var(--blue-deep);}
+.timer{display:flex;align-items:center;gap:6px;background:var(--red);color:white;padding:6px 14px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;transition:background .3s;}
+.timer.warn{background:var(--orange);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+.soal-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.no-lbl{font-size:18px;font-weight:800;color:var(--blue-deep);}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge.pg_teks{background:var(--blue-light);color:var(--blue-main);border:1px solid #BDD4F5;}
+.badge.pg_gambar{background:#EEF0FF;color:#3730A3;border:1px solid #C7CAF7;}
+.badge.esai{background:var(--orange-light);color:var(--orange);border:1px solid #F5C6A0;}
+.poin-b{margin-left:auto;display:flex;align-items:center;gap:4px;background:var(--yellow-light);color:var(--yellow);border:1px solid #E8D48A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.box-gambar{background:var(--gray-bg);border:1.5px solid var(--gray-line);border-radius:var(--r-md);margin-bottom:20px;position:relative;overflow:hidden;min-height:160px;}
+.zoom-tb{position:absolute;top:10px;right:10px;display:flex;gap:5px;z-index:10;}
+.zoom-tb button{border:none;background:var(--blue-main);color:white;width:34px;height:34px;border-radius:var(--r-sm);cursor:pointer;font-size:14px;font-weight:700;}
+.img-scroll{overflow:auto;padding:12px;padding-top:48px;touch-action:pan-x pan-y;}
+.img-soal{display:block;width:100%;height:auto;border-radius:var(--r-sm);transform-origin:top left;transition:width .15s;user-select:none;}
+.img-load{padding:40px;text-align:center;color:var(--gray-soft);font-size:13px;}
+.box-teks{background:var(--blue-pale);border:1.5px solid var(--blue-light);border-radius:var(--r-md);padding:18px 20px;margin-bottom:14px;font-size:15px;font-weight:500;line-height:1.75;white-space:pre-wrap;word-break:break-word;}
+.teks-ilustrasi{max-width:100%;border-radius:var(--r-sm);border:1px solid var(--gray-line);display:block;margin:10px 0;}
+.options-grid{display:grid;gap:10px;margin-bottom:24px;}
+.btn-opt{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1.5px solid var(--gray-line);background:var(--white);border-radius:var(--r-md);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:500;color:var(--gray-dark);transition:all .18s;line-height:1.5;text-align:left;}
+.btn-opt:hover{border-color:var(--blue-mid);background:var(--blue-pale);}
+.btn-opt.selected{border-color:var(--blue-main);background:var(--blue-light);color:var(--blue-deep);font-weight:700;box-shadow:0 0 0 3px rgba(26,115,232,.15);}
+.opt-ltr{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:var(--gray-bg);border:1.5px solid var(--gray-line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gray-mid);transition:all .18s;}
+.btn-opt.selected .opt-ltr{background:var(--blue-main);border-color:var(--blue-main);color:white;}
+.opt-img{max-width:100%;max-height:120px;border-radius:var(--r-sm);border:1px solid var(--gray-line);display:block;}
+.opt-content{flex:1;min-width:0;}
+.options-row{display:flex;gap:10px;margin-bottom:24px;flex-wrap:nowrap;}
+.btn-opt-row{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:1.5px solid var(--gray-line);background:var(--white);border-radius:var(--r-md);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gray-dark);transition:all .18s;}
+.btn-opt-row:hover{border-color:var(--blue-mid);background:var(--blue-pale);}
+.btn-opt-row.selected{border-color:var(--blue-main);background:var(--blue-light);color:var(--blue-deep);box-shadow:0 0 0 3px rgba(26,115,232,.15);}
+.btn-opt-row .opt-ltr{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:var(--gray-bg);border:1.5px solid var(--gray-line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gray-mid);}
+.btn-opt-row.selected .opt-ltr{background:var(--blue-main);border-color:var(--blue-main);color:white;}
+.esai-info{background:var(--orange-light);border:1px solid #F5C6A0;border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--orange);font-weight:600;margin-bottom:12px;line-height:1.5;}
+.esai-textarea{width:100%;min-height:150px;padding:14px;border:1.5px solid #F5C6A0;border-radius:var(--r-md);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;line-height:1.7;color:var(--gray-dark);background:#FFFDF8;resize:vertical;transition:border-color .2s;}
+.esai-textarea:focus{outline:none;border-color:var(--orange);background:white;}
+.esai-textarea.terisi{border-color:var(--green);background:var(--green-light);}
+.esai-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--gray-soft);margin-top:4px;}
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
+.btn-nav{padding:10px 22px;background:var(--gray-dark);color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s;}
+.btn-nav:hover{opacity:.85;}
+.btn-ragu{background:var(--yellow-light);color:var(--yellow);border:1.5px solid #E8D48A;}
+.btn-ragu.aktif{background:#FFDE8A;border-color:var(--yellow);}
+.btn-ragu-hidden{visibility:hidden;}
+.right-panel{width:240px;flex-shrink:0;background:var(--white);border-radius:var(--r-lg);box-shadow:var(--sh-md);padding:20px;position:sticky;top:24px;max-height:calc(100vh - 48px);overflow-y:auto;}
+.right-panel h3{font-size:13px;font-weight:800;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.6px;padding-bottom:10px;border-bottom:1.5px solid var(--gray-line);margin-bottom:12px;}
+.legenda{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.leg-row{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--gray-mid);}
+.leg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.skor-live{background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:var(--r-sm);padding:10px;margin-bottom:12px;font-size:11px;color:var(--blue-main);font-weight:600;text-align:center;}
+.grid-nomor{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
+.btn-no{aspect-ratio:1;border:1.5px solid var(--gray-line);background:var(--white);border-radius:var(--r-sm);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:var(--gray-dark);transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.btn-no:hover{border-color:var(--blue-mid);background:var(--blue-pale);}
+.btn-no.aktif{border-color:var(--blue-main);box-shadow:0 0 0 2px rgba(26,115,232,.3);}
+.btn-no.dijawab{background:var(--green);color:white;border-color:var(--green);}
+.btn-no.ragu{background:#FFDE8A;border-color:var(--yellow);color:var(--gray-dark);}
+.btn-no.esai-m{border-left:3px solid var(--orange);}
+.btn-no.esai-m.dijawab{background:var(--green);color:white;}
+.btn-selesai{width:100%;padding:11px;background:linear-gradient(135deg,#B71C1C,var(--red));color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
+.btn-selesai:hover{opacity:.88;}
+
+/* ── HASIL ─────────────────────────────────── */
+.hasil-wrap{display:none;width:100%;max-width:680px;}
+.hasil-card{background:var(--white);border-radius:var(--r-lg);box-shadow:var(--sh-lg);overflow:hidden;}
+.hasil-head{background:linear-gradient(135deg,var(--blue-deep),var(--blue-mid));padding:32px;text-align:center;color:white;}
+.hasil-head h2{font-size:22px;font-weight:800;margin-bottom:6px;}
+.hasil-body{padding:28px;}
+.skor-box{text-align:center;margin:0 auto 24px;padding:24px;background:linear-gradient(135deg,var(--blue-deep),var(--blue-mid));border-radius:var(--r-lg);color:white;}
+.skor-angka{font-size:68px;font-weight:800;line-height:1;letter-spacing:-2px;}
+.skor-sub{font-size:13px;opacity:.8;margin-top:4px;}
+.skor-pred{margin-top:10px;padding:5px 18px;background:rgba(255,255,255,.2);border-radius:20px;font-size:16px;font-weight:700;display:inline-block;}
+.poin-info{background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:var(--r-md);padding:14px 18px;margin-bottom:18px;font-size:13px;color:var(--blue-deep);}
+.esai-note{background:var(--orange-light);border:1px solid #F5C6A0;border-radius:var(--r-md);padding:14px 18px;margin-bottom:18px;}
+.esai-note h4{font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px;}
+.esai-note p{font-size:12px;color:var(--gray-mid);line-height:1.5;}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;}
+.stat-c{padding:14px;border-radius:var(--r-md);text-align:center;}
+.stat-c.benar{background:var(--green-light);} .stat-c.salah{background:var(--red-light);}
+.stat-c.ragu{background:var(--yellow-light);} .stat-c.esai{background:var(--orange-light);}
+.stat-num{font-size:30px;font-weight:800;}
+.stat-c.benar .stat-num{color:var(--green);} .stat-c.salah .stat-num{color:var(--red);}
+.stat-c.ragu .stat-num{color:var(--yellow);} .stat-c.esai .stat-num{color:var(--orange);}
+.stat-lbl{font-size:12px;color:var(--gray-mid);margin-top:2px;}
+.aksi-col{display:flex;flex-direction:column;gap:10px;}
+.btn-aksi{width:100%;padding:14px;border:none;border-radius:var(--r-md);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s;}
+.btn-aksi:hover{opacity:.9;}
+.btn-aksi.analisis{background:var(--blue-main);color:white;}
+.btn-aksi.sertifikat{background:var(--green);color:white;}
+
+/* ── MODAL ─────────────────────────────────── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(10,20,40,.65);z-index:999;align-items:center;justify-content:center;padding:20px;}
+.modal-ov.aktif{display:flex;}
+.modal-box{background:var(--white);border-radius:var(--r-lg);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-lg);}
+.modal-wide{max-width:780px;}
+.modal-box h3{font-size:18px;font-weight:800;padding-bottom:12px;border-bottom:1.5px solid var(--gray-line);margin-bottom:16px;}
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.sum-c{text-align:center;padding:12px 8px;border-radius:var(--r-md);}
+.sum-c.t{background:var(--blue-pale);} .sum-c.d{background:var(--green-light);} .sum-c.b{background:var(--yellow-light);}
+.sum-num{font-size:26px;font-weight:800;}
+.sum-c.t .sum-num{color:var(--blue-main);} .sum-c.d .sum-num{color:var(--green);} .sum-c.b .sum-num{color:var(--yellow);}
+.sum-lbl{font-size:11px;color:var(--gray-soft);margin-top:2px;}
+.warn{border-radius:var(--r-sm);padding:12px 14px;margin-bottom:10px;font-size:12px;line-height:1.5;}
+.warn.ragu{background:var(--yellow-light);border:1px solid #E8D48A;color:var(--yellow);}
+.warn.belum{background:var(--red-light);border:1px solid #F5B7B1;color:var(--red);}
+.warn.esai{background:var(--orange-light);border:1px solid #F5C6A0;color:var(--orange);}
+.pill-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.pill{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;}
+.pill.r{background:#FFE082;color:#6B4C00;} .pill.b{background:#EF9A9A;color:#7B1111;} .pill.e{background:#FFCC80;color:#7B3200;}
+.chk-row{display:flex;align-items:flex-start;gap:10px;padding:14px;background:var(--gray-bg);border-radius:var(--r-sm);border:1px solid var(--gray-line);margin:16px 0;cursor:pointer;}
+.chk-row input{width:16px;height:16px;margin-top:2px;flex-shrink:0;}
+.chk-row span{font-size:13px;color:var(--gray-mid);line-height:1.5;}
+.konfirm-btns{display:flex;gap:8px;}
+.btn-batal{flex:1;padding:12px;background:var(--gray-bg);color:var(--gray-dark);border:1.5px solid var(--gray-line);border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-yakin{flex:2;padding:12px;background:var(--green);color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-yakin:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ── ANALISIS ─────────────────────────────── */
+.btn-print-analisis{width:100%;padding:12px;margin-bottom:10px;background:var(--green);color:white;border:none;border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.ana-list{display:flex;flex-direction:column;gap:12px;}
+.ana-item{border:1.5px solid var(--gray-line);border-radius:var(--r-md);overflow:hidden;}
+.ana-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;}
+.ana-head.benar{background:var(--green-light);} .ana-head.salah{background:var(--red-light);}
+.ana-head.kosong{background:var(--gray-bg);} .ana-head.esai-p{background:var(--orange-light);}
+.ana-no{font-size:14px;font-weight:800;}
+.ana-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
+.ana-badge.benar{background:var(--green);color:white;} .ana-badge.salah{background:var(--red);color:white;}
+.ana-badge.kosong{background:var(--gray-soft);color:white;} .ana-badge.esai-p{background:var(--orange);color:white;}
+.ana-teks{padding:12px 14px;background:var(--blue-pale);font-size:13px;line-height:1.6;border-top:1px solid var(--blue-light);white-space:pre-wrap;word-break:break-word;}
+.ana-img{padding:10px 14px;background:var(--gray-bg);border-top:1px solid var(--gray-line);}
+.ana-img img{max-width:100%;border-radius:var(--r-sm);}
+.ana-opsi{padding:10px 14px;border-top:1px solid var(--gray-line);background:var(--white);}
+.ana-opsi-ttl{font-size:11px;font-weight:700;color:var(--gray-soft);margin-bottom:6px;text-transform:uppercase;}
+.opsi-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;}
+.opsi-row.kunci{font-weight:700;color:var(--green);}
+.opsi-row.salah-mark{color:var(--red);text-decoration:line-through;opacity:.7;}
+.opsi-ltr{width:30px;height:30px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;background:var(--gray-bg);color:var(--gray-mid);border:1.5px solid var(--gray-line);}
+.opsi-row.kunci .opsi-ltr{background:var(--green);color:white;border-color:var(--green);}
+.opsi-row.salah-mark .opsi-ltr{background:var(--red-light);color:var(--red);border-color:var(--red);}
+.opsi-img-sm{max-height:60px;border-radius:4px;border:1px solid var(--gray-line);}
+.kunci-bar{padding:10px 14px;background:var(--blue-pale);border-top:1px solid var(--blue-light);font-size:13px;font-weight:700;color:var(--blue-main);}
+.pemb-bar{padding:12px 14px;background:var(--green-light);border-top:1px solid #A8D5BB;font-size:13px;color:var(--gray-dark);line-height:1.6;}
+.pemb-bar strong{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;display:block;margin-bottom:4px;}
+.rubrik-bar{padding:10px 14px;background:#E8F4FF;border-top:1px solid #B3D4F5;font-size:12px;color:var(--blue-main);}
+.esai-ans{padding:12px 14px;background:#FFFDF5;border-top:1px solid #FFE082;font-size:13px;}
+.esai-ans strong{color:var(--orange);display:block;margin-bottom:4px;}
+.esai-ans .teks{padding:10px;background:white;border:1px solid #FFE082;border-radius:var(--r-sm);line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+.poin-bar{padding:6px 14px;background:var(--yellow-light);border-top:1px solid #E8D48A;font-size:11px;font-weight:700;color:var(--yellow);}
+.btn-tutup{width:100%;padding:12px;margin-top:8px;background:var(--gray-bg);color:var(--gray-dark);border:1.5px solid var(--gray-line);border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.reset-guru{margin-top:12px;text-align:center;}
+.reset-guru a{font-size:11px;color:var(--gray-soft);cursor:pointer;text-decoration:underline;}
+
+@media(max-width:768px){
+  .exam-wrap{flex-direction:column;}
+  .right-panel{width:100%;position:static;max-height:none;}
+  .grid-nomor{grid-template-columns:repeat(6,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div class="login-head">
+      <span class="ico">&#127891;</span>
+      <h1 id="judul-login">CBT Sekolah</h1>
+      <p id="sub-login">Masukkan data Anda untuk memulai ujian</p>
+    </div>
+    <div class="login-body">
+      <div class="status-bar loading" id="load-bar">
+        <div class="sdot"></div>
+        <span id="load-txt">Menghubungi server soal...</span>
+      </div>
+      <div class="sudah-banner" id="sudah-banner">
+        <h4>&#9888;&#65039; Kamu sudah pernah mengerjakan ujian ini</h4>
+        <p>Ujian ini hanya bisa dikerjakan <strong>1 kali</strong> dari perangkat ini.</p>
+        <button class="btn-lihat-hasil" onclick="tampilHasilSaja()">&#128202; Lihat Hasil &amp; Pembahasan</button>
+      </div>
+      <div id="form-login-area">
+        <div class="info-sesi" id="info-sesi" style="display:none"></div>
+        <div class="fg">
+          <label>Nama Lengkap</label>
+          <input type="text" id="inp-nama" placeholder="Ketik nama lengkap Anda...">
+        </div>
+        <div class="fg">
+          <label>Kelas</label>
+          <input type="text" id="inp-kelas" placeholder="Contoh: VII A, VIII B..." style="text-transform:uppercase">
+        </div>
+        <div class="fg">
+          <label>Token Ujian</label>
+          <input type="text" id="inp-token" placeholder="Token dari guru..." style="font-family:'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase">
+        </div>
+        <button class="btn-login" id="btn-login" onclick="mulaiUjian()" disabled>&#9654; Mulai Ujian</button>
+        <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--gray-soft)">CBT Sekolah v1.0</div>
+      </div>
+    </div>
+    <div class="load-overlay" id="load-overlay">
+      <div class="spin"></div>
+      <p id="overlay-txt">Memuat soal dari server...<br><small style="font-weight:400;color:var(--gray-soft)">Harap tunggu 5&#8211;15 detik</small></p>
+    </div>
+  </div>
+</div>
+
+<!-- EXAM -->
+<div class="exam-wrap" id="exam-screen">
+  <div class="left-panel">
+    <div class="exam-hdr">
+      <span class="exam-ttl" id="exam-ttl">CBT Sekolah</span>
+      <div class="timer" id="timer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span id="timer-txt">--:--:--</span>
+      </div>
+    </div>
+    <div class="soal-bar">
+      <span class="no-lbl" id="no-lbl">SOAL --</span>
+      <span class="badge pg_teks" id="badge-tipe">PG Teks</span>
+      <span class="poin-b" id="badge-poin">-- poin</span>
+    </div>
+    <div class="box-gambar" id="box-gambar" style="display:none">
+      <div class="zoom-tb">
+        <button onclick="zoomOut()">&#8722;</button>
+        <button onclick="resetZoom()">&#8635;</button>
+        <button onclick="zoomIn()">&#43;</button>
+      </div>
+      <div class="img-scroll"><img class="img-soal" id="img-soal" src="" alt="Soal"></div>
+      <div class="img-load" id="img-load" style="display:none">Memuat gambar soal...</div>
+    </div>
+    <div id="box-teks" style="display:none">
+      <div class="box-teks" id="teks-q"></div>
+      <div id="teks-img-wrap" style="display:none;margin-bottom:14px"><img class="teks-ilustrasi" id="teks-img" src="" alt=""></div>
+    </div>
+    <div id="area-pg" style="display:none">
+      <div class="options-grid" id="options-grid"></div>
+      <div class="options-row" id="options-row" style="display:none"></div>
+    </div>
+    <div id="area-esai" style="display:none">
+      <div class="esai-info">&#9998; <strong>Soal Esai</strong> &#8212; Tulis jawaban Anda. Akan diperiksa guru secara manual.</div>
+      <textarea class="esai-textarea" id="esai-ta" placeholder="Tuliskan jawaban Anda di sini..." oninput="simpanEsai(this)" rows="7"></textarea>
+      <div class="esai-meta"><span id="esai-char">0 karakter</span></div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="prevSoal()">&#8592; Kembali</button>
+      <button class="btn-nav btn-ragu" id="btn-ragu" onclick="toggleRagu()">Ragu-ragu</button>
+      <button class="btn-nav" onclick="nextSoal()">Lanjut &#8594;</button>
+    </div>
+  </div>
+  <div class="right-panel">
+    <h3>Navigasi Soal</h3>
+    <div class="legenda">
+      <div class="leg-row"><div class="leg-dot" style="background:var(--green)"></div>Sudah dijawab</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#FFE082;border:1px solid var(--yellow)"></div>Ragu-ragu</div>
+      <div class="leg-row"><div class="leg-dot" style="background:white;border:1.5px solid var(--gray-line)"></div>Belum dijawab</div>
+      <div class="leg-row"><div class="leg-dot" style="background:white;border:1.5px solid var(--gray-line);border-left:3px solid var(--orange)"></div>Esai</div>
+    </div>
+    <div class="skor-live" id="skor-live">Poin PG: <strong>0</strong> / <span id="poin-max-live">0</span></div>
+    <div class="grid-nomor" id="grid-nomor"></div>
+    <button class="btn-selesai" onclick="bukaKonfirmasi()">&#9209; Selesai Ujian</button>
+  </div>
+</div>
+
+<!-- HASIL -->
+<div class="hasil-wrap" id="hasil-screen">
+  <div class="hasil-card">
+    <div class="hasil-head">
+      <div style="font-size:52px;margin-bottom:10px">&#127891;</div>
+      <h2>Ujian Selesai!</h2>
+      <p>Terima kasih, <strong id="h-nama"></strong></p>
+      <p style="font-size:12px;opacity:.7;margin-top:4px" id="h-kelas"></p>
+    </div>
+    <div class="hasil-body">
+      <div class="skor-box">
+        <div class="skor-angka" id="h-nilai">--</div>
+        <div class="skor-sub">Nilai (bobot poin soal PG)</div>
+        <div class="skor-pred" id="h-pred">--</div>
+      </div>
+      <div class="poin-info">Poin diperoleh: <strong id="h-poin-dapat">0</strong> / <span id="h-poin-max">0</span> poin (soal PG)</div>
+      <div class="esai-note" id="esai-note-blok">
+        <h4>&#9998; Soal Esai</h4>
+        <p>Nomor <strong id="h-esai-list">--</strong> sudah dikirim ke guru &amp; akan diperiksa manual.</p>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-c benar"><div class="stat-num" id="h-benar">--</div><div class="stat-lbl">Benar (PG)</div></div>
+        <div class="stat-c salah"><div class="stat-num" id="h-salah">--</div><div class="stat-lbl">Salah (PG)</div></div>
+        <div class="stat-c ragu"><div class="stat-num" id="h-ragu">--</div><div class="stat-lbl">Ragu-ragu</div></div>
+        <div class="stat-c esai"><div class="stat-num" id="h-esai">--</div><div class="stat-lbl">Esai (menunggu)</div></div>
+      </div>
+      <div class="aksi-col">
+        <button class="btn-aksi analisis" onclick="bukaAnalisis()">&#128202; Analisis &amp; Pembahasan</button>
+        <button class="btn-aksi sertifikat" onclick="pilihanTema()">&#128229; Unduh Sertifikat (PDF)</button>
+        <div id="tema-box" style="display:none;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px">
+          <button class="btn-aksi sertifikat" style="flex:1;min-width:100px;font-size:12px" onclick="unduhPDF('biru')">&#9632; Biru</button>
+          <button class="btn-aksi" style="flex:1;min-width:100px;font-size:12px;background:#1b8a4c;color:white" onclick="unduhPDF('hijau')">&#9632; Hijau</button>
+          <button class="btn-aksi" style="flex:1;min-width:100px;font-size:12px;background:#8e24aa;color:white" onclick="unduhPDF('ungu')">&#9632; Ungu</button>
+        </div>
+      </div>
+      <div class="reset-guru" style="margin-top:14px">
+        <a onclick="resetDevice()">Minta Reset Perangkat</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KONFIRMASI -->
+<div class="modal-ov" id="modal-konfirmasi">
+  <div class="modal-box">
+    <h3>&#9888; Konfirmasi Selesai Ujian</h3>
+    <div class="sum-grid" id="sum-grid"></div>
+    <div id="w-esai" class="warn esai" style="display:none"><strong>Esai belum diisi:</strong><div class="pill-wrap" id="w-esai-list"></div></div>
+    <div id="w-ragu" class="warn ragu" style="display:none"><strong>Masih ragu-ragu:</strong><div class="pill-wrap" id="w-ragu-list"></div></div>
+    <div id="w-belum" class="warn belum" style="display:none"><strong>PG belum dijawab:</strong><div class="pill-wrap" id="w-belum-list"></div></div>
+    <label class="chk-row"><input type="checkbox" id="chk-setuju" onchange="toggleYakin()"><span>Saya memahami bahwa setelah klik <b>"Ya, Kunci Jawaban"</b>, jawaban tidak dapat diubah.</span></label>
+    <div class="konfirm-btns">
+      <button class="btn-batal" onclick="tutupKonfirmasi()">Kembali</button>
+      <button class="btn-yakin" id="btn-yakin" onclick="selesaiFinal()" disabled>&#10003; Ya, Kunci Jawaban</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ANALISIS -->
+<div class="modal-ov" id="modal-analisis">
+  <div class="modal-box modal-wide">
+    <h3>&#128202; Analisis &amp; Pembahasan Soal</h3>
+    <button class="btn-print-analisis" onclick="printAnalisis()">&#128438; Cetak / Simpan PDF Pembahasan</button>
+    <div class="ana-list" id="ana-list"></div>
+    <button class="btn-tutup" onclick="document.getElementById('modal-analisis').classList.remove('aktif')">Tutup</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  KONFIGURASI DINAMIS — dari URL parameter
+//  Link siswa: ujian_siswa.html?sesi=ID_SESI&server=URL_GAS_SERVER
+// ═══════════════════════════════════════════════════════════
+const params    = new URLSearchParams(window.location.search);
+const ID_SESI   = params.get('sesi')   || '';
+const URL_SERVER= params.get('server') || '';
+
+// Fallback untuk testing langsung tanpa parameter
+// Ganti dua baris ini jika ingin testing hardcode:
+// const ID_SESI    = 'G01_UTS1_010726XXXX';
+// const URL_SERVER = 'https://script.google.com/macros/s/XXXXX/exec';
+
+const TIMEOUT_MS = 15000;
+const MAX_RETRY  = 2;
+const LS_KEY     = 'cbt_selesai_' + ID_SESI;   // key per sesi — tiap ujian berbeda
+const LS_DRAFT   = 'cbt_draft_'  + ID_SESI;
+const LS_DEVICE  = 'cbt_device';
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let soalData    = [];
+let tokenSheet  = '';
+let resetToken  = '';
+let DURASI      = 90;
+let JUDUL       = 'CBT Sekolah';
+let MAPEL       = '';
+let KELAS_SESI  = '';
+let soalReady   = false;
+
+let idx         = 0;
+let jawPG       = {};
+let jawEsai     = {};
+let raguMap     = {};
+let namaSiswa   = '';
+let kelasInput  = '';
+let detik       = 0;
+let timerID     = null;
+let pelanggar   = 0;
+const MAKS_P    = 10;
+let ujianSelesai= false;
+let tMulai = null, tSelesai = null;
+let dbEsai = null;
+let zoom   = 1;
+let deviceId    = '';
+
+// ═══════════════════════════════════════════════════════════
+//  CEK SUDAH MENGERJAKAN
+// ═══════════════════════════════════════════════════════════
+function cekSudahMengerjakan() {
+  try { let d = localStorage.getItem(LS_KEY); return d ? JSON.parse(d) : null; } catch(e) { return null; }
+}
+function simpanStatusSelesai(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function resetDevice() {
+  let tok = prompt('Masukkan token reset dari guru:');
+  if (!tok) return;
+  tok = tok.trim().toUpperCase();
+  if (tok === tokenSheet) { alert('Token reset tidak valid. Hubungi guru.'); return; }
+  if (tok === resetToken) {
+    try { localStorage.removeItem(LS_KEY); } catch(e) {}
+    document.getElementById('modal-analisis').classList.remove('aktif');
+    document.getElementById('hasil-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('sudah-banner').style.display = 'none';
+    document.getElementById('form-login-area').style.display = 'block';
+    location.reload();
+  } else { alert('Token reset salah!'); }
+}
+function tampilHasilSaja() {
+  let data = cekSudahMengerjakan();
+  if (!data) { alert('Data hasil tidak ditemukan.'); return; }
+  namaSiswa  = data.nama   || '';
+  kelasInput = data.kelas  || '';
+  jawPG      = data.jawPG  || {};
+  jawEsai    = data.jawEsai|| {};
+  raguMap    = data.raguMap|| {};
+  tMulai     = data.tMulai  ? new Date(data.tMulai)  : null;
+  tSelesai   = data.tSelesai? new Date(data.tSelesai) : null;
+  if (!soalReady || soalData.length === 0) { alert('Soal belum dimuat. Tunggu sebentar.'); return; }
+  tampilHasilAkhir();
+  document.getElementById('login-screen').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FETCH HELPER
+// ═══════════════════════════════════════════════════════════
+function fetchTimeout(url, opts, ms) {
+  return new Promise((res, rej) => {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), ms);
+    fetch(url, { ...opts, signal: ctrl.signal, redirect: 'follow' })
+      .then(r => { clearTimeout(tid); res(r); })
+      .catch(e => { clearTimeout(tid); rej(e); });
+  });
+}
+async function fetchRetry(url, opts, ms, maxR) {
+  let n = 0;
+  while (n <= maxR) {
+    try {
+      if (n > 0) {
+        setOverlay(`Percobaan ke-${n+1}...<br><small style="font-weight:400;color:var(--gray-soft)">Server sedang booting</small>`);
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      const r = await fetchTimeout(url, opts, ms);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r;
+    } catch(e) { n++; if (n > maxR) throw e; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MUAT SOAL — dari GAS_Soal_Guru via GAS_Server (relay)
+// ═══════════════════════════════════════════════════════════
+window.onload = function() {
+  // Cek parameter wajib
+  if (!ID_SESI || !URL_SERVER) {
+    setBar('error', '&#9888; Link ujian tidak valid. Minta link baru dari guru.');
+    document.getElementById('load-overlay').classList.add('hide');
+    return;
+  }
+  muatSoal();
+};
+
+function getOrInitDevice() {
+  try {
+    let d = localStorage.getItem(LS_DEVICE);
+    d = d ? JSON.parse(d) : null;
+    if (!d || !d.id) d = { id: 'dev_' + Math.random().toString(36).slice(2,10) + Date.now(), count: 0 };
+    return d;
+  } catch(e) { return { id: 'dev_unknown', count: 0 }; }
+}
+
+async function muatSoal() {
+  soalReady = false;
+  document.getElementById('btn-login').disabled = true;
+  setBar('loading', 'Menghubungi server soal...');
+  setOverlay('Memuat soal dari server...<br><small style="font-weight:400;color:var(--gray-soft)">Harap tunggu 5&#8211;15 detik</small>');
+  document.getElementById('load-overlay').classList.remove('hide');
+
+  // Step 1: cek sesi valid dari server
+  try {
+    const cekResp = await fetchRetry(
+      URL_SERVER + '?action=cekSesi&id_sesi=' + encodeURIComponent(ID_SESI),
+      {}, TIMEOUT_MS, MAX_RETRY
+    );
+    const cek = await cekResp.json();
+    if (cek.status !== 'ok') {
+      setBar('error', '&#9888; ' + (cek.msg || 'Sesi tidak valid atau sudah berakhir.'));
+      tampilTombolRefresh(cek.msg || 'Sesi tidak valid.');
+      return;
+    }
+
+    KELAS_SESI = cek.kelas || '';
+    // Tampilkan info sesi di login
+    let infoEl = document.getElementById('info-sesi');
+    infoEl.style.display = 'block';
+    infoEl.textContent   = '&#128196; ' + cek.mapel + ' — Kelas ' + cek.kelas + ' — ' + cek.kode_soal;
+
+    // Hitung sisa waktu dari server
+    const sisaDetik = parseInt(cek.sisa_detik) || 0;
+    if (sisaDetik <= 0) {
+      setBar('error', '&#9201; Waktu ujian sudah habis.');
+      tampilTombolRefresh('Waktu ujian sudah habis. Hubungi guru.');
+      return;
+    }
+
+    // Step 2: ambil soal dari GAS_Soal_Guru via url_gas_guru
+    const urlGasGuru = cek.url_gas_guru || '';
+    if (!urlGasGuru) {
+      setBar('error', '&#9888; URL GAS guru tidak ditemukan.');
+      return;
+    }
+
+    setOverlay('Mengambil soal dari server guru...');
+    // Ambil kode soal dari ID sesi: format G01_UTS1_ddMMyyHHmm
+    const kodeSoal = ID_SESI.split('_')[1] || '';
+    const soalResp = await fetchRetry(
+      urlGasGuru + '?action=getDataSoal&kode=' + encodeURIComponent(kodeSoal),
+      {}, TIMEOUT_MS, MAX_RETRY
+    );
+    const data = await soalResp.json();
+
+    if (data.status !== 'ok' || !Array.isArray(data.soal) || data.soal.length === 0) {
+      setBar('error', '&#9888; Soal belum tersedia. Hubungi guru.');
+      tampilTombolRefresh('Data soal kosong. Hubungi guru atau coba refresh.');
+      return;
+    }
+
+    // Isi state dari data soal
+    tokenSheet = (data.token || '').trim().toUpperCase();
+    resetToken = (data.reset_token || data.token || '').trim().toUpperCase();
+    DURASI     = sisaDetik; // pakai sisa detik dari server (lebih akurat)
+    JUDUL      = data.judul || ('CBT ' + data.mapel + ' — Kelas ' + cek.kelas);
+    MAPEL      = data.mapel || '';
+
+    soalData = data.soal.map(s => ({
+      no             : parseInt(s.no),
+      tipe           : (s.tipe || 'pg_gambar').toLowerCase().trim(),
+      poin           : parseFloat(s.poin) || 1,
+      pertanyaan     : (s.pertanyaan || '').trim(),
+      url_gambar     : (s.url_gambar || '').trim(),
+      opsi_a         : (s.opsi_a || '').trim(),
+      opsi_b         : (s.opsi_b || '').trim(),
+      opsi_c         : (s.opsi_c || '').trim(),
+      opsi_d         : (s.opsi_d || '').trim(),
+      kunci          : (s.kunci || '').trim().toUpperCase(),
+      pembahasan     : (s.pembahasan || '').trim(),
+      url_pemb_gambar: (s.url_pemb_gambar || '').trim(),
+      topik          : (s.topik || '').trim(),
+      kesulitan      : (s.kesulitan || 'sedang').trim()
+    }));
+
+    soalReady = true;
+    let pm = soalData.filter(s => s.tipe !== 'esai').reduce((a, s) => a + s.poin, 0);
+    document.getElementById('poin-max-live').textContent = pm;
+
+    // Update judul login
+    document.getElementById('judul-login').textContent = JUDUL;
+    document.getElementById('sub-login').textContent   = data.nama_guru + ' — ' + soalData.length + ' soal';
+
+    // Cek sudah mengerjakan
+    let sudah = cekSudahMengerjakan();
+    if (sudah) {
+      setBar('ok', 'Soal dimuat. Kamu sudah pernah mengerjakan ujian ini.');
+      document.getElementById('load-overlay').classList.add('hide');
+      document.getElementById('sudah-banner').style.display = 'block';
+      document.getElementById('form-login-area').style.display = 'none';
+    } else {
+      setBar('ok', '&#10003; ' + soalData.length + ' soal berhasil dimuat. Silakan isi data dan mulai.');
+      document.getElementById('btn-login').disabled = false;
+      document.getElementById('load-overlay').classList.add('hide');
+    }
+
+  } catch(e) {
+    console.error(e);
+    let pesan = e.name === 'AbortError'
+      ? '&#8987; Timeout setelah ' + MAX_RETRY + ' percobaan.'
+      : '&#10060; Gagal: ' + (e.message || 'periksa koneksi.');
+    setBar('error', pesan);
+    tampilTombolRefresh(pesan);
+  }
+}
+
+function setOverlay(html) { document.getElementById('overlay-txt').innerHTML = html; }
+function tampilTombolRefresh(pesan) {
+  setOverlay(pesan + '<br><br>');
+  const ov = document.getElementById('load-overlay');
+  const sp = ov.querySelector('.spin'); if (sp) sp.remove();
+  if (!ov.querySelector('.btn-refresh')) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-refresh'; btn.textContent = 'Coba Lagi';
+    btn.onclick = function() {
+      const old = ov.querySelector('.spin');
+      if (!old) { const s = document.createElement('div'); s.className='spin'; ov.insertBefore(s, ov.firstChild); }
+      btn.remove(); muatSoal();
+    };
+    ov.appendChild(btn);
+  }
+}
+function setBar(t, m) {
+  let b = document.getElementById('load-bar'), tx = document.getElementById('load-txt');
+  b.className = 'status-bar ' + t; tx.innerHTML = m;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MULAI UJIAN
+// ═══════════════════════════════════════════════════════════
+function mulaiUjian() {
+  namaSiswa  = document.getElementById('inp-nama').value.trim();
+  kelasInput = document.getElementById('inp-kelas').value.trim().toUpperCase();
+  let tok    = document.getElementById('inp-token').value.trim().toUpperCase();
+  if (!namaSiswa)  { alert('Isi Nama Lengkap!'); return; }
+  if (!kelasInput) { alert('Isi Kelas!'); return; }
+  if (!soalReady || soalData.length === 0) { alert('Soal belum siap. Tunggu atau klik Coba Lagi.'); return; }
+  if (tok !== tokenSheet) { alert('Token salah!'); return; }
+  if (cekSudahMengerjakan()) { alert('Perangkat ini sudah mengerjakan ujian ini. Hubungi guru untuk reset.'); return; }
+
+  let devData = getOrInitDevice();
+  deviceId    = devData.id;
+  devData.count++;
+  try { localStorage.setItem(LS_DEVICE, JSON.stringify(devData)); } catch(e) {}
+
+  tMulai = new Date(); detik = DURASI;
+  let adaDraft = muatDraft();
+  if (adaDraft) console.log('Draft ditemukan, melanjutkan sesi.');
+
+  document.getElementById('exam-ttl').textContent = JUDUL;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('exam-screen').style.display  = 'flex';
+  buatGrid(); tampil(); mulaiTimer(); fullscreen(); antiCheat();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAMPIL SOAL
+// ═══════════════════════════════════════════════════════════
+function buatGrid() {
+  let g = document.getElementById('grid-nomor'); g.innerHTML = '';
+  soalData.forEach((s, i) => {
+    let b = document.createElement('button');
+    b.className = 'btn-no' + (s.tipe === 'esai' ? ' esai-m' : '');
+    b.textContent = s.no; b.id = 'nn' + i;
+    b.onclick = () => { idx = i; tampil(); };
+    g.appendChild(b);
+  });
+}
+function tampil() {
+  let s = getSoal(), no = s.no, tipe = s.tipe;
+  document.getElementById('no-lbl').textContent = 'SOAL ' + no;
+  let bd = document.getElementById('badge-tipe');
+  if (tipe === 'pg_teks')       { bd.className = 'badge pg_teks';   bd.textContent = 'PG Teks'; }
+  else if (tipe === 'pg_gambar'){ bd.className = 'badge pg_gambar'; bd.textContent = 'PG Gambar'; }
+  else                          { bd.className = 'badge esai';      bd.textContent = 'Esai'; }
+  document.getElementById('badge-poin').textContent = s.poin + ' poin';
+  ['box-gambar','box-teks','area-pg','area-esai'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('btn-ragu').classList.remove('btn-ragu-hidden');
+
+  if (tipe === 'pg_gambar') {
+    document.getElementById('box-gambar').style.display = 'block';
+    document.getElementById('area-pg').style.display    = 'block';
+    document.getElementById('options-grid').style.display = 'none';
+    document.getElementById('options-row').style.display  = 'flex';
+    muatGambar(s.url_gambar); renderOpsiRow(s, no);
+  } else if (tipe === 'pg_teks') {
+    document.getElementById('box-teks').style.display   = 'block';
+    document.getElementById('area-pg').style.display    = 'block';
+    document.getElementById('options-grid').style.display = 'grid';
+    document.getElementById('options-row').style.display  = 'none';
+    document.getElementById('teks-q').textContent = s.pertanyaan;
+    if (s.url_gambar) { document.getElementById('teks-img-wrap').style.display='block'; document.getElementById('teks-img').src=gdrive(s.url_gambar); }
+    else              { document.getElementById('teks-img-wrap').style.display='none'; }
+    renderOpsi(s, no);
+  } else {
+    if (s.pertanyaan) { document.getElementById('box-teks').style.display='block'; document.getElementById('teks-q').textContent=s.pertanyaan; }
+    if (s.url_gambar) { document.getElementById('box-gambar').style.display='block'; muatGambar(s.url_gambar); }
+    document.getElementById('area-esai').style.display = 'block';
+    let ta = document.getElementById('esai-ta');
+    ta.value = jawEsai[no] || '';
+    ta.className = 'esai-textarea' + (ta.value.trim() ? ' terisi' : '');
+    document.getElementById('esai-char').textContent = ta.value.length + ' karakter';
+    document.getElementById('btn-ragu').classList.add('btn-ragu-hidden');
+  }
+  if (tipe !== 'esai') document.getElementById('btn-ragu').classList.toggle('aktif', !!raguMap[no]);
+  updateGrid(); updateLive();
+}
+function muatGambar(url) {
+  resetZoom();
+  let img = document.getElementById('img-soal'), ld = document.getElementById('img-load');
+  img.style.display = 'none'; ld.style.display = 'block';
+  img.onload  = () => { ld.style.display='none'; img.style.display='block'; };
+  img.onerror = () => { ld.textContent = 'Gagal memuat gambar soal'; };
+  img.src = gdrive(url);
+}
+function renderOpsi(soal, no) {
+  let g = document.getElementById('options-grid'); g.innerHTML = '';
+  ['A','B','C','D'].forEach(ltr => {
+    let val = soal['opsi_' + ltr.toLowerCase()] || '';
+    let btn = document.createElement('button');
+    btn.className = 'btn-opt' + (jawPG[no] === ltr ? ' selected' : '');
+    btn.onclick = () => pilihPG(ltr);
+    let lDiv = document.createElement('div'); lDiv.className = 'opt-ltr'; lDiv.textContent = ltr;
+    let cDiv = document.createElement('div'); cDiv.className = 'opt-content';
+    if (isUrl(val)) { let img = document.createElement('img'); img.className='opt-img'; img.src=gdrive(val); img.alt='Opsi '+ltr; img.loading='lazy'; cDiv.appendChild(img); }
+    else { cDiv.textContent = val || '(opsi kosong)'; }
+    btn.appendChild(lDiv); btn.appendChild(cDiv); g.appendChild(btn);
+  });
+}
+function renderOpsiRow(soal, no) {
+  let g = document.getElementById('options-row'); g.innerHTML = '';
+  ['A','B','C','D'].forEach(ltr => {
+    let btn = document.createElement('button');
+    btn.className = 'btn-opt-row' + (jawPG[no] === ltr ? ' selected' : '');
+    btn.onclick = () => pilihPG(ltr);
+    let lDiv = document.createElement('div'); lDiv.className = 'opt-ltr'; lDiv.textContent = ltr;
+    btn.appendChild(lDiv); g.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAFT & JAWABAN
+// ═══════════════════════════════════════════════════════════
+function simpanDraft() {
+  try { localStorage.setItem(LS_DRAFT, JSON.stringify({ nama:namaSiswa, kelas:kelasInput, jawPG, jawEsai, raguMap, tMulai:tMulai?.toISOString(), detikSisa:detik })); } catch(e) {}
+}
+function muatDraft() {
+  try {
+    let raw = localStorage.getItem(LS_DRAFT);
+    if (!raw) return false;
+    let d = JSON.parse(raw);
+    if (d.nama !== namaSiswa) return false;
+    jawPG = d.jawPG || {}; jawEsai = d.jawEsai || {}; raguMap = d.raguMap || {};
+    if (d.tMulai) tMulai = new Date(d.tMulai);
+    if (d.detikSisa > 0) detik = d.detikSisa;
+    return true;
+  } catch(e) { return false; }
+}
+function hapusDraft() { try { localStorage.removeItem(LS_DRAFT); } catch(e) {} }
+
+function pilihPG(ltr) { let no = getSoal().no; jawPG[no] = ltr; tampil(); simpanDraft(); }
+function simpanEsai(ta) {
+  let no = getSoal().no, txt = ta.value;
+  jawEsai[no] = txt;
+  ta.className = 'esai-textarea' + (txt.trim() ? ' terisi' : '');
+  document.getElementById('esai-char').textContent = txt.length + ' karakter';
+  document.getElementById('nn' + idx).classList.toggle('dijawab', txt.trim().length > 0);
+  clearTimeout(dbEsai); dbEsai = setTimeout(() => simpanDraft(), 800);
+}
+function toggleRagu() { let no = getSoal().no; if (isEsai(no)) return; raguMap[no] = !raguMap[no]; document.getElementById('btn-ragu').classList.toggle('aktif', raguMap[no]); updateGrid(); }
+function nextSoal() { if (idx < soalData.length-1) { idx++; tampil(); } }
+function prevSoal() { if (idx > 0) { idx--; tampil(); } }
+function updateGrid() {
+  soalData.forEach((s,i) => {
+    let b = document.getElementById('nn'+i); if (!b) return;
+    b.className = 'btn-no' + (s.tipe==='esai' ? ' esai-m' : '');
+    if (i === idx) b.classList.add('aktif');
+    let dij = s.tipe==='esai' ? (jawEsai[s.no]||'').trim().length>0 : !!jawPG[s.no];
+    if (dij) b.classList.add('dijawab');
+    if (s.tipe!=='esai' && raguMap[s.no]) b.classList.add('ragu');
+  });
+}
+function updateLive() {
+  let poin = 0;
+  soalData.forEach(s => { if (s.tipe!=='esai' && jawPG[s.no] && jawPG[s.no]===s.kunci) poin += s.poin; });
+  let pm = soalData.filter(s=>s.tipe!=='esai').reduce((a,s)=>a+s.poin,0);
+  document.getElementById('skor-live').innerHTML = 'Poin PG: <strong>'+poin+'</strong> / <span id="poin-max-live">'+pm+'</span>';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════════
+function mulaiTimer() {
+  timerID = setInterval(() => {
+    if (detik <= 0) { clearInterval(timerID); alert('Waktu habis! Jawaban dikunci.'); selesaiFinal(); return; }
+    detik--;
+    let j=Math.floor(detik/3600), m=Math.floor((detik%3600)/60), d=detik%60;
+    document.getElementById('timer-txt').textContent =
+      `${String(j).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(d).padStart(2,'0')}`;
+    document.getElementById('timer').classList.toggle('warn', detik <= 300);
+  }, 1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KONFIRMASI
+// ═══════════════════════════════════════════════════════════
+function bukaKonfirmasi() {
+  let pg = soalData.filter(s=>s.tipe!=='esai'), esaiL = soalData.filter(s=>s.tipe==='esai');
+  let dijPG = pg.filter(s=>jawPG[s.no]).length, dijE = esaiL.filter(s=>(jawEsai[s.no]||'').trim()).length;
+  document.getElementById('sum-grid').innerHTML = `
+    <div class="sum-c t"><div class="sum-num">${soalData.length}</div><div class="sum-lbl">Total Soal</div></div>
+    <div class="sum-c d"><div class="sum-num">${dijPG+dijE}</div><div class="sum-lbl">Dijawab</div></div>
+    <div class="sum-c b"><div class="sum-num">${pg.filter(s=>!jawPG[s.no]).length}</div><div class="sum-lbl">PG Belum</div></div>`;
+  let eK = esaiL.filter(s=>!(jawEsai[s.no]||'').trim()).map(s=>s.no);
+  document.getElementById('w-esai').style.display = eK.length ? 'block' : 'none';
+  document.getElementById('w-esai-list').innerHTML = eK.map(n=>`<span class="pill e">No.${n}</span>`).join('');
+  let nR = pg.filter(s=>raguMap[s.no]).map(s=>s.no);
+  document.getElementById('w-ragu').style.display = nR.length ? 'block' : 'none';
+  document.getElementById('w-ragu-list').innerHTML = nR.map(n=>`<span class="pill r">${n}</span>`).join('');
+  let nB = pg.filter(s=>!jawPG[s.no]).map(s=>s.no);
+  document.getElementById('w-belum').style.display = nB.length ? 'block' : 'none';
+  document.getElementById('w-belum-list').innerHTML = nB.map(n=>`<span class="pill b">${n}</span>`).join('');
+  document.getElementById('chk-setuju').checked = false;
+  document.getElementById('btn-yakin').disabled  = true;
+  document.getElementById('modal-konfirmasi').classList.add('aktif');
+}
+function tutupKonfirmasi() { document.getElementById('modal-konfirmasi').classList.remove('aktif'); }
+function toggleYakin() { document.getElementById('btn-yakin').disabled = !document.getElementById('chk-setuju').checked; }
+
+// ═══════════════════════════════════════════════════════════
+//  SELESAI — kirim ke GAS_Server_CBT
+// ═══════════════════════════════════════════════════════════
+function selesaiFinal() {
+  clearInterval(timerID); tSelesai = new Date();
+  ujianSelesai = true; hapusDraft();
+  document.getElementById('modal-konfirmasi').classList.remove('aktif');
+  document.getElementById('exam-screen').style.display = 'none';
+  simpanStatusSelesai({ nama:namaSiswa, kelas:kelasInput, jawPG, jawEsai, raguMap, tMulai:tMulai?.toISOString(), tSelesai:tSelesai?.toISOString() });
+  tampilHasilAkhir();
+
+  (async () => {
+    // Kumpulkan semua jawaban
+    let items = [];
+    soalData.forEach(s => {
+      let no = s.no, tipe = s.tipe;
+      if (tipe === 'esai') {
+        items.push({ id_sesi:ID_SESI, siswa:namaSiswa, kelas:kelasInput,
+          no_soal:no, tipe:'esai', jawaban:jawEsai[no]||'', kunci:s.kunci, poin_soal:s.poin, benar:false });
+      } else {
+        let jwb = jawPG[no] || '';
+        items.push({ id_sesi:ID_SESI, siswa:namaSiswa, kelas:kelasInput,
+          no_soal:no, tipe, jawaban:jwb, kunci:s.kunci, poin_soal:s.poin, benar:jwb===s.kunci });
+      }
+    });
+
+    // Kirim batch jawaban
+    await kirimPost({ action:'simpanJawabanBatch', id_sesi:ID_SESI, items });
+
+    // Kirim rekap akhir
+    let h = hitungNilai();
+    await kirimPost({
+      action:'rekapAkhir', id_sesi:ID_SESI,
+      siswa:namaSiswa, kelas:kelasInput,
+      nilai:h.nilai, poin_dapat:h.poinD, poin_max:h.poinM,
+      benar:h.benar, salah:h.salah, esai:h.esaiC,
+      pelanggaran:pelanggar,
+      waktu_mulai:tMulai?.toISOString(), waktu_selesai:tSelesai?.toISOString()
+    });
+    console.log('Jawaban & rekap berhasil dikirim ke server.');
+  })();
+}
+
+async function kirimPost(payload) {
+  try {
+    await fetch(URL_SERVER, {
+      method:'POST', mode:'no-cors', redirect:'follow',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+  } catch(e) { console.warn('kirimPost error:', e); }
+}
+
+function hitungNilai() {
+  let benar=0, salah=0, raguC=0, esaiC=0, poinD=0, poinM=0;
+  soalData.forEach(s => {
+    if (s.tipe === 'esai') { esaiC++; return; }
+    poinM += s.poin;
+    if (raguMap[s.no]) raguC++;
+    let jwb = jawPG[s.no];
+    if (!jwb) {}
+    else if (s.kunci && jwb === s.kunci) { benar++; poinD += s.poin; }
+    else if (s.kunci) salah++;
+  });
+  let nilai = poinM > 0 ? Math.round(poinD / poinM * 100) : 0;
+  return { benar, salah, raguC, esaiC, poinD, poinM, nilai };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAMPIL HASIL
+// ═══════════════════════════════════════════════════════════
+function tampilHasilAkhir() {
+  let { benar, salah, raguC, esaiC, poinD, poinM, nilai } = hitungNilai();
+  let pred = nilai>=90?'Sangat Baik':nilai>=75?'Baik':nilai>=60?'Cukup':'Terus Semangat';
+  document.getElementById('h-nama').textContent        = namaSiswa;
+  document.getElementById('h-kelas').textContent       = 'Kelas ' + kelasInput + ' — ' + MAPEL;
+  document.getElementById('h-nilai').textContent       = nilai;
+  document.getElementById('h-pred').textContent        = pred;
+  document.getElementById('h-benar').textContent       = benar;
+  document.getElementById('h-salah').textContent       = salah;
+  document.getElementById('h-ragu').textContent        = raguC;
+  document.getElementById('h-esai').textContent        = esaiC;
+  document.getElementById('h-poin-dapat').textContent  = poinD;
+  document.getElementById('h-poin-max').textContent    = poinM;
+  let esaiList = soalData.filter(s=>s.tipe==='esai').map(s=>s.no).join(', ') || '-';
+  document.getElementById('h-esai-list').textContent   = esaiList;
+  if (esaiC === 0) document.getElementById('esai-note-blok').style.display = 'none';
+  document.getElementById('hasil-screen').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ANALISIS
+// ═══════════════════════════════════════════════════════════
+function bukaAnalisis() {
+  document.getElementById('ana-list').innerHTML = buatHtmlAnalisis();
+  document.getElementById('modal-analisis').classList.add('aktif');
+}
+function buatHtmlAnalisis() {
+  let html = '';
+  soalData.forEach(s => {
+    let no=s.no, tipe=s.tipe;
+    let pemb = (s.pembahasan||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    let poinBar = `<div class="poin-bar">Poin soal ini: ${s.poin}</div>`;
+    if (tipe === 'esai') {
+      let teks=jawEsai[no]||'', diisi=teks.trim().length>0;
+      let rubrik=(s.kunci||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      html+=`<div class="ana-item">
+  <div class="ana-head esai-p"><span class="ana-no">No.${no} <span style="font-size:10px;background:var(--orange-light);color:var(--orange);padding:1px 7px;border-radius:8px;border:1px solid #F5C6A0;margin-left:6px">ESAI</span></span><span class="ana-badge esai-p">${diisi?'Diisi':'Kosong'}</span></div>
+  ${s.pertanyaan?`<div class="ana-teks">${s.pertanyaan.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`:''}
+  ${s.url_gambar?`<div class="ana-img"><img src="${gdrive(s.url_gambar)}" loading="lazy"></div>`:''}
+  <div class="esai-ans"><strong>Jawaban Anda:</strong><div class="teks">${diisi?teks.replace(/</g,'&lt;').replace(/>/g,'&gt;'):'<span style="color:var(--gray-soft);font-style:italic">Tidak diisi</span>'}</div></div>
+  ${rubrik?`<div class="rubrik-bar"><strong>Rubrik/Kunci:</strong> ${rubrik}</div>`:''}
+  ${pemb?`<div class="pemb-bar"><strong>Pembahasan</strong>${pemb}</div>`:''}
+  ${s.url_pemb_gambar?`<div class="ana-img"><img src="${gdrive(s.url_pemb_gambar)}" loading="lazy"></div>`:''}
+  ${poinBar}</div>`;
+    } else {
+      let jwb=jawPG[no]||null, kunci=s.kunci;
+      let status=!jwb?'kosong':(kunci&&jwb===kunci)?'benar':'salah';
+      let label=status==='benar'?'Benar':status==='salah'?'Salah':'Tidak Dijawab';
+      let opsiH;
+      if (tipe === 'pg_gambar') {
+        opsiH = '<div class="ana-opsi"><div class="ana-opsi-ttl">Pilihan Jawaban</div><div style="display:flex;gap:8px;flex-wrap:nowrap;">';
+        ['A','B','C','D'].forEach(ltr => {
+          let isK=ltr===kunci, isJ=ltr===jwb&&jwb!==kunci;
+          let bg=isK?'var(--green)':(isJ?'var(--red)':'var(--gray-bg)');
+          let col=isK||isJ?'white':'var(--gray-mid)';
+          let bdr=isK?'var(--green)':(isJ?'var(--red)':'var(--gray-line)');
+          let icon=isK?'<span style="font-size:17px;font-weight:900;line-height:1;color:var(--green)">&#10003;</span>':(isJ?'<span style="font-size:17px;font-weight:900;line-height:1;color:var(--red)">&#10007;</span>':'');
+          opsiH+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:1.5px solid ${bdr};border-radius:8px;background:${bg==='var(--gray-bg)'?'var(--white)':bg}"><span style="width:26px;height:26px;border-radius:50%;background:${bg};color:${col};border:1.5px solid ${bdr};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">${ltr}</span>${icon}</div>`;
+        });
+        opsiH += '</div></div>';
+      } else {
+        opsiH='<div class="ana-opsi"><div class="ana-opsi-ttl">Pilihan Jawaban</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;">';
+        ['A','B','C','D'].forEach(ltr => {
+          let val=(s['opsi_'+ltr.toLowerCase()]||'');
+          let isK=ltr===kunci, isJ=ltr===jwb;
+          let cls=isK?'kunci':(isJ&&!isK?'salah-mark':'');
+          let icon=isK?'<span style="font-size:17px;font-weight:900;line-height:1">&#10003;</span> ':(isJ&&!isK?'<span style="font-size:17px;font-weight:900;line-height:1">&#10007;</span> ':'');
+          let isi=isUrl(val)?`<img class="opsi-img-sm" src="${gdrive(val)}" loading="lazy">`:(val||'(kosong)').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          opsiH+=`<div class="opsi-row ${cls}" style="padding:3px 0"><span class="opsi-ltr">${ltr}</span><span style="flex:1;min-width:0;word-break:break-word">${icon}${isi}</span></div>`;
+        });
+        opsiH += '</div></div>';
+      }
+      html+=`<div class="ana-item">
+  <div class="ana-head ${status}"><span class="ana-no">No.${no} <span style="font-size:10px;background:var(--blue-light);color:var(--blue-main);padding:1px 7px;border-radius:8px;border:1px solid #BDD4F5;margin-left:6px">${tipe==='pg_teks'?'PG TEKS':'PG GAMBAR'}</span></span>
+    <div style="display:flex;gap:6px;align-items:center">${jwb?`<span style="font-size:12px;color:var(--gray-mid)">Jawaban: <b>${jwb}</b></span>`:''}
+    <span class="ana-badge ${status}">${label}</span></div></div>
+  ${s.pertanyaan?`<div class="ana-teks">${s.pertanyaan.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`:''}
+  ${s.url_gambar?`<div class="ana-img"><img src="${gdrive(s.url_gambar)}" loading="lazy"></div>`:''}
+  ${opsiH}
+  <div class="kunci-bar">Kunci: ${kunci||'Belum tersedia'}</div>
+  ${pemb?`<div class="pemb-bar"><strong>Pembahasan</strong>${pemb}</div>`:''}
+  ${s.url_pemb_gambar?`<div class="ana-img"><img src="${gdrive(s.url_pemb_gambar)}" loading="lazy"></div>`:''}
+  ${poinBar}</div>`;
+    }
+  });
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PRINT ANALISIS PDF
+// ═══════════════════════════════════════════════════════════
+function printAnalisis() {
+  let { nilai, poinD, poinM, benar, salah } = hitungNilai();
+  let tgl = tSelesai ? tSelesai.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) : '';
+  let konten = buatHtmlAnalisis();
+  let pw = window.open('', '_blank', 'width=900,height=700');
+  if (!pw) { alert('Pop-up diblokir. Izinkan pop-up lalu coba lagi.'); return; }
+  pw.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Pembahasan CBT - ${namaSiswa}</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:white;color:#1E2B3A;padding:20px;}
+.hdr{background:#0A3566;color:white;padding:18px 22px;border-radius:8px;margin-bottom:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.hdr h1{font-size:17px;margin:0 0 5px;}.hdr p{font-size:13px;margin:3px 0 0;opacity:.9;}
+.ana-item{border:1.5px solid #DDE3EC;border-radius:10px;overflow:hidden;margin-bottom:16px;break-inside:avoid;}
+.ana-head{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.ana-head.benar{background:#E6F7EE;}.ana-head.salah{background:#FDECEA;}.ana-head.kosong{background:#F3F6FA;}.ana-head.esai-p{background:#FFF3E8;}
+.ana-no{font-size:14px;font-weight:800;}.ana-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.ana-badge.benar{background:#1B8A4C;}.ana-badge.salah{background:#C0392B;}.ana-badge.kosong{background:#8896A5;}.ana-badge.esai-p{background:#D4550A;}
+.ana-teks{padding:11px 13px;background:#F0F6FF;font-size:13px;line-height:1.65;border-top:1px solid #E8F1FD;white-space:pre-wrap;word-break:break-word;}
+.ana-img{padding:8px 13px;background:#F3F6FA;border-top:1px solid #DDE3EC;}.ana-img img{max-width:100%;border-radius:6px;}
+.ana-opsi{padding:9px 13px;border-top:1px solid #DDE3EC;background:white;}
+.ana-opsi-ttl{font-size:10px;font-weight:700;color:#8896A5;margin-bottom:5px;text-transform:uppercase;}
+.opsi-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:13px;}
+.opsi-row.kunci{font-weight:700;color:#1B8A4C;}.opsi-row.salah-mark{color:#C0392B;text-decoration:line-through;opacity:.7;}
+.opsi-ltr{width:21px;height:21px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:#F3F6FA;color:#8896A5;border:1px solid #DDE3EC;}
+.opsi-row.kunci .opsi-ltr{background:#1B8A4C;color:white;border-color:#1B8A4C;}
+.opsi-row.salah-mark .opsi-ltr{background:#FDECEA;color:#C0392B;border-color:#C0392B;}
+.opsi-img-sm{max-height:60px;border-radius:4px;border:1px solid #DDE3EC;}
+.kunci-bar{padding:9px 13px;background:#F0F6FF;border-top:1px solid #E8F1FD;font-size:13px;font-weight:700;color:#1058B0;}
+.pemb-bar{padding:11px 13px;background:#E6F7EE;border-top:1px solid #A8D5BB;font-size:13px;color:#1E2B3A;line-height:1.6;}
+.pemb-bar strong{font-size:10px;font-weight:700;color:#1B8A4C;text-transform:uppercase;display:block;margin-bottom:3px;}
+.rubrik-bar{padding:9px 13px;background:#E8F4FF;border-top:1px solid #B3D4F5;font-size:12px;color:#1058B0;}
+.esai-ans{padding:11px 13px;background:#FFFDF5;border-top:1px solid #FFE082;font-size:13px;}
+.esai-ans strong{color:#D4550A;display:block;margin-bottom:4px;}
+.esai-ans .teks{padding:9px;background:white;border:1px solid #FFE082;border-radius:6px;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+.poin-bar{padding:5px 13px;background:#FFFBEA;border-top:1px solid #E8D48A;font-size:11px;font-weight:700;color:#B8860B;}
+.btn-print-now{display:block;width:100%;padding:13px;margin-bottom:18px;background:#1B8A4C;color:white;border:none;border-radius:8px;font-family:'Plus Jakarta Sans',Arial,sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+@media print{body{padding:10px;}.btn-print-now{display:none;}.ana-item{break-inside:avoid;}}
+</style></head><body>
+<button class="btn-print-now" id="btnCetak" onclick="window.print()" disabled>Memuat gambar...</button>
+<div class="hdr"><h1>${JUDUL} — Analisis &amp; Pembahasan</h1>
+<p>Nama: <strong>${namaSiswa}</strong> &nbsp;|&nbsp; Kelas: <strong>${kelasInput}</strong></p>
+<p>Nilai: <strong>${nilai}</strong> &nbsp;|&nbsp; Benar: ${benar} &nbsp;|&nbsp; Salah: ${salah} &nbsp;|&nbsp; Poin: ${poinD}/${poinM} &nbsp;|&nbsp; ${tgl}</p></div>
+${konten}
+<script>(function(){var imgs=Array.from(document.images),total=imgs.length,btn=document.getElementById('btnCetak');
+if(total===0){btn.textContent='\uD83D\uDDA8 Cetak / Simpan sebagai PDF';btn.disabled=false;return;}
+var loaded=0;btn.textContent='Memuat gambar... (0/'+total+')';btn.style.background='#8896A5';
+function onLoad(){loaded++;btn.textContent=loaded>=total?'\uD83D\uDDA8 Cetak / Simpan sebagai PDF':'Memuat gambar... ('+loaded+'/'+total+')';if(loaded>=total){btn.disabled=false;btn.style.background='#1B8A4C';}}
+imgs.forEach(function(img){if(img.complete&&img.naturalWidth>0)onLoad();else{img.addEventListener('load',onLoad);img.addEventListener('error',onLoad);}});
+setTimeout(function(){if(btn.disabled){btn.textContent='\uD83D\uDDA8 Cetak / Simpan sebagai PDF';btn.disabled=false;btn.style.background='#1B8A4C';}},10000);})();<\/script>
+</body></html>`);
+  pw.document.close();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SERTIFIKAT PDF
+// ═══════════════════════════════════════════════════════════
+function pilihanTema() {
+  let box = document.getElementById('tema-box');
+  box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+}
+function unduhPDF(tema) {
+  if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') { alert('Library PDF belum siap.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const W=297, H=210;
+  let clrP, clrA, clrBg, clrBd;
+  if (tema==='hijau')     { clrP=[27,138,76];  clrA=[19,97,53];   clrBg=[240,255,245]; clrBd=[26,180,100]; }
+  else if (tema==='ungu') { clrP=[142,36,170]; clrA=[106,27,154]; clrBg=[248,240,255]; clrBd=[171,71,188]; }
+  else                    { clrP=[10,53,102];  clrA=[10,53,102];  clrBg=[240,247,255]; clrBd=[26,115,232]; }
+  doc.setFillColor(...clrBg); doc.rect(0,0,W,H,'F');
+  doc.setDrawColor(...clrA); doc.setLineWidth(3); doc.rect(8,8,W-16,H-16);
+  doc.setLineWidth(1); doc.setDrawColor(...clrBd); doc.rect(12,12,W-24,H-24);
+  doc.setFillColor(...clrP); doc.rect(0,0,W,48,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('SERTIFIKAT KEIKUTSERTAAN UJIAN', W/2, 13, {align:'center'});
+  doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text('CBT SEKOLAH', W/2, 27, {align:'center'});
+  doc.setFontSize(11); doc.setFont('helvetica','normal');
+  doc.text(JUDUL, W/2, 38, {align:'center'});
+  doc.setTextColor(80,80,80); doc.setFontSize(11); doc.setFont('helvetica','italic');
+  doc.text('Diberikan kepada:', W/2, 60, {align:'center'});
+  doc.setFontSize(28); doc.setFont('helvetica','bold'); doc.setTextColor(...clrP);
+  doc.text(namaSiswa.toUpperCase(), W/2, 75, {align:'center'});
+  doc.setFontSize(12); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+  doc.text('Kelas ' + kelasInput, W/2, 85, {align:'center'});
+  doc.setDrawColor(...clrP); doc.setLineWidth(0.8); doc.line(60,91,W-60,91);
+  doc.setLineWidth(0.3); doc.setDrawColor(...clrBd); doc.line(80,93,W-80,93);
+  let { nilai, poinD, poinM, benar, salah } = hitungNilai();
+  let predTxt = nilai>=90?'Sangat Baik':nilai>=75?'Baik':nilai>=60?'Cukup':'Terus Semangat';
+  doc.setFillColor(...clrP); doc.roundedRect(W/2-35,98,70,38,6,6,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(34); doc.setFont('helvetica','bold');
+  doc.text(String(nilai), W/2, 121, {align:'center'});
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('NILAI PG', W/2, 129, {align:'center'});
+  doc.setTextColor(...clrP); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text(predTxt, W/2, 148, {align:'center'});
+  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+  doc.text('Poin: '+poinD+' / '+poinM+'   |   Benar: '+benar+'   |   Salah: '+salah, W/2, 159, {align:'center'});
+  let tgl = tSelesai ? tSelesai.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) : '';
+  doc.setFontSize(9); doc.setTextColor(130,130,130);
+  doc.text('Tanggal: '+tgl, W/2, 167, {align:'center'});
+  doc.setFillColor(...clrP); doc.rect(0,H-18,W,18,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('CBT Sekolah  |  Dokumen digenerate otomatis', W/2, H-6, {align:'center'});
+  doc.save('Sertifikat_' + namaSiswa.replace(/\s+/g,'_') + '.pdf');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HELPER
+// ═══════════════════════════════════════════════════════════
+function getSoal()  { return soalData[idx]; }
+function isEsai(no) { return soalData.find(s => s.no === no)?.tipe === 'esai'; }
+function isUrl(s)   { return s && (s.startsWith('http://') || s.startsWith('https://')); }
+function gdrive(u) {
+  if (!u) return u;
+  let id = u.match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1]
+           || u.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/)?.[1]
+           || u.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+  return id ? 'https://drive.google.com/thumbnail?id='+id+'&sz=s4000' : u;
+}
+function applyZoom() { document.getElementById('img-soal').style.width = (zoom*100)+'%'; }
+function zoomIn()    { zoom = Math.min(zoom+.25, 4); applyZoom(); }
+function zoomOut()   { zoom = Math.max(zoom-.25, 1); applyZoom(); }
+function resetZoom() { zoom=1; applyZoom(); let w=document.querySelector('.img-scroll'); if(w){w.scrollTop=0;w.scrollLeft=0;} }
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('wheel', e => { if(e.ctrlKey) e.preventDefault(); }, { passive:false });
+function fullscreen() { let el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }
+function antiCheat() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !ujianSelesai) {
+      pelanggar++;
+      if (pelanggar >= MAKS_P) { alert('Terlalu sering pindah tab. Ujian dihentikan!'); selesaiFinal(); }
+      else { alert(`PERINGATAN! Keluar halaman terdeteksi (${pelanggar}/${MAKS_P}). Sisa: ${MAKS_P-pelanggar}`); fullscreen(); }
+    }
+  });
+}
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key==='F12') { e.preventDefault(); alert('Dilarang!'); }
+  if (e.ctrlKey && e.key==='u') { e.preventDefault(); alert('Dilarang!'); }
+  if (e.ctrlKey && e.key==='s') e.preventDefault();
+});
+</script>
+</body>
+</html>
