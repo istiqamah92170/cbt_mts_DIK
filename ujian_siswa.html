@@ -891,20 +891,39 @@ function selesaiFinal() {
       }
     });
 
-    // Kirim batch jawaban
-    await kirimPost({ action:'simpanJawabanBatch', id_sesi:ID_SESI, items });
-
-    // Kirim rekap akhir
     let h = hitungNilai();
-    await kirimPost({
+    let rekapPayload = {
       action:'rekapAkhir', id_sesi:ID_SESI,
       siswa:namaSiswa, kelas:kelasInput,
       nilai:h.nilai, poin_dapat:h.poinD, poin_max:h.poinM,
       benar:h.benar, salah:h.salah, esai:h.esaiC,
       pelanggaran:pelanggar,
       waktu_mulai:tMulai?.toISOString(), waktu_selesai:tSelesai?.toISOString()
-    });
-    console.log('Jawaban & rekap berhasil dikirim ke server.');
+    };
+
+    // Strategi: kirim via no-cors POST (utama) + GET (backup) untuk pastikan data masuk
+    try {
+      // Kirim jawaban batch via POST (no-cors)
+      await kirimPost({ action:'simpanJawabanBatch', id_sesi:ID_SESI, items });
+      // Kirim rekap via POST (no-cors)
+      await kirimPost(rekapPayload);
+      console.log('Data terkirim via POST.');
+    } catch(e) {
+      console.warn('POST gagal, coba GET backup:', e);
+    }
+
+    // Kirim rekap via GET sebagai backup (bisa dibaca response-nya)
+    try {
+      let p = new URLSearchParams();
+      Object.keys(rekapPayload).forEach(k => {
+        let v = rekapPayload[k];
+        p.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v||''));
+      });
+      await fetch(URL_SERVER + '?' + p.toString(), { redirect:'follow' });
+      console.log('Rekap backup GET terkirim.');
+    } catch(e) {
+      console.warn('GET backup juga gagal:', e);
+    }
   })();
 }
 
