@@ -553,7 +553,7 @@ async function muatSoal() {
     // Tampilkan info sesi di login
     let infoEl = document.getElementById('info-sesi');
     infoEl.style.display = 'block';
-    infoEl.textContent   = '&#128196; ' + cek.mapel + ' — Kelas ' + cek.kelas + ' — ' + cek.kode_soal;
+    infoEl.innerHTML = '📄 ' + cek.mapel + ' — Kelas ' + cek.kelas + ' — ' + cek.kode_soal;
 
     // Hitung sisa waktu dari server
     const sisaDetik = parseInt(cek.sisa_detik) || 0;
@@ -586,7 +586,9 @@ async function muatSoal() {
     }
 
     // Isi state dari data soal
-    tokenSheet = (data.token || '').trim().toUpperCase();
+    // token_siswa = token sesi yang di-generate guru (dari GAS_Server_CBT)
+    // tokenSheet  = token di spreadsheet guru (untuk reset device)
+    tokenSheet = (cek.token_siswa || data.token || '').trim().toUpperCase();
     resetToken = (data.reset_token || data.token || '').trim().toUpperCase();
     DURASI     = sisaDetik; // pakai sisa detik dari server (lebih akurat)
     JUDUL      = data.judul || ('CBT ' + data.mapel + ' — Kelas ' + cek.kelas);
