@@ -538,15 +538,16 @@ var URL_UJIAN  = 'https://istiqamah92170.github.io/cbt_mts_DIK/ujian_siswa.html'
 //  State
 // ══════════════════════════════════════════════════════════════
 var state = {
-  guru        : null,   // data guru setelah login
-  sesi        : null,   // sesi aktif
-  kodeList    : [],     // daftar kode soal dari GAS guru
-  kodeSelected: null,
-  esaiData    : null,
-  esaiIdx     : 0,
-  analisis    : null,
-  nilaiArr    : [],     // buffer nilai esai
-  timerInt    : null
+  guru          : null,   // data guru setelah login
+  sesi          : null,   // sesi aktif
+  kodeList      : [],     // daftar kode soal dari GAS guru
+  kodeSelected  : null,
+  esaiData      : null,
+  esaiIdx       : 0,
+  analisis      : null,
+  nilaiArr      : [],     // buffer nilai esai belum disimpan
+  nilaiTersimpan: {},     // nilai esai yang sudah tersimpan ke server {row_idx: nilai}
+  timerInt      : null
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -596,7 +597,7 @@ function masukDashboard() {
 function doLogout() {
   if(state.timerInt) clearInterval(state.timerInt);
   sessionStorage.removeItem('cbt_guru');
-  state = { guru:null,sesi:null,kodeList:[],kodeSelected:null,esaiData:null,esaiIdx:0,analisis:null,nilaiArr:[],timerInt:null };
+  state = { guru:null,sesi:null,kodeList:[],kodeSelected:null,esaiData:null,esaiIdx:0,analisis:null,nilaiArr:[],nilaiTersimpan:{},timerInt:null };
   document.getElementById('screen-app').style.display   = 'none';
   document.getElementById('screen-login').style.display = 'flex';
   document.getElementById('inp-id').value = '';
@@ -778,14 +779,18 @@ async function konfirmasiSelesai() {
   try {
     var resp = await postServer({ action:'selesaiSesi', id_sesi:state.sesi.id_sesi, id_guru:state.guru.id_guru });
     if(resp.status !== 'ok') throw new Error(resp.msg);
-    state.analisis = resp.analisis;
-    state.sesi     = null;
+    state.analisis       = resp.analisis;
+    state.analisis.link_arsip = resp.link_arsip || '';
+    state.sesi           = null;
+    state.nilaiTersimpan = {};
+    state.nilaiArr       = [];
     document.getElementById('sesi-aktif-box').style.display  = 'none';
     document.getElementById('hasil-generate').style.display  = 'none';
     if(state.timerInt) clearInterval(state.timerInt);
-    showToast('Sesi selesai! Arsip tersimpan.', 'success');
     document.getElementById('dot-monitor').classList.remove('show');
     document.getElementById('dot-esai').classList.remove('show');
+    showToast('Sesi selesai! Arsip tersimpan.', 'success');
+    // Auto pindah ke tab Hasil & Analisis
     switchTab('hasil');
   } catch(e) {
     showToast('Gagal: ' + e.message, 'error');
@@ -838,15 +843,21 @@ function renderEsai(data) {
   d.siswa.forEach(function(s, i) {
     var div = document.createElement('div');
     div.className = 'jawaban-item';
-    var saved = state.nilaiArr.find(function(n){ return n.row_idx===s.row_idx; });
-    var nilaiVal = saved ? saved.nilai : (s.poin_dapat !== '' && s.poin_dapat !== null ? s.poin_dapat : '');
+    // Prioritas: buffer belum simpan → sudah tersimpan ke server → dari data server
+    var buffered  = state.nilaiArr.find(function(n){ return n.row_idx===s.row_idx; });
+    var tersimpan = (state.nilaiTersimpan && state.nilaiTersimpan[s.row_idx] !== undefined)
+                    ? state.nilaiTersimpan[s.row_idx] : null;
+    var nilaiVal  = buffered   ? buffered.nilai
+                  : tersimpan !== null ? tersimpan
+                  : (s.poin_dapat !== '' && s.poin_dapat !== null ? s.poin_dapat : '');
     div.innerHTML =
       '<div><div class="siswa-nama">' + esc(s.nama) + '</div>'
       + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Poin maks: ' + d.poin_max + '</div></div>'
       + '<div class="jawaban-teks">' + esc(s.jawaban) + '</div>'
       + '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
-      + '<input type="number" class="nilai-input" min="0" max="' + d.poin_max + '" placeholder="0" value="' + nilaiVal + '" data-row="' + s.row_idx + '" data-max="' + d.poin_max + '" oninput="bufferNilai(this)">'
+      + '<input type="number" class="nilai-input" min="0" max="' + d.poin_max + '" placeholder="0" value="' + nilaiVal + '" data-row="' + s.row_idx + '" data-max="' + d.poin_max + '" oninput="bufferNilai(this)" style="border-color:' + (nilaiVal !== '' ? 'var(--green)' : '') + '">'
       + '<div style="font-size:10px;color:var(--ink3)">/ ' + d.poin_max + '</div>'
+      + '<div style="font-size:10px;color:var(--green)">' + (nilaiVal !== '' ? '✓ tersimpan' : '') + '</div>'
       + '</div>';
     list.appendChild(div);
   });
@@ -859,6 +870,8 @@ function bufferNilai(inp) {
   var idx   = state.nilaiArr.findIndex(function(n){ return n.row_idx===row; });
   if(idx >= 0) state.nilaiArr[idx].nilai = nilai;
   else         state.nilaiArr.push({ row_idx:row, nilai:nilai });
+  // Tandai input sudah diisi (border hijau)
+  inp.style.borderColor = nilai > 0 ? 'var(--green)' : '';
 }
 
 async function navSoalEsai(dir) {
@@ -872,10 +885,18 @@ async function navSoalEsai(dir) {
 async function simpanSemuaNilai() {
   if(state.nilaiArr.length === 0){ showToast('Belum ada nilai yang diinput', 'error'); return; }
   try {
+    // Simpan nilai ke server
     var resp = await postServer({ action:'simpanNilaiEsai', id_sesi:state.sesi.id_sesi, nilai_arr:state.nilaiArr });
     if(resp.status !== 'ok') throw new Error(resp.msg);
-    showToast('Nilai tersimpan (' + resp.updated + ' jawaban)', 'success');
+    // Simpan ke state lokal supaya tidak hilang saat navigasi soal
+    state.nilaiArr.forEach(function(item) {
+      if(!state.nilaiTersimpan) state.nilaiTersimpan = {};
+      state.nilaiTersimpan[item.row_idx] = item.nilai;
+    });
     state.nilaiArr = [];
+    showToast('Nilai tersimpan (' + resp.updated + ' jawaban)', 'success');
+    // Reload data esai agar tampil nilai yang sudah tersimpan
+    await loadSoalEsai(state.esaiIdx);
   } catch(e) { showToast('Gagal simpan: '+e.message, 'error'); }
 }
 
@@ -924,9 +945,12 @@ function loadAnalisis() {
       +'<div class="top3-nilai">'+t.nilai+'</div></div>';
   }).join('');
   // Arsip link
-  if(a.link_arsip) {
-    document.getElementById('arsip-link-btn').href = a.link_arsip;
+  var linkArsip = a.link_arsip || '';
+  if(linkArsip) {
+    document.getElementById('arsip-link-btn').href = linkArsip;
     document.getElementById('arsip-link-box').style.display = 'block';
+  } else {
+    document.getElementById('arsip-link-box').style.display = 'none';
   }
 }
 
