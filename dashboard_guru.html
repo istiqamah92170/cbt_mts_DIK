@@ -547,7 +547,9 @@ async function doLogin() {
   btn.textContent = 'Memeriksa...'; btn.disabled = true;
   try {
     var url  = URL_SERVER + '?action=loginGuru&id_guru=' + encodeURIComponent(id) + '&password=' + encodeURIComponent(pass);
+    console.log('Login attempt:', id);
     var data = await gasGet(url);
+    console.log('Login response:', JSON.stringify(data).substring(0,150));
     if(data.status !== 'ok'){ showErr(err, data.msg || 'Login gagal.'); return; }
     state.guru = data;
     localStorage.setItem('cbt_guru', JSON.stringify(data));
@@ -602,11 +604,20 @@ async function loadKodeSoal() {
   document.getElementById('kode-loading').style.display = 'flex';
   document.getElementById('kode-grid').style.display    = 'none';
   try {
-    var url  = URL_SERVER + '?action=getDaftarKode&id_guru=' + state.guru.id_guru;
+    var url  = URL_SERVER + '?action=getDaftarKode&id_guru=' + encodeURIComponent(state.guru.id_guru);
+    console.log('loadKodeSoal:', url.substring(0,100));
     var data = await gasGet(url);
+    console.log('loadKodeSoal response:', JSON.stringify(data).substring(0,150));
+    if(data.status !== 'ok') throw new Error(data.msg || 'Status error');
     state.kodeList = data.kode_list || [];
     renderKodeGrid();
-  } catch(e) { showToast('Gagal memuat daftar soal', 'error'); }
+  } catch(e) {
+    console.error('loadKodeSoal error:', e.message);
+    showToast('Gagal muat soal: ' + e.message, 'error');
+    document.getElementById('kode-loading').style.display = 'none';
+    document.getElementById('kode-grid').style.display = 'flex';
+    document.getElementById('kode-grid').innerHTML = '<div style="font-size:13px;color:var(--red);padding:8px">Error: ' + e.message + '<br><small>Cek Console untuk detail</small></div>';
+  }
   document.getElementById('kode-loading').style.display = 'none';
   document.getElementById('kode-grid').style.display    = 'flex';
 }
@@ -789,7 +800,13 @@ async function loadStatusSesi() {
         document.getElementById('sm-siswa').textContent = sesiAktif.jumlah_siswa || 0;
       }
     }
-  } catch(e) { showToast('Gagal refresh status: ' + e.message, 'error'); }
+  } catch(e) {
+    console.warn('loadStatusSesi error:', e.message);
+    // Hanya tampilkan toast jika dipanggil manual (bukan otomatis saat login)
+    if(e.message && e.message.indexOf('Timeout') < 0) {
+      showToast('Status sesi: ' + e.message, 'error');
+    }
+  }
 }
 
 // Buka tab koreksi esai langsung untuk sesi tertentu dari monitor
@@ -1033,15 +1050,41 @@ function statBox(num, lbl, cls) {
 // ══════════════════════════════════════════════════════════════
 //  HELPER
 // ══════════════════════════════════════════════════════════════
-function gasGet(url) {
+function gasGet(url, retryCount) {
+  retryCount = retryCount || 0;
   return new Promise(function(resolve, reject) {
     var cbName = 'cb_' + Math.random().toString(36).slice(2,10);
     var script = document.createElement('script');
-    var tid = setTimeout(function(){ cleanup(); reject(new Error('Timeout 20s')); }, 20000);
-    function cleanup(){ clearTimeout(tid); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
+    var tid = setTimeout(function(){
+      cleanup();
+      if (retryCount < 2) {
+        console.warn('gasGet timeout, retry ' + (retryCount+1));
+        gasGet(url, retryCount+1).then(resolve).catch(reject);
+      } else {
+        reject(new Error('Timeout setelah 3 percobaan'));
+      }
+    }, 20000);
+    function cleanup(){
+      clearTimeout(tid);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
     window[cbName] = function(data){ cleanup(); resolve(data); };
-    script.src = url + (url.indexOf('?')>=0?'&':'?') + 'callback=' + cbName;
-    script.onerror = function(){ cleanup(); reject(new Error('GAS tidak dapat diakses')); };
+    // Tambah timestamp agar tidak kena cache browser
+    var sep = url.indexOf('?') >= 0 ? '&' : '?';
+    script.src = url + sep + 'callback=' + cbName + '&_t=' + Date.now();
+    console.log('gasGet:', script.src.substring(0,100));
+    script.onerror = function(){
+      cleanup();
+      console.error('gasGet onerror:', url.substring(0,80));
+      if (retryCount < 2) {
+        setTimeout(function(){
+          gasGet(url, retryCount+1).then(resolve).catch(reject);
+        }, 2000);
+      } else {
+        reject(new Error('GAS tidak dapat diakses setelah 3 percobaan'));
+      }
+    };
     document.head.appendChild(script);
   });
 }
