@@ -510,7 +510,7 @@ a{color:var(--accent);text-decoration:none}
 // ══════════════════════════════════════════════════════════════
 //  KONFIGURASI — ganti URL sesuai deploy GAS_Server_CBT
 // ══════════════════════════════════════════════════════════════
-var URL_SERVER = 'https://script.google.com/macros/s/AKfycbwBHAtspEtqegp8IdqZGP-9pXEX6Jw1deggyf7fUPoTlg3PzQ1gsYRbOuK_Fz-TdY6SqQ/exec';
+var URL_SERVER = 'https://script.google.com/macros/s/AKfycbw6lUJeXuAGydnYMGY_-BnW8wpi6O7RYdyF1RMdorJRo-ZJ8MJd_Y8Up0GbVN1VGNjflw/exec';
 var URL_UJIAN  = 'https://istiqamah92170.github.io/cbt_mts_DIK/ujian_siswa.html';   // path ke file HTML ujian siswa
 
 // ══════════════════════════════════════════════════════════════
@@ -547,8 +547,7 @@ async function doLogin() {
   btn.textContent = 'Memeriksa...'; btn.disabled = true;
   try {
     var url  = URL_SERVER + '?action=loginGuru&id_guru=' + encodeURIComponent(id) + '&password=' + encodeURIComponent(pass);
-    var resp = await fetch(url);
-    var data = await resp.json();
+    var data = await gasGet(url);
     if(data.status !== 'ok'){ showErr(err, data.msg || 'Login gagal.'); return; }
     state.guru = data;
     localStorage.setItem('cbt_guru', JSON.stringify(data));
@@ -604,8 +603,7 @@ async function loadKodeSoal() {
   document.getElementById('kode-grid').style.display    = 'none';
   try {
     var url  = URL_SERVER + '?action=getDaftarKode&id_guru=' + state.guru.id_guru;
-    var resp = await fetch(url);
-    var data = await resp.json();
+    var data = await gasGet(url);
     state.kodeList = data.kode_list || [];
     renderKodeGrid();
   } catch(e) { showToast('Gagal memuat daftar soal', 'error'); }
@@ -717,8 +715,7 @@ async function loadStatusSesi() {
   if(!state.guru) return;
   try {
     var url  = URL_SERVER + '?action=getStatusSesi&id_guru=' + state.guru.id_guru;
-    var resp = await fetch(url);
-    var data = await resp.json();
+    var data = await gasGet(url);
 
     if(!data.ada_sesi || !data.sesi_list || data.sesi_list.length === 0) {
       document.getElementById('monitor-nosesi').style.display = 'block';
@@ -892,8 +889,7 @@ function gantiSesiEsai(idSesi) {
 async function loadSoalEsai(idx) {
   var sesiId = state.esaiSesiId || (state.sesi ? state.sesi.id_sesi : '');
   var url  = URL_SERVER + '?action=getKoreksiEsai&id_sesi=' + encodeURIComponent(sesiId) + '&idx_soal=' + idx;
-  var resp = await fetch(url);
-  var data = await resp.json();
+  var data = await gasGet(url);
   if(!data.ada_esai) {
     document.getElementById('esai-nosesi').style.display = 'block';
     document.getElementById('esai-panel').style.display  = 'none';
@@ -1037,18 +1033,26 @@ function statBox(num, lbl, cls) {
 // ══════════════════════════════════════════════════════════════
 //  HELPER
 // ══════════════════════════════════════════════════════════════
+function gasGet(url) {
+  return new Promise(function(resolve, reject) {
+    var cbName = 'cb_' + Math.random().toString(36).slice(2,10);
+    var script = document.createElement('script');
+    var tid = setTimeout(function(){ cleanup(); reject(new Error('Timeout 20s')); }, 20000);
+    function cleanup(){ clearTimeout(tid); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
+    window[cbName] = function(data){ cleanup(); resolve(data); };
+    script.src = url + (url.indexOf('?')>=0?'&':'?') + 'callback=' + cbName;
+    script.onerror = function(){ cleanup(); reject(new Error('GAS tidak dapat diakses')); };
+    document.head.appendChild(script);
+  });
+}
 async function postServer(body) {
-  // GAS dari GitHub Pages: kirim via GET dengan encoded params
-  // Hapus redirect:follow — biarkan browser handle default (lebih aman cross-origin)
+  // Kirim via JSONP — satu-satunya cara lolos CORS GAS dari GitHub Pages
   var params = new URLSearchParams();
   Object.keys(body).forEach(function(k) {
     var v = body[k];
     params.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   });
-  var resp = await fetch(URL_SERVER + '?' + params.toString());
-  var text = await resp.text();
-  try { return JSON.parse(text); }
-  catch(e) { throw new Error('Response GAS tidak valid: ' + text.substring(0,80)); }
+  return gasGet(URL_SERVER + '?' + params.toString());
 }
 
 function copyToken() {
