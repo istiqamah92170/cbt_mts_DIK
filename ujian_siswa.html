@@ -566,22 +566,30 @@ async function muatSoal() {
     // Step 2: ambil soal dari GAS_Soal_Guru via url_gas_guru
     const urlGasGuru = cek.url_gas_guru || '';
     if (!urlGasGuru) {
-      setBar('error', '&#9888; URL GAS guru tidak ditemukan.');
+      setBar('error', '&#9888; URL GAS guru tidak ditemukan. Hubungi admin sekolah.');
+      tampilTombolRefresh('URL GAS guru kosong.');
       return;
     }
 
     setOverlay('Mengambil soal dari server guru...');
-    // Ambil kode soal dari ID sesi: format G01_UTS1_ddMMyyHHmm
-    const kodeSoal = ID_SESI.split('_')[1] || '';
+    // Ambil kode soal dari response cekSesi (lebih andal dari parsing id_sesi)
+    const kodeSoal = cek.kode_soal || ID_SESI.split('_')[1] || '';
+    if (!kodeSoal) {
+      setBar('error', '&#9888; Kode soal tidak ditemukan.');
+      tampilTombolRefresh('Kode soal kosong. Hubungi guru.');
+      return;
+    }
     const soalResp = await fetchRetry(
       urlGasGuru + '?action=getDataSoal&kode=' + encodeURIComponent(kodeSoal),
       {}, TIMEOUT_MS, MAX_RETRY
     );
     const data = await soalResp.json();
 
+    console.log('Response GAS guru:', data.status, 'jumlah soal:', data.soal ? data.soal.length : 0);
     if (data.status !== 'ok' || !Array.isArray(data.soal) || data.soal.length === 0) {
-      setBar('error', '&#9888; Soal belum tersedia. Hubungi guru.');
-      tampilTombolRefresh('Data soal kosong. Hubungi guru atau coba refresh.');
+      var pesanErr = data.msg || 'Data soal kosong.';
+      setBar('error', '&#9888; ' + pesanErr + ' Hubungi guru.');
+      tampilTombolRefresh(pesanErr + ' Coba refresh atau hubungi guru.');
       return;
     }
 
