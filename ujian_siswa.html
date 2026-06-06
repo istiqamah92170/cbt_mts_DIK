@@ -400,12 +400,14 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--gray-bg);color:
 // ═══════════════════════════════════════════════════════════
 const params    = new URLSearchParams(window.location.search);
 const ID_SESI   = params.get('sesi')   || '';
-const URL_SERVER= params.get('server') || '';
+// URL_SERVER diambil dari parameter ATAU dari response cekSesi (lebih andal)
+// Parameter 'server' mungkin terpotong saat dibagikan via WA — cekSesi jadi backup
+let   URL_SERVER= params.get('server') || '';
 
-// Fallback untuk testing langsung tanpa parameter
-// Ganti dua baris ini jika ingin testing hardcode:
+// Hardcode URL GAS Server di sini sebagai fallback utama
+// Ganti jika ingin testing langsung:
 // const ID_SESI    = 'G01_UTS1_010726XXXX';
-// const URL_SERVER = 'https://script.google.com/macros/s/XXXXX/exec';
+const URL_GAS_FALLBACK = 'https://script.google.com/macros/s/AKfycbw6lUJeXuAGydnYMGY_-BnW8wpi6O7RYdyF1RMdorJRo-ZJ8MJd_Y8Up0GbVN1VGNjflw/exec';  // ← GANTI dengan URL /exec GAS Server jika perlu
 
 const TIMEOUT_MS = 15000;
 const MAX_RETRY  = 2;
@@ -561,11 +563,26 @@ async function muatSoal() {
 
   // Step 1: cek sesi valid dari server
   try {
+    // Jika URL_SERVER dari parameter terlalu pendek (terpotong), pakai fallback
+    if (!URL_SERVER || URL_SERVER.length < 30) {
+      URL_SERVER = URL_GAS_FALLBACK;
+    }
+    if (!URL_SERVER) {
+      setBar('error', '&#9888; URL server tidak valid. Minta link baru dari guru.');
+      tampilTombolRefresh('URL server kosong.');
+      return;
+    }
+
     const cekResp = await fetchRetry(
       URL_SERVER + '?action=cekSesi&id_sesi=' + encodeURIComponent(ID_SESI),
       {}, TIMEOUT_MS, MAX_RETRY
     );
     const cek = await cekResp.json();
+    // Ambil url_server dari response jika ada (lebih andal dari parameter URL)
+    if (cek.url_server && cek.url_server.length > 30) {
+      URL_SERVER = cek.url_server;
+      console.log('URL_SERVER dari cekSesi:', URL_SERVER.substring(0,80));
+    }
     if (cek.status !== 'ok') {
       setBar('error', '&#9888; ' + (cek.msg || 'Sesi tidak valid atau sudah berakhir.'));
       tampilTombolRefresh(cek.msg || 'Sesi tidak valid.');
