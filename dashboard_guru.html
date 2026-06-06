@@ -431,7 +431,10 @@ a{color:var(--accent);text-decoration:none}
       <div id="esai-panel" style="display:none">
         <div class="card">
           <div class="card-head">
-            <div class="card-title">Koreksi Jawaban Esai</div>
+            <div>
+              <div class="card-title">Koreksi Jawaban Esai</div>
+              <div id="esai-sesi-label" style="font-size:11px;color:var(--ink3);font-family:var(--mono);margin-top:2px"></div>
+            </div>
             <button class="btn btn-success btn-sm" onclick="simpanSemuaNilai()">Simpan Semua Nilai</button>
           </div>
           <div class="card-body">
@@ -743,45 +746,53 @@ async function loadStatusSesi() {
     // Simpan semua sesi ke state
     state.sesiList = data.sesi_list;
 
-    // Render kartu per sesi
-    var html = '';
-    var adaEsaiBelum = false;
-    data.sesi_list.forEach(function(s) {
-      var statusBerlangsung = s.status_sesi === 'berlangsung';
+    // Pisah sesi aktif vs selesai
+    var sesiAktifList   = data.sesi_list.filter(function(s){ return s.status_sesi === 'berlangsung'; });
+    var sesiSelesaiList = data.sesi_list.filter(function(s){ return s.status_sesi !== 'berlangsung'; });
+    var adaEsaiBelum    = false;
+
+    function buatKartuSesi(s) {
+      var berlangsung = s.status_sesi === 'berlangsung';
       var sisaM = Math.floor((s.sisa_detik || 0) / 60);
       var sisaS = (s.sisa_detik || 0) % 60;
-      var sisaTxt = statusBerlangsung
-        ? (String(sisaM).padStart(2,'0') + ':' + String(sisaS).padStart(2,'0') + ' mnt')
-        : '—';
-      var badgeHtml = statusBerlangsung
+      var sisaTxt = berlangsung ? (String(sisaM).padStart(2,'0') + ':' + String(sisaS).padStart(2,'0')) : '—';
+      var badgeHtml = berlangsung
         ? '<span class="badge badge-green" style="font-size:10px"><span class="dot"></span> Berlangsung</span>'
         : '<span class="badge badge-gray" style="font-size:10px">&#9632; Selesai</span>';
       if(s.esai_belum > 0) adaEsaiBelum = true;
-
-      html += '<div class="card" style="margin-bottom:12px">'
+      var h = '<div class="card" style="margin-bottom:10px">'
         + '<div class="card-head">'
-        + '<div><div class="card-title">' + esc(s.mapel) + ' — Kelas ' + esc(s.kelas) + '</div>'
-        + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + esc(s.kode_soal) + '</div></div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div class="card-title">' + esc(s.mapel) + ' — Kelas ' + esc(s.kelas) + '</div>'
+        + '<div style="font-size:10px;color:var(--ink3);margin-top:2px;font-family:var(--mono)">'
+        + esc(s.kode_soal) + ' &nbsp;|&nbsp; ID: ' + esc(s.id_sesi) + '</div></div>'
         + badgeHtml + '</div>'
         + '<div class="card-body">'
         + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'
-        + '<div class="stat-box accent-box" style="padding:10px"><div class="num" style="font-size:22px">'+ s.jumlah_siswa +'</div><div class="lbl">Submit</div></div>'
-        + '<div class="stat-box" style="padding:10px"><div class="num" style="font-size:16px">'+ sisaTxt +'</div><div class="lbl">Sisa Waktu</div></div>'
-        + '<div class="stat-box' + (s.esai_belum > 0 ? ' red-box' : ' green-box') + '" style="padding:10px"><div class="num" style="font-size:22px">'+ (s.esai_belum||0) +'</div><div class="lbl">Esai Belum</div></div>'
+        + '<div class="stat-box accent-box" style="padding:10px"><div class="num" style="font-size:22px">'+(s.jumlah_siswa||0)+'</div><div class="lbl">Submit</div></div>'
+        + '<div class="stat-box" style="padding:10px"><div class="num" style="font-size:16px">'+sisaTxt+'</div><div class="lbl">Sisa Waktu</div></div>'
+        + '<div class="stat-box'+(s.esai_belum>0?' red-box':' green-box')+'" style="padding:10px"><div class="num" style="font-size:22px">'+(s.esai_belum||0)+'</div><div class="lbl">Esai Belum</div></div>'
         + '</div>'
         + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
         + '<div><div style="font-size:10px;color:var(--ink3)">Token</div>'
-        + '<div style="font-family:var(--mono);font-size:16px;letter-spacing:2px;font-weight:500">' + esc(s.token_siswa) + '</div></div>'
+        + '<div style="font-family:var(--mono);font-size:16px;letter-spacing:2px;font-weight:500">'+esc(s.token_siswa)+'</div></div>'
         + '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+      if(berlangsung) h += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi(\'' + esc(s.id_sesi) + '\')">Selesaikan</button>';
+      if(s.esai_belum > 0) h += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor(\'' + esc(s.id_sesi) + '\')">Koreksi Esai</button>';
+      h += '</div></div></div></div>';
+      return h;
+    }
 
-      if(statusBerlangsung) {
-        html += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi(\'' + esc(s.id_sesi) + '\')" >Selesaikan</button>';
-      }
-      if(s.esai_belum > 0) {
-        html += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor(\'' + esc(s.id_sesi) + '\')" >Koreksi Esai</button>';
-      }
-      html += '</div></div></div></div>';
-    });
+    var html = '';
+    if(sesiAktifList.length > 0) {
+      html += '<div style="font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">&#9654; Sesi Berlangsung ('+sesiAktifList.length+')</div>';
+      sesiAktifList.forEach(function(s){ html += buatKartuSesi(s); });
+    }
+    if(sesiSelesaiList.length > 0) {
+      html += '<details style="margin-top:10px"><summary style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;cursor:pointer;list-style:none;padding:6px 0;border-top:1px solid var(--border)">&#9660; Riwayat Selesai ('+sesiSelesaiList.length+')</summary><div style="margin-top:8px">';
+      sesiSelesaiList.forEach(function(s){ html += buatKartuSesi(s); });
+      html += '</div></details>';
+    }
 
     document.getElementById('mon-sesi-list').innerHTML = html;
 
@@ -893,6 +904,9 @@ async function loadEsai() {
     await loadSoalEsai(state.esaiIdx);
   } catch(e) { showToast('Gagal memuat esai: ' + e.message, 'error'); }
   document.getElementById('esai-loading').style.display = 'none';
+  // Tampilkan ID sesi di header panel koreksi
+  var lbl = document.getElementById('esai-sesi-label');
+  if(lbl) lbl.textContent = state.esaiSesiId ? 'ID Sesi: ' + state.esaiSesiId : '';
 }
 
 function gantiSesiEsai(idSesi) {
@@ -942,11 +956,15 @@ function renderEsai(data) {
       '<div><div class="siswa-nama">' + esc(s.nama) + '</div>'
       + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Poin maks: ' + d.poin_max + '</div></div>'
       + '<div class="jawaban-teks">' + esc(s.jawaban) + '</div>'
-      + '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
-      + '<input type="number" class="nilai-input" min="0" max="' + d.poin_max + '" placeholder="0" value="' + nilaiVal + '" data-row="' + s.row_idx + '" data-max="' + d.poin_max + '" oninput="bufferNilai(this)" style="border-color:' + (nilaiVal !== '' ? 'var(--green)' : '') + '">'
-      + '<div style="font-size:10px;color:var(--ink3)">/ ' + d.poin_max + '</div>'
-      + '<div style="font-size:10px;color:var(--green)">' + (nilaiVal !== '' ? '✓ tersimpan' : '') + '</div>'
-      + '</div>';
+      + (function(){
+        var sudahTersimpan = !!(state.nilaiTersimpan && state.nilaiTersimpan[s.row_idx] !== undefined);
+        var borderColor    = sudahTersimpan ? 'var(--green)' : '';
+        var ceklisHtml     = sudahTersimpan ? '<div style="font-size:10px;color:var(--green)">&#10003; tersimpan</div>' : '';
+        return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
+          + '<input type="number" class="nilai-input" min="0" max="' + d.poin_max + '" placeholder="0" value="' + nilaiVal + '" data-row="' + s.row_idx + '" data-max="' + d.poin_max + '" oninput="bufferNilai(this)" style="border-color:' + borderColor + '">'
+          + '<div style="font-size:10px;color:var(--ink3)">/ ' + d.poin_max + '</div>'
+          + ceklisHtml + '</div>';
+      })();
     list.appendChild(div);
   });
 }
