@@ -767,10 +767,10 @@ async function loadStatusSesi() {
         + '<div style="display:flex;gap:6px;flex-wrap:wrap">';
 
       if(statusBerlangsung) {
-        html += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi('' + esc(s.id_sesi) + '')">Selesaikan</button>';
+        html += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi(\'' + esc(s.id_sesi) + '\')" >Selesaikan</button>';
       }
       if(s.esai_belum > 0) {
-        html += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor('' + esc(s.id_sesi) + '')">Koreksi Esai</button>';
+        html += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor(\'' + esc(s.id_sesi) + '\')" >Koreksi Esai</button>';
       }
       html += '</div></div></div></div>';
     });
@@ -803,8 +803,7 @@ function bukaEsaiDariMonitor(idSesi) {
 
 // Selesaikan sesi tertentu (bisa dipanggil dari monitor multi-sesi)
 async function konfirmasiSelesaiSesi(idSesi) {
-  if(!confirm('Selesaikan sesi ' + idSesi + '?
-Pastikan semua esai sudah dikoreksi.')) return;
+  if(!confirm('Selesaikan sesi ' + idSesi + '? Pastikan semua esai sudah dikoreksi.')) return;
   try {
     var resp = await postServer({ action:'selesaiSesi', id_sesi:idSesi, id_guru:state.guru.id_guru });
     if(resp.status !== 'ok') throw new Error(resp.msg);
