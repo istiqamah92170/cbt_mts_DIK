@@ -403,38 +403,10 @@ a{color:var(--accent);text-decoration:none}
         </div>
       </div>
       <div id="monitor-sesi" style="display:none">
-        <div class="stats-row">
-          <div class="stat-box accent-box">
-            <div class="num" id="mon-total">0</div>
-            <div class="lbl">Total Submit</div>
-          </div>
-          <div class="stat-box green-box">
-            <div class="num" id="mon-tuntas">—</div>
-            <div class="lbl">Est. Tuntas</div>
-          </div>
-          <div class="stat-box">
-            <div class="num" id="mon-sisa">—</div>
-            <div class="lbl">Sisa Waktu</div>
-          </div>
-          <div class="stat-box">
-            <div class="num" id="mon-status-label">—</div>
-            <div class="lbl">Status Sesi</div>
-          </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <button class="btn btn-ghost btn-sm" onclick="loadStatusSesi()">&#8635; Refresh</button>
         </div>
-        <div class="card">
-          <div class="card-head">
-            <div class="card-title">Info Sesi</div>
-            <button class="btn btn-ghost btn-sm" onclick="loadStatusSesi()">&#8635; Refresh</button>
-          </div>
-          <div class="card-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div><span style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:500">Mapel</span><br><strong id="mon-mapel">—</strong></div>
-              <div><span style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:500">Kelas</span><br><strong id="mon-kelas">—</strong></div>
-              <div><span style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:500">Kode Soal</span><br><strong id="mon-kode">—</strong></div>
-              <div><span style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:500">Token</span><br><strong id="mon-token" style="font-family:var(--mono);font-size:15px;letter-spacing:2px">—</strong></div>
-            </div>
-          </div>
-        </div>
+        <div id="mon-sesi-list"></div>
       </div>
     </div>
 
@@ -445,8 +417,15 @@ a{color:var(--accent);text-decoration:none}
         <div class="card-body">
           <div class="empty">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <p>Belum ada sesi selesai atau tidak ada soal esai.</p>
+            <p>Belum ada sesi aktif atau tidak ada soal esai.</p>
           </div>
+        </div>
+      </div>
+      <!-- Pilih sesi jika ada lebih dari 1 -->
+      <div id="esai-sesi-picker" style="display:none;margin-bottom:12px">
+        <div class="field">
+          <label>Pilih Sesi</label>
+          <select id="esai-sesi-select" onchange="gantiSesiEsai(this.value)" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px"></select>
         </div>
       </div>
       <div id="esai-panel" style="display:none">
@@ -539,11 +518,13 @@ var URL_UJIAN  = 'https://istiqamah92170.github.io/cbt_mts_DIK/ujian_siswa.html'
 // ══════════════════════════════════════════════════════════════
 var state = {
   guru          : null,   // data guru setelah login
-  sesi          : null,   // sesi aktif
+  sesi          : null,   // sesi aktif utama (yang di-generate terakhir)
+  sesiList      : [],     // semua sesi aktif guru
   kodeList      : [],     // daftar kode soal dari GAS guru
   kodeSelected  : null,
   esaiData      : null,
   esaiIdx       : 0,
+  esaiSesiId    : null,   // id_sesi yang sedang dikoreksi esainya
   analisis      : null,
   nilaiArr      : [],     // buffer nilai esai belum disimpan
   nilaiTersimpan: {},     // nilai esai yang sudah tersimpan ke server {row_idx: nilai}
@@ -597,7 +578,7 @@ function masukDashboard() {
 function doLogout() {
   if(state.timerInt) clearInterval(state.timerInt);
   sessionStorage.removeItem('cbt_guru');
-  state = { guru:null,sesi:null,kodeList:[],kodeSelected:null,esaiData:null,esaiIdx:0,analisis:null,nilaiArr:[],nilaiTersimpan:{},timerInt:null };
+  state = { guru:null,sesi:null,sesiList:[],kodeList:[],kodeSelected:null,esaiData:null,esaiIdx:0,esaiSesiId:null,analisis:null,nilaiArr:[],nilaiTersimpan:{},timerInt:null };
   document.getElementById('screen-app').style.display   = 'none';
   document.getElementById('screen-login').style.display = 'flex';
   document.getElementById('inp-id').value = '';
@@ -740,34 +721,114 @@ async function loadStatusSesi() {
     var url  = URL_SERVER + '?action=getStatusSesi&id_guru=' + state.guru.id_guru;
     var resp = await fetch(url);
     var data = await resp.json();
-    if(!data.ada_sesi) {
+
+    if(!data.ada_sesi || !data.sesi_list || data.sesi_list.length === 0) {
       document.getElementById('monitor-nosesi').style.display = 'block';
       document.getElementById('monitor-sesi').style.display   = 'none';
+      // Update state.sesi jika sesi sudah tidak ada
+      state.sesi = null;
+      document.getElementById('sesi-aktif-box').style.display = 'none';
       return;
     }
-    state.sesi = data;
+
     document.getElementById('monitor-nosesi').style.display = 'none';
     document.getElementById('monitor-sesi').style.display   = 'block';
-    document.getElementById('mon-total').textContent  = data.jumlah_siswa || 0;
-    document.getElementById('mon-mapel').textContent  = data.mapel  || '—';
-    document.getElementById('mon-kelas').textContent  = data.kelas  || '—';
-    document.getElementById('mon-kode').textContent   = data.kode_soal || '—';
-    document.getElementById('mon-token').textContent  = data.token_siswa || '—';
-    document.getElementById('mon-status-label').textContent = data.status_sesi === 'berlangsung' ? '▶ Aktif' : '■ Selesai';
-    // Sisa waktu
-    if(data.waktu_kunci) {
-      var sisa = Math.max(0, new Date(data.waktu_kunci) - Date.now());
-      var m = Math.floor(sisa/60000);
-      document.getElementById('mon-sisa').textContent = m + ' mnt';
+
+    // Simpan semua sesi ke state
+    state.sesiList = data.sesi_list;
+
+    // Render kartu per sesi
+    var html = '';
+    var adaEsaiBelum = false;
+    data.sesi_list.forEach(function(s) {
+      var statusBerlangsung = s.status_sesi === 'berlangsung';
+      var sisaM = Math.floor((s.sisa_detik || 0) / 60);
+      var sisaS = (s.sisa_detik || 0) % 60;
+      var sisaTxt = statusBerlangsung
+        ? (String(sisaM).padStart(2,'0') + ':' + String(sisaS).padStart(2,'0') + ' mnt')
+        : '—';
+      var badgeHtml = statusBerlangsung
+        ? '<span class="badge badge-green" style="font-size:10px"><span class="dot"></span> Berlangsung</span>'
+        : '<span class="badge badge-gray" style="font-size:10px">&#9632; Selesai</span>';
+      if(s.esai_belum > 0) adaEsaiBelum = true;
+
+      html += '<div class="card" style="margin-bottom:12px">'
+        + '<div class="card-head">'
+        + '<div><div class="card-title">' + esc(s.mapel) + ' — Kelas ' + esc(s.kelas) + '</div>'
+        + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + esc(s.kode_soal) + '</div></div>'
+        + badgeHtml + '</div>'
+        + '<div class="card-body">'
+        + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'
+        + '<div class="stat-box accent-box" style="padding:10px"><div class="num" style="font-size:22px">'+ s.jumlah_siswa +'</div><div class="lbl">Submit</div></div>'
+        + '<div class="stat-box" style="padding:10px"><div class="num" style="font-size:16px">'+ sisaTxt +'</div><div class="lbl">Sisa Waktu</div></div>'
+        + '<div class="stat-box' + (s.esai_belum > 0 ? ' red-box' : ' green-box') + '" style="padding:10px"><div class="num" style="font-size:22px">'+ (s.esai_belum||0) +'</div><div class="lbl">Esai Belum</div></div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+        + '<div><div style="font-size:10px;color:var(--ink3)">Token</div>'
+        + '<div style="font-family:var(--mono);font-size:16px;letter-spacing:2px;font-weight:500">' + esc(s.token_siswa) + '</div></div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+
+      if(statusBerlangsung) {
+        html += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi('' + esc(s.id_sesi) + '')">Selesaikan</button>';
+      }
+      if(s.esai_belum > 0) {
+        html += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor('' + esc(s.id_sesi) + '')">Koreksi Esai</button>';
+      }
+      html += '</div></div></div></div>';
+    });
+
+    document.getElementById('mon-sesi-list').innerHTML = html;
+
+    // Badge dot esai
+    if(adaEsaiBelum) document.getElementById('dot-esai').classList.add('show');
+    else             document.getElementById('dot-esai').classList.remove('show');
+
+    // Sinkron state.sesi dengan sesi pertama yang masih berlangsung
+    var sesiAktif = data.sesi_list.find(function(s){ return s.status_sesi === 'berlangsung'; });
+    if(sesiAktif) {
+      if(!state.sesi || state.sesi.id_sesi !== sesiAktif.id_sesi) {
+        state.sesi = sesiAktif;
+        tampilSesiAktif();
+      } else {
+        // Update jumlah siswa saja
+        document.getElementById('sm-siswa').textContent = sesiAktif.jumlah_siswa || 0;
+      }
     }
-    // Badge esai
-    if(data.esai_belum > 0) {
-      document.getElementById('dot-esai').classList.add('show');
+  } catch(e) { showToast('Gagal refresh status: ' + e.message, 'error'); }
+}
+
+// Buka tab koreksi esai langsung untuk sesi tertentu dari monitor
+function bukaEsaiDariMonitor(idSesi) {
+  state.esaiSesiId = idSesi;
+  switchTab('esai');
+}
+
+// Selesaikan sesi tertentu (bisa dipanggil dari monitor multi-sesi)
+async function konfirmasiSelesaiSesi(idSesi) {
+  if(!confirm('Selesaikan sesi ' + idSesi + '?
+Pastikan semua esai sudah dikoreksi.')) return;
+  try {
+    var resp = await postServer({ action:'selesaiSesi', id_sesi:idSesi, id_guru:state.guru.id_guru });
+    if(resp.status !== 'ok') throw new Error(resp.msg);
+    // Jika ini sesi aktif utama, update state
+    if(state.sesi && state.sesi.id_sesi === idSesi) {
+      state.analisis = resp.analisis;
+      state.analisis.link_arsip = resp.link_arsip || '';
+      state.sesi           = null;
+      state.nilaiTersimpan = {};
+      state.nilaiArr       = [];
+      document.getElementById('sesi-aktif-box').style.display = 'none';
+      document.getElementById('hasil-generate').style.display = 'none';
+      if(state.timerInt) clearInterval(state.timerInt);
     }
-    // Update sm-siswa di buat tab
-    var smSiswa = document.getElementById('sm-siswa');
-    if(smSiswa) smSiswa.textContent = data.jumlah_siswa || 0;
-  } catch(e) { showToast('Gagal refresh status', 'error'); }
+    showToast('Sesi selesai! Arsip tersimpan.', 'success');
+    // Refresh monitor otomatis
+    await loadStatusSesi();
+    // Cek apakah masih ada sesi lain, kalau tidak ada pindah ke hasil
+    if(!state.sesiList || state.sesiList.filter(function(s){return s.status_sesi==='berlangsung';}).length === 0) {
+      if(state.analisis) switchTab('hasil');
+    }
+  } catch(e) { showToast('Gagal: ' + e.message, 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -775,48 +836,65 @@ async function loadStatusSesi() {
 // ══════════════════════════════════════════════════════════════
 async function konfirmasiSelesai() {
   if(!state.sesi || !state.sesi.id_sesi) return;
-  if(!confirm('Selesaikan sesi ujian ini?\nPastikan semua esai sudah dikoreksi sebelum melanjutkan.')) return;
-  try {
-    var resp = await postServer({ action:'selesaiSesi', id_sesi:state.sesi.id_sesi, id_guru:state.guru.id_guru });
-    if(resp.status !== 'ok') throw new Error(resp.msg);
-    state.analisis       = resp.analisis;
-    state.analisis.link_arsip = resp.link_arsip || '';
-    state.sesi           = null;
-    state.nilaiTersimpan = {};
-    state.nilaiArr       = [];
-    document.getElementById('sesi-aktif-box').style.display  = 'none';
-    document.getElementById('hasil-generate').style.display  = 'none';
-    if(state.timerInt) clearInterval(state.timerInt);
-    document.getElementById('dot-monitor').classList.remove('show');
-    document.getElementById('dot-esai').classList.remove('show');
-    showToast('Sesi selesai! Arsip tersimpan.', 'success');
-    // Auto pindah ke tab Hasil & Analisis
-    switchTab('hasil');
-  } catch(e) {
-    showToast('Gagal: ' + e.message, 'error');
-  }
+  await konfirmasiSelesaiSesi(state.sesi.id_sesi);
 }
 
 // ══════════════════════════════════════════════════════════════
 //  KOREKSI ESAI
 // ══════════════════════════════════════════════════════════════
 async function loadEsai() {
-  if(!state.sesi || !state.sesi.id_sesi) {
-    document.getElementById('esai-nosesi').style.display  = 'block';
-    document.getElementById('esai-panel').style.display   = 'none';
+  // Tentukan id_sesi untuk koreksi esai
+  // Prioritas: dari klik monitor (esaiSesiId) → sesi aktif pertama
+  var sesiId = state.esaiSesiId || (state.sesi ? state.sesi.id_sesi : null);
+
+  // Jika belum ada, cari dari sesiList yang masih berlangsung
+  if(!sesiId && state.sesiList && state.sesiList.length > 0) {
+    var aktif = state.sesiList.find(function(s){ return s.status_sesi === 'berlangsung'; });
+    if(aktif) sesiId = aktif.id_sesi;
+  }
+
+  if(!sesiId) {
+    document.getElementById('esai-nosesi').style.display     = 'block';
+    document.getElementById('esai-sesi-picker').style.display = 'none';
+    document.getElementById('esai-panel').style.display       = 'none';
     return;
   }
+
+  state.esaiSesiId = sesiId;
+
+  // Tampilkan picker jika ada lebih dari 1 sesi
+  if(state.sesiList && state.sesiList.length > 1) {
+    var sel = document.getElementById('esai-sesi-select');
+    sel.innerHTML = state.sesiList.map(function(s){
+      return '<option value="'+ esc(s.id_sesi) +'"'+ (s.id_sesi===sesiId?' selected':'') +'>'
+        + esc(s.mapel) + ' — Kelas ' + esc(s.kelas) + ' (' + esc(s.kode_soal) + ')</option>';
+    }).join('');
+    document.getElementById('esai-sesi-picker').style.display = 'block';
+  } else {
+    document.getElementById('esai-sesi-picker').style.display = 'none';
+  }
+
   document.getElementById('esai-loading').style.display = 'flex';
   document.getElementById('esai-nosesi').style.display   = 'none';
   document.getElementById('esai-panel').style.display    = 'none';
   try {
+    state.esaiIdx = 0;
     await loadSoalEsai(state.esaiIdx);
-  } catch(e) { showToast('Gagal memuat esai', 'error'); }
+  } catch(e) { showToast('Gagal memuat esai: ' + e.message, 'error'); }
   document.getElementById('esai-loading').style.display = 'none';
 }
 
+function gantiSesiEsai(idSesi) {
+  state.esaiSesiId = idSesi;
+  state.esaiIdx    = 0;
+  state.nilaiTersimpan = {};
+  state.nilaiArr       = [];
+  loadEsai();
+}
+
 async function loadSoalEsai(idx) {
-  var url  = URL_SERVER + '?action=getKoreksiEsai&id_sesi=' + encodeURIComponent(state.sesi.id_sesi) + '&idx_soal=' + idx;
+  var sesiId = state.esaiSesiId || (state.sesi ? state.sesi.id_sesi : '');
+  var url  = URL_SERVER + '?action=getKoreksiEsai&id_sesi=' + encodeURIComponent(sesiId) + '&idx_soal=' + idx;
   var resp = await fetch(url);
   var data = await resp.json();
   if(!data.ada_esai) {
@@ -886,7 +964,8 @@ async function simpanSemuaNilai() {
   if(state.nilaiArr.length === 0){ showToast('Belum ada nilai yang diinput', 'error'); return; }
   try {
     // Simpan nilai ke server
-    var resp = await postServer({ action:'simpanNilaiEsai', id_sesi:state.sesi.id_sesi, nilai_arr:state.nilaiArr });
+    var sesiIdEsai = state.esaiSesiId || (state.sesi ? state.sesi.id_sesi : '');
+    var resp = await postServer({ action:'simpanNilaiEsai', id_sesi:sesiIdEsai, nilai_arr:state.nilaiArr });
     if(resp.status !== 'ok') throw new Error(resp.msg);
     // Simpan ke state lokal supaya tidak hilang saat navigasi soal
     state.nilaiArr.forEach(function(item) {
