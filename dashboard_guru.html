@@ -1038,15 +1038,17 @@ function statBox(num, lbl, cls) {
 //  HELPER
 // ══════════════════════════════════════════════════════════════
 async function postServer(body) {
-  // GAS dari GitHub Pages tidak bisa POST+JSON header (CORS preflight block).
-  // Kirim via GET dengan encoded params — GAS tangkap di doGet.
+  // GAS dari GitHub Pages: kirim via GET dengan encoded params
+  // Hapus redirect:follow — biarkan browser handle default (lebih aman cross-origin)
   var params = new URLSearchParams();
   Object.keys(body).forEach(function(k) {
     var v = body[k];
     params.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   });
-  var resp = await fetch(URL_SERVER + '?' + params.toString(), { redirect: 'follow' });
-  return resp.json();
+  var resp = await fetch(URL_SERVER + '?' + params.toString());
+  var text = await resp.text();
+  try { return JSON.parse(text); }
+  catch(e) { throw new Error('Response GAS tidak valid: ' + text.substring(0,80)); }
 }
 
 function copyToken() {
