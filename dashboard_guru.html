@@ -551,7 +551,7 @@ async function doLogin() {
     var data = await resp.json();
     if(data.status !== 'ok'){ showErr(err, data.msg || 'Login gagal.'); return; }
     state.guru = data;
-    sessionStorage.setItem('cbt_guru', JSON.stringify(data));
+    localStorage.setItem('cbt_guru', JSON.stringify(data));
     masukDashboard();
   } catch(e) {
     showErr(err, 'Gagal menghubungi server. Cek koneksi.');
@@ -567,22 +567,15 @@ function masukDashboard() {
   document.getElementById('label-guru').textContent  = g.nama_guru;
   document.getElementById('badge-mapel').textContent = g.mapel;
   document.getElementById('badge-kelas').textContent = 'Kelas ' + g.kelas;
-  // Restore sesi aktif dari response login (sesi_aktif berisi sesi_list)
-  if(g.sesi_aktif && g.sesi_aktif.ada_sesi && g.sesi_aktif.sesi_list) {
-    state.sesiList = g.sesi_aktif.sesi_list;
-    // Ambil sesi berlangsung pertama sebagai sesi utama
-    var sesiAktif = g.sesi_aktif.sesi_list.find(function(s){ return s.status_sesi === 'berlangsung'; });
-    if(sesiAktif) {
-      state.sesi = sesiAktif;
-      tampilSesiAktif();
-    }
-  }
+  // Load kode soal dan status sesi secara paralel
   loadKodeSoal();
+  // Load status sesi terpisah — tidak blok login jika GAS lambat
+  loadStatusSesi().catch(function(e){ console.warn('loadStatusSesi error:', e); });
 }
 
 function doLogout() {
   if(state.timerInt) clearInterval(state.timerInt);
-  sessionStorage.removeItem('cbt_guru');
+  localStorage.removeItem('cbt_guru');
   state = { guru:null,sesi:null,sesiList:[],kodeList:[],kodeSelected:null,esaiData:null,esaiIdx:0,esaiSesiId:null,analisis:null,nilaiArr:[],nilaiTersimpan:{},timerInt:null };
   document.getElementById('screen-app').style.display   = 'none';
   document.getElementById('screen-login').style.display = 'flex';
@@ -1098,7 +1091,7 @@ function esc(s) {
 //  INIT — cek session storage
 // ══════════════════════════════════════════════════════════════
 (function init(){
-  var saved = sessionStorage.getItem('cbt_guru');
+  var saved = localStorage.getItem('cbt_guru');
   if(saved) {
     try { state.guru = JSON.parse(saved); masukDashboard(); } catch(e) {}
   }
