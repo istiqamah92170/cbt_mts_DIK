@@ -227,7 +227,10 @@ a{color:var(--accent);text-decoration:none}
       </div>
       <div class="field">
         <label>Password</label>
-        <input type="password" id="inp-pass" placeholder="Password Anda" autocomplete="current-password">
+        <div style="position:relative">
+          <input type="password" id="inp-pass" placeholder="Password Anda" autocomplete="current-password" style="padding-right:40px">
+          <button type="button" onclick="togglePass()" id="btn-toggle-pass" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3);font-size:16px;padding:0;line-height:1">&#128065;</button>
+        </div>
       </div>
       <button class="btn btn-primary btn-block" id="btn-login" onclick="doLogin()">Masuk</button>
     </div>
@@ -541,6 +544,18 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Enter' && document.getElementById('screen-login').style.display !== 'none') doLogin();
 });
 
+function togglePass() {
+  var inp = document.getElementById('inp-pass');
+  var btn = document.getElementById('btn-toggle-pass');
+  if(inp.type === 'password') {
+    inp.type = 'text';
+    btn.innerHTML = '&#128064;'; // mata terbuka
+  } else {
+    inp.type = 'password';
+    btn.innerHTML = '&#128065;'; // mata tertutup
+  }
+}
+
 async function doLogin() {
   var id   = document.getElementById('inp-id').value.trim().toUpperCase();
   var pass = document.getElementById('inp-pass').value.trim();
@@ -822,7 +837,10 @@ async function loadStatusSesi() {
 
 // Buka tab koreksi esai langsung untuk sesi tertentu dari monitor
 function bukaEsaiDariMonitor(idSesi) {
-  state.esaiSesiId = idSesi;
+  // Reset nilai tersimpan agar tidak tampil nilai sesi lain
+  state.esaiSesiId     = idSesi;
+  state.nilaiTersimpan = {};
+  state.nilaiArr       = [];
   switchTab('esai');
 }
 
@@ -910,8 +928,9 @@ async function loadEsai() {
 }
 
 function gantiSesiEsai(idSesi) {
-  state.esaiSesiId = idSesi;
-  state.esaiIdx    = 0;
+  // Reset buffer nilai saat ganti sesi — nilai sesi lain tidak ikut campur
+  state.esaiSesiId     = idSesi;
+  state.esaiIdx        = 0;
   state.nilaiTersimpan = {};
   state.nilaiArr       = [];
   loadEsai();
@@ -993,7 +1012,9 @@ async function simpanSemuaNilai() {
   try {
     // Simpan nilai ke server
     var sesiIdEsai = state.esaiSesiId || (state.sesi ? state.sesi.id_sesi : '');
+    console.log('Simpan nilai esai:', sesiIdEsai, 'jumlah:', state.nilaiArr.length, JSON.stringify(state.nilaiArr));
     var resp = await postServer({ action:'simpanNilaiEsai', id_sesi:sesiIdEsai, nilai_arr:state.nilaiArr });
+    console.log('Response simpan nilai:', JSON.stringify(resp));
     if(resp.status !== 'ok') throw new Error(resp.msg);
     // Simpan ke state lokal supaya tidak hilang saat navigasi soal
     state.nilaiArr.forEach(function(item) {
