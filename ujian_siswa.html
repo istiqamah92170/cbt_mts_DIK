@@ -483,40 +483,45 @@ function tampilHasilSaja() {
 // ═══════════════════════════════════════════════════════════
 //  FETCH HELPER
 // ═══════════════════════════════════════════════════════════
-function fetchTimeout(url, opts, ms) {
-  return new Promise((res, rej) => {
-    const ctrl = new AbortController();
-    const tid  = setTimeout(() => ctrl.abort(), ms);
-    // Hapus redirect:follow — GAS handle redirect sendiri, browser ikuti default
-    fetch(url, { ...opts, signal: ctrl.signal })
-      .then(r => { clearTimeout(tid); res(r); })
-      .catch(e => { clearTimeout(tid); rej(e); });
+// ── JSONP fetch — satu-satunya cara lolos CORS GAS dari GitHub Pages ──
+function gasGet(url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Math.random().toString(36).slice(2);
+    const script  = document.createElement('script');
+    const tid     = setTimeout(() => {
+      cleanup(); reject(new Error('Timeout ' + timeoutMs + 'ms'));
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(tid);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(data) { cleanup(); resolve(data); };
+    // Tambah callback ke URL
+    const sep = url.includes('?') ? '&' : '?';
+    script.src = url + sep + 'callback=' + cbName;
+    script.onerror = function() { cleanup(); reject(new Error('Script load error')); };
+    document.head.appendChild(script);
   });
 }
+
 async function fetchRetry(url, opts, ms, maxR) {
   let n = 0;
   while (n <= maxR) {
     try {
       if (n > 0) {
-        setOverlay(`Percobaan ke-${n+1}...<br><small style="font-weight:400;color:var(--gray-soft)">Server sedang booting, harap tunggu</small>`);
+        setOverlay('Percobaan ke-'+(n+1)+'...<br><small style="font-weight:400;color:var(--gray-soft)">Server sedang booting, harap tunggu</small>');
         await new Promise(r => setTimeout(r, 3000));
       }
-      console.log(`Fetch attempt ${n+1}:`, url.substring(0, 80));
-      const r = await fetchTimeout(url, opts, ms);
-      // GAS kadang return 200 tapi body kosong saat cold start — cek content
-      const text = await r.text();
-      console.log(`Response ${n+1}:`, text.substring(0, 100));
-      if (!text || text.trim() === '') throw new Error('Response kosong (server cold start)');
-      // Parse manual agar bisa retry jika JSON tidak valid
-      try {
-        const json = JSON.parse(text);
-        // Buat fake Response object dengan json method
-        return { ok: true, json: () => Promise.resolve(json), text: () => Promise.resolve(text) };
-      } catch(pe) {
-        throw new Error('Response bukan JSON: ' + text.substring(0, 50));
-      }
+      console.log('GAS request attempt ' + (n+1) + ':', url.substring(0, 80));
+      const data = await gasGet(url, ms);
+      console.log('GAS response:', JSON.stringify(data).substring(0, 100));
+      // Return objek yang kompatibel dengan kode lama
+      return { ok: true, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) };
     } catch(e) {
-      console.warn(`Attempt ${n+1} failed:`, e.message);
+      console.warn('Attempt ' + (n+1) + ' failed:', e.message);
       n++; if (n > maxR) throw e;
     }
   }
@@ -587,13 +592,13 @@ async function muatSoal() {
     }
 
     setOverlay('Mengambil soal dari server guru...');
-    // Ambil kode soal dari response cekSesi (lebih andal dari parsing id_sesi)
     const kodeSoal = cek.kode_soal || ID_SESI.split('_')[1] || '';
     if (!kodeSoal) {
       setBar('error', '&#9888; Kode soal tidak ditemukan.');
       tampilTombolRefresh('Kode soal kosong. Hubungi guru.');
       return;
     }
+    // Fetch soal dari GAS guru via JSONP
     const soalResp = await fetchRetry(
       urlGasGuru + '?action=getDataSoal&kode=' + encodeURIComponent(kodeSoal),
       {}, TIMEOUT_MS, MAX_RETRY
