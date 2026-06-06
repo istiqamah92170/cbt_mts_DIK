@@ -1068,44 +1068,31 @@ function statBox(num, lbl, cls) {
 // ══════════════════════════════════════════════════════════════
 //  HELPER
 // ══════════════════════════════════════════════════════════════
-function gasGet(url, retryCount) {
-  retryCount = retryCount || 0;
-  return new Promise(function(resolve, reject) {
-    var cbName = 'cb_' + Math.random().toString(36).slice(2,10);
-    var script = document.createElement('script');
-    var tid = setTimeout(function(){
-      cleanup();
-      if (retryCount < 2) {
-        console.warn('gasGet timeout, retry ' + (retryCount+1));
-        gasGet(url, retryCount+1).then(resolve).catch(reject);
-      } else {
-        reject(new Error('Timeout setelah 3 percobaan'));
-      }
-    }, 20000);
-    function cleanup(){
-      clearTimeout(tid);
-      delete window[cbName];
-      if(script.parentNode) script.parentNode.removeChild(script);
-    }
-    window[cbName] = function(data){ cleanup(); resolve(data); };
-    // Tambah timestamp agar tidak kena cache browser
-    var sep = url.indexOf('?') >= 0 ? '&' : '?';
-    script.src = url + sep + 'callback=' + cbName + '&_t=' + Date.now();
-    console.log('gasGet:', script.src.substring(0,100));
-    script.onerror = function(){
-      cleanup();
-      console.error('gasGet onerror:', url.substring(0,80));
-      if (retryCount < 2) {
-        setTimeout(function(){
-          gasGet(url, retryCount+1).then(resolve).catch(reject);
-        }, 2000);
-      } else {
-        reject(new Error('GAS tidak dapat diakses setelah 3 percobaan'));
-      }
-    };
-    document.head.appendChild(script);
-  });
+async function gasGet(url) {
+  var sep  = url.indexOf('?') >= 0 ? '&' : '?';
+  var full = url + sep + '_t=' + Date.now();
+  console.log('gasGet:', full.substring(0,120));
+  try {
+    var resp = await fetch(full);
+    var text = await resp.text();
+    console.log('gasGet ok:', text.substring(0,80));
+    return JSON.parse(text);
+  } catch(e1) {
+    console.warn('fetch gagal:', e1.message, '- coba JSONP');
+    return new Promise(function(resolve, reject) {
+      var cbName = 'cb_' + Math.random().toString(36).slice(2,10);
+      var script = document.createElement('script');
+      var tid = setTimeout(function(){ cleanup(); reject(new Error('JSONP timeout')); }, 20000);
+      function cleanup(){ clearTimeout(tid); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
+      window[cbName] = function(data){ cleanup(); resolve(data); };
+      script.src = url + sep + 'callback=' + cbName + '&_t=' + Date.now();
+      script.onerror = function(){ cleanup(); reject(new Error('GAS tidak dapat diakses')); };
+      document.head.appendChild(script);
+    });
+  }
 }
+
+
 async function postServer(body) {
   // Kirim via JSONP — satu-satunya cara lolos CORS GAS dari GitHub Pages
   var params = new URLSearchParams();
