@@ -519,6 +519,7 @@ a{color:var(--accent);text-decoration:none}
 // ══════════════════════════════════════════════════════════════
 var URL_SERVER = 'https://script.google.com/macros/s/AKfycbw6lUJeXuAGydnYMGY_-BnW8wpi6O7RYdyF1RMdorJRo-ZJ8MJd_Y8Up0GbVN1VGNjflw/exec';
 var URL_UJIAN  = 'https://istiqamah92170.github.io/cbt_mts_DIK/ujian_siswa.html';   // path ke file HTML ujian siswa
+
 // ══════════════════════════════════════════════════════════════
 //  State
 // ══════════════════════════════════════════════════════════════
@@ -800,6 +801,7 @@ async function loadStatusSesi() {
         + '<div style="font-family:var(--mono);font-size:16px;letter-spacing:2px;font-weight:500">'+esc(s.token_siswa)+'</div></div>'
         + '<div style="display:flex;gap:6px;flex-wrap:wrap">';
       if(berlangsung) h += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi(\'' + esc(s.id_sesi) + '\')">Selesaikan</button>';
+      if(!berlangsung && s.link_arsip) h += '<a class="btn btn-ghost btn-sm" href="' + esc(s.link_arsip) + '" target="_blank">Buka Arsip</a>';
       if(s.esai_belum > 0) h += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor(\'' + esc(s.id_sesi) + '\')">Koreksi Esai</button>';
       h += '</div></div></div></div>';
       return h;
@@ -853,7 +855,7 @@ function bukaEsaiDariMonitor(idSesi) {
 
 // Selesaikan sesi tertentu (bisa dipanggil dari monitor multi-sesi)
 async function konfirmasiSelesaiSesi(idSesi) {
-  if(!confirm('Selesaikan sesi ' + idSesi + '? Pastikan semua esai sudah dikoreksi.')) return;
+  if(!confirm('Selesaikan sesi ' + idSesi + '? Koreksi esai masih bisa dilakukan setelah sesi berakhir.')) return;
   try {
     var resp = await postServer({ action:'selesaiSesi', id_sesi:idSesi, id_guru:state.guru.id_guru });
     if(resp.status !== 'ok') throw new Error(resp.msg);
@@ -894,10 +896,11 @@ async function loadEsai() {
   // Prioritas: dari klik monitor (esaiSesiId) → sesi aktif pertama
   var sesiId = state.esaiSesiId || (state.sesi ? state.sesi.id_sesi : null);
 
-  // Jika belum ada, cari dari sesiList yang masih berlangsung
+  // Jika belum ada, cari dari sesiList — utamakan berlangsung, fallback ke sesi manapun
   if(!sesiId && state.sesiList && state.sesiList.length > 0) {
     var aktif = state.sesiList.find(function(s){ return s.status_sesi === 'berlangsung'; });
     if(aktif) sesiId = aktif.id_sesi;
+    else sesiId = state.sesiList[state.sesiList.length - 1].id_sesi; // sesi terakhir
   }
 
   if(!sesiId) {
@@ -971,13 +974,20 @@ function renderEsai(data) {
   d.siswa.forEach(function(s, i) {
     var div = document.createElement('div');
     div.className = 'jawaban-item';
-    // Prioritas: buffer belum simpan → sudah tersimpan ke server → dari data server
+    // Sinkron nilai dari server ke state.nilaiTersimpan agar persistent saat navigasi
+    if (s.sudah_dinilai && s.poin_dapat > 0) {
+      if(!state.nilaiTersimpan) state.nilaiTersimpan = {};
+      if(state.nilaiTersimpan[s.row_idx] === undefined) {
+        state.nilaiTersimpan[s.row_idx] = s.poin_dapat;
+      }
+    }
+    // Prioritas: buffer belum simpan → tersimpan di state → dari server
     var buffered  = state.nilaiArr.find(function(n){ return n.row_idx===s.row_idx; });
     var tersimpan = (state.nilaiTersimpan && state.nilaiTersimpan[s.row_idx] !== undefined)
                     ? state.nilaiTersimpan[s.row_idx] : null;
     var nilaiVal  = buffered   ? buffered.nilai
                   : tersimpan !== null ? tersimpan
-                  : (s.poin_dapat !== '' && s.poin_dapat !== null ? s.poin_dapat : '');
+                  : (s.poin_dapat > 0 ? s.poin_dapat : '');
     div.innerHTML =
       '<div><div class="siswa-nama">' + esc(s.nama) + '</div>'
       + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Poin maks: ' + d.poin_max + '</div></div>'
@@ -1030,7 +1040,8 @@ async function simpanSemuaNilai() {
     });
     state.nilaiArr = [];
     showToast('Nilai tersimpan (' + resp.updated + ' jawaban)', 'success');
-    // Reload data esai agar tampil nilai yang sudah tersimpan
+    // Reload data esai agar nilai tersimpan tampil dengan benar
+    // nilaiTersimpan sudah diupdate di atas, loadSoalEsai akan sinkron dari server
     await loadSoalEsai(state.esaiIdx);
   } catch(e) { showToast('Gagal simpan: '+e.message, 'error'); }
 }
