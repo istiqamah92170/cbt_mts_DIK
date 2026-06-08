@@ -282,31 +282,34 @@ _bi.open = _open_patched
 }
 
 // ── Stdout handler — pisahkan GAS dari output normal ─────────────────
-// Kode GAS ada di antara baris "── APPS SCRIPT" dan baris "═══...═══" penutup
+// Format output script:
+//   ══════════ (garis pembuka)
+//   ...info...
+//   ══════════ (garis setelah header)
+//   ✅ HTML: ...
+//   ── APPS SCRIPT (salin & ganti seluruh editor GAS) ──
+//   <-- kode GAS mulai dari sini (baris berikutnya) -->
+//   ══════════ (garis penutup)
 let _gasBuffer  = '';
 let _inGas      = false;
-let _gasStarted = false;
+let _afterAppsScriptLine = false; // flag: baris APPS SCRIPT sudah lewat, baris berikutnya = GAS
 
 function handleStdout(text) {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Deteksi awal blok GAS
-    if (!_inGas && (
-      line.includes('APPS SCRIPT') ||
-      line.includes('salin & ganti seluruh editor GAS')
-    )) {
+    // Jika baris sebelumnya adalah header APPS SCRIPT,
+    // maka baris ini dan seterusnya adalah isi GAS
+    if (_afterAppsScriptLine) {
+      _afterAppsScriptLine = false;
       _inGas = true;
       _gasBuffer = '';
-      _gasStarted = true;
-      appendOut(line, 'warn');
-      continue;
     }
 
     if (_inGas) {
-      // Deteksi akhir blok GAS: baris berisi minimal 20 karakter "═" atau "="
-      if (/^[=═]{20,}/.test(line.trim())) {
+      // Akhir GAS = baris separator panjang (≥20 karakter = atau ═)
+      if (/^[=═─]{20,}$/.test(line.trim())) {
         _inGas = false;
         tampilGAS(_gasBuffer.trim());
         appendOut(line, 'warn');
@@ -314,9 +317,17 @@ function handleStdout(text) {
       }
       _gasBuffer += line + '\n';
       // Jangan tampilkan ke output biasa
-    } else {
-      appendOut(line, 'text');
+      continue;
     }
+
+    // Deteksi baris header APPS SCRIPT
+    if (line.includes('APPS SCRIPT') || line.includes('salin & ganti seluruh editor GAS')) {
+      _afterAppsScriptLine = true;
+      appendOut(line, 'warn');
+      continue;
+    }
+
+    appendOut(line, 'text');
   }
 }
 
@@ -427,9 +438,9 @@ async function runCode() {
   // Reset state
   capturedHtml = null;
   capturedGAS  = null;
-  _gasBuffer   = '';
-  _inGas       = false;
-  _gasStarted  = false;
+  _gasBuffer           = '';
+  _inGas               = false;
+  _afterAppsScriptLine = false;
   document.getElementById('dl-banner').classList.remove('show');
   document.getElementById('gas-panel').classList.remove('show');
   document.getElementById('output').innerHTML = '';
