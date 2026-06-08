@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Runner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b22;
+    --bg3: #1c2230;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --blue: #58a6ff;
+    --blue-bg: rgba(88,166,255,0.1);
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,0.1);
+    --red: #f85149;
+    --red-bg: rgba(248,81,73,0.1);
+    --yellow: #d29922;
+    --yellow-bg: rgba(210,153,34,0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .nav-logo {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .nav-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .nav-tag {
+    font-size: 11px; font-weight: 500;
+    background: var(--blue-bg); color: var(--blue);
+    padding: 3px 10px; border-radius: 99px;
+    border: 1px solid rgba(88,166,255,0.2);
+    letter-spacing: 0.04em;
+  }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .status-pill {
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    padding: 4px 12px; border-radius: 99px;
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.3s;
+  }
+  .status-pill.loading { color: var(--yellow); border-color: rgba(210,153,34,0.3); background: var(--yellow-bg); }
+  .status-pill.ready { color: var(--green); border-color: rgba(63,185,80,0.3); background: var(--green-bg); }
+  .status-pill.error { color: var(--red); border-color: rgba(248,81,73,0.3); background: var(--red-bg); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .dot.pulse { animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* MAIN LAYOUT */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+    flex: 1;
+    height: calc(100vh - 57px);
+  }
+
+  /* TOOLBAR */
+  .toolbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border2);
+    background: var(--bg3); color: var(--text);
+    font-family: 'Syne', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.2); }
+  .btn:active { transform: scale(0.97); }
+  .btn.run {
+    background: #1f6feb; color: white;
+    border-color: #388bfd;
+    box-shadow: 0 0 0 0 rgba(56,139,253,0);
+    transition: all 0.2s;
+  }
+  .btn.run:hover { background: #388bfd; box-shadow: 0 0 12px rgba(56,139,253,0.3); }
+  .btn.run:disabled { background: #1a3a6b; color: #4d7bb5; border-color: #1a3a6b; cursor: not-allowed; box-shadow: none; }
+  .btn.danger { color: var(--red); border-color: rgba(248,81,73,0.3); }
+  .btn.danger:hover { background: var(--red-bg); }
+  .file-badge {
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    padding: 5px 12px; border-radius: 99px;
+    background: var(--bg3); color: var(--text2);
+    border: 1px solid var(--border);
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sep { width: 1px; height: 20px; background: var(--border2); margin: 0 4px; }
+  .ex-label { font-size: 12px; color: var(--text3); }
+
+  .ex-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ex-chip {
+    font-size: 11px; padding: 4px 10px; border-radius: 99px;
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--text2); cursor: pointer; font-family: 'Syne', sans-serif;
+    transition: all 0.15s;
+  }
+  .ex-chip:hover { color: var(--blue); border-color: rgba(88,166,255,0.4); background: var(--blue-bg); }
+
+  /* EDITOR PANE */
+  .pane {
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .pane-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 500;
+    color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase;
+  }
+  .pane-header .file-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--text2);
+    text-transform: none; letter-spacing: 0;
+  }
+
+  .editor-container {
+    display: flex; flex: 1; overflow: auto;
+    background: var(--bg);
+  }
+  .line-nums {
+    padding: 14px 10px 14px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.65;
+    color: var(--text3); text-align: right;
+    user-select: none; pointer-events: none;
+    background: var(--bg);
+    min-width: 48px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .line-nums span { display: block; }
+
+  #code {
+    flex: 1; padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.65;
+    background: transparent; color: var(--text);
+    border: none; outline: none; resize: none;
+    tab-size: 4; white-space: pre;
+    overflow-wrap: normal; overflow-x: auto;
+    min-height: 100%;
+  }
+
+  /* OUTPUT PANE */
+  .output-pane {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--bg);
+  }
+  .out-actions { display: flex; gap: 6px; }
+
+  #output {
+    flex: 1; overflow: auto;
+    padding: 14px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.7;
+    white-space: pre-wrap; word-break: break-all;
+    color: var(--text);
+  }
+  .out-info { color: var(--text3); font-style: italic; }
+  .out-err { color: var(--red); }
+  .out-success { color: var(--green); }
+  .out-warn { color: var(--yellow); }
+  .out-divider { color: var(--text3); display: block; margin: 4px 0; }
+
+  /* STDIN ROW */
+  .stdin-row {
+    display: none;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .stdin-prompt {
+    padding: 0 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--green);
+  }
+  #stdinInput {
+    flex: 1; padding: 9px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; background: transparent;
+    border: none; outline: none; color: var(--text);
+  }
+  .stdin-send {
+    padding: 9px 16px;
+    background: transparent; border: none;
+    border-left: 1px solid var(--border);
+    color: var(--text2); cursor: pointer;
+    font-size: 12px; font-family: 'Syne', sans-serif;
+    transition: all 0.15s;
+  }
+  .stdin-send:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+  /* STATUSBAR */
+  .statusbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 16px;
+    padding: 5px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    font-size: 11px; color: var(--text3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .statusbar span { display: flex; align-items: center; gap: 5px; }
+
+  .hidden { display: none !important; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🐍</div>
+  <span class="nav-title">Python Runner</span>
+  <span class="nav-tag">Pyodide</span>
+  <div class="nav-right">
+    <div class="status-pill loading" id="statusPill">
+      <div class="dot pulse"></div>
+      <span id="statusText">Memuat runtime...</span>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="toolbar">
+    <button class="btn" onclick="document.getElementById('fileInput').click()">
+      📂 Upload .py
+    </button>
+    <input type="file" id="fileInput" accept=".py">
+    <span class="file-badge" id="fileBadge">untitled.py</span>
+
+    <button class="btn run" id="runBtn" onclick="runCode()" disabled>
+      ▶ Jalankan
+    </button>
+    <button class="btn danger" onclick="clearOutput()">
+      🗑 Bersihkan
+    </button>
+
+    <div class="sep"></div>
+    <span class="ex-label">Contoh:</span>
+    <div class="ex-chips">
+      <button class="ex-chip" onclick="loadExample('hello')">Hello World</button>
+      <button class="ex-chip" onclick="loadExample('fib')">Fibonacci</button>
+      <button class="ex-chip" onclick="loadExample('loop')">List & Loop</button>
+      <button class="ex-chip" onclick="loadExample('math')">Math</button>
+      <button class="ex-chip" onclick="loadExample('oop')">OOP Class</button>
+      <button class="ex-chip" onclick="loadExample('input')">Input()</button>
+    </div>
+  </div>
+
+  <div class="pane">
+    <div class="pane-header">
+      <span>Editor</span>
+      <span class="file-name" id="editorFileName">untitled.py</span>
+    </div>
+    <div class="editor-container">
+      <div class="line-nums" id="lineNums"><span>1</span></div>
+      <textarea id="code" spellcheck="false" placeholder="# Tulis kode Python di sini atau upload file .py">print("Halo, dunia!")
+print("Selamat datang di Python Runner!")</textarea>
+    </div>
+  </div>
+
+  <div class="output-pane">
+    <div class="pane-header">
+      <span>Output</span>
+      <div class="out-actions">
+        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="copyOutput()">📋 Salin</button>
+      </div>
+    </div>
+    <div id="output">
+      <span class="out-info">Menunggu runtime Python selesai dimuat...
+Runtime akan diunduh otomatis (~10MB, sekali saja).
+Setelah siap, klik ▶ Jalankan untuk menjalankan kode.</span>
+    </div>
+    <div class="stdin-row" id="stdinRow">
+      <span class="stdin-prompt">›</span>
+      <input type="text" id="stdinInput" placeholder="Masukkan input, tekan Enter...">
+      <button class="stdin-send" onclick="submitInput()">Kirim ↵</button>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span>🐍 Python 3.11</span>
+    <span id="sbLines">Baris: 2</span>
+    <span id="sbCursor">Kolom: 1</span>
+    <span id="sbTime"></span>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+<script>
+let pyodide = null;
+let pyReady = false;
+let inputResolve = null;
+let runStart = null;
+
+// Load Pyodide
+async function initPy() {
+  try {
+    pyodide = await loadPyodide({
+      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/"
+    });
+    pyodide.setStdout({ batched: (s) => appendOut(s, 'text') });
+    pyodide.setStderr({ batched: (s) => appendOut(s, 'err') });
+    pyodide.setStdin({ stdin: () => waitForInput() });
+    pyReady = true;
+    setStatus('ready', '🟢 Python siap');
+    document.getElementById('runBtn').disabled = false;
+    setOutput('<span class="out-success">✓ Python runtime siap! Klik ▶ Jalankan atau upload file .py</span>\n');
+  } catch(e) {
+    setStatus('error', '❌ Gagal memuat');
+    setOutput(`<span class="out-err">Gagal memuat Pyodide:\n${e.message}\n\nPastikan koneksi internet tersedia.</span>`);
+  }
+}
+
+function setStatus(type, text) {
+  const pill = document.getElementById('statusPill');
+  const dot = pill.querySelector('.dot');
+  pill.className = 'status-pill ' + type;
+  dot.className = 'dot' + (type === 'loading' ? ' pulse' : '');
+  document.getElementById('statusText').textContent = text;
+}
+
+function setOutput(html) {
+  document.getElementById('output').innerHTML = html;
+}
+
+function appendOut(text, type) {
+  const out = document.getElementById('output');
+  const el = document.createElement('span');
+  if (type === 'err') el.className = 'out-err';
+  else if (type === 'warn') el.className = 'out-warn';
+  el.textContent = text + '\n';
+  if (out.querySelector('.out-info, .out-success')) {
+    const stale = out.querySelector('.out-info, .out-success');
+    if (stale && out.children.length === 1) out.innerHTML = '';
+  }
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+
+function waitForInput() {
+  return new Promise(res => {
+    document.getElementById('stdinRow').style.display = 'flex';
+    document.getElementById('stdinInput').focus();
+    inputResolve = res;
+  });
+}
+
+function submitInput() {
+  const val = document.getElementById('stdinInput').value;
+  if (!inputResolve) return;
+  appendOut('  ▸ ' + val, 'warn');
+  document.getElementById('stdinInput').value = '';
+  document.getElementById('stdinRow').style.display = 'none';
+  inputResolve(val);
+  inputResolve = null;
+}
+
+document.getElementById('stdinInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitInput();
+});
+
+async function runCode() {
+  if (!pyReady) { alert('Runtime Python belum siap.'); return; }
+  const code = document.getElementById('code').value.trim();
+  if (!code) { alert('Kode kosong!'); return; }
+
+  document.getElementById('output').innerHTML = '';
+  document.getElementById('runBtn').disabled = true;
+  setStatus('loading', '▶ Menjalankan...');
+  runStart = Date.now();
+
+  try {
+    await pyodide.runPythonAsync(code);
+    const ms = Date.now() - runStart;
+    appendOut('', 'text');
+    const divider = document.createElement('span');
+    divider.className = 'out-divider';
+    divider.textContent = `─── selesai dalam ${ms}ms ───`;
+    document.getElementById('output').appendChild(divider);
+    setStatus('ready', `✓ Selesai (${ms}ms)`);
+  } catch(e) {
+    appendOut(e.message, 'err');
+    setStatus('error', '✗ Error');
+  }
+
+  document.getElementById('runBtn').disabled = false;
+}
+
+function clearOutput() {
+  setOutput('<span class="out-info">Output dibersihkan. Siap menjalankan kode baru.</span>');
+  setStatus('ready', '🟢 Python siap');
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✓ Tersalin!';
+    setTimeout(() => btn.textContent = '📋 Salin', 1500);
+  });
+}
+
+// File upload
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('code').value = ev.target.result;
+    document.getElementById('fileBadge').textContent = f.name;
+    document.getElementById('editorFileName').textContent = f.name;
+    updateLines();
+  };
+  reader.readAsText(f);
+});
+
+// Line numbers & cursor pos
+function updateLines() {
+  const val = document.getElementById('code').value;
+  const lines = val.split('\n');
+  document.getElementById('lineNums').innerHTML =
+    lines.map((_, i) => `<span>${i+1}</span>`).join('');
+  document.getElementById('sbLines').textContent = `Baris: ${lines.length}`;
+}
+
+document.getElementById('code').addEventListener('input', updateLines);
+document.getElementById('code').addEventListener('keyup', updateCursor);
+document.getElementById('code').addEventListener('click', updateCursor);
+
+function updateCursor() {
+  const el = document.getElementById('code');
+  const val = el.value.substring(0, el.selectionStart);
+  const lines = val.split('\n');
+  document.getElementById('sbCursor').textContent =
+    `Ln ${lines.length}, Kol ${lines[lines.length-1].length + 1}`;
+}
+
+// Tab support
+document.getElementById('code').addEventListener('keydown', function(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = this.selectionStart, end = this.selectionEnd;
+    this.value = this.value.substring(0,s) + '    ' + this.value.substring(end);
+    this.selectionStart = this.selectionEnd = s + 4;
+    updateLines();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    runCode();
+  }
+});
+
+// Example snippets
+const examples = {
+  hello: `# Hello World\nprint("Halo, dunia!")\nprint("Selamat belajar Python!")`,
+  fib: `# Deret Fibonacci\ndef fibonacci(n):\n    a, b = 0, 1\n    hasil = []\n    for _ in range(n):\n        hasil.append(a)\n        a, b = b, a + b\n    return hasil\n\nhasil = fibonacci(15)\nprint("Deret Fibonacci:")\nprint(hasil)\nprint(f"\\nJumlah 15 angka pertama: {sum(hasil)}")`,
+  loop: `# List dan Loop\nbuah = ["apel", "mangga", "jeruk", "pisang", "rambutan"]\n\nprint("Daftar buah:")\nfor i, b in enumerate(buah, 1):\n    print(f"  {i}. {b.capitalize()}")\n\nprint(f"\\nTotal: {len(buah)} buah")\nprint(f"Diurutkan: {sorted(buah)}")`,
+  math: `import math\n\nprint("=== Operasi Matematika ===")\n\n# Akar kuadrat\nfor n in [4, 9, 16, 25, 36, 49]:\n    print(f"  √{n:2d} = {math.sqrt(n):.1f}")\n\n# Konstanta\nprint(f"\\nPI  = {math.pi:.8f}")\nprint(f"e   = {math.e:.8f}")\n\n# Trigonometri\nprint(f"\\nsin(90°) = {math.sin(math.radians(90)):.4f}")\nprint(f"cos(60°) = {math.cos(math.radians(60)):.4f}")`,
+  oop: `# OOP - Class\nclass Kendaraan:\n    def __init__(self, merk, kecepatan_max):\n        self.merk = merk\n        self.kecepatan_max = kecepatan_max\n        self.kecepatan = 0\n\n    def gas(self, tambah):\n        self.kecepatan = min(self.kecepatan + tambah, self.kecepatan_max)\n        print(f"{self.merk}: {self.kecepatan} km/h")\n\n    def rem(self):\n        self.kecepatan = 0\n        print(f"{self.merk}: berhenti")\n\n\nmobil = Kendaraan("Toyota", 200)\nmotor = Kendaraan("Honda", 150)\n\nprint("--- Gas ---")\nmobil.gas(80)\nmobil.gas(80)\nmobil.gas(80)  # terbatas 200\n\nmotor.gas(60)\n\nprint("--- Rem ---")\nmobil.rem()`,
+  input: `# Contoh input() dari pengguna\nnama = input("Siapa namamu? ")\nukur = int(input("Berapa umurmu? "))\n\nprint(f"\\nHalo, {nama}!")\nprint(f"Umurmu {ukur} tahun.")\n\nif ukur < 18:\n    print("Kamu masih di bawah umur.")\nelif ukur < 60:\n    print("Kamu dewasa.")\nelse:\n    print("Kamu lansia.")`
+};
+
+function loadExample(key) {
+  document.getElementById('code').value = examples[key];
+  document.getElementById('fileBadge').textContent = key + '.py (contoh)';
+  document.getElementById('editorFileName').textContent = key + '.py';
+  updateLines();
+}
+
+// Clock in statusbar
+setInterval(() => {
+  document.getElementById('sbTime').textContent =
+    new Date().toLocaleTimeString('id-ID');
+}, 1000);
+
+updateLines();
+initPy();
+</script>
+</body>
+</html>
