@@ -10,315 +10,106 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #0f1117;
-    --bg2: #161b22;
-    --bg3: #1c2230;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #e6edf3;
-    --text2: #8b949e;
-    --text3: #484f58;
-    --blue: #58a6ff;
-    --blue-bg: rgba(88,166,255,0.1);
-    --green: #3fb950;
-    --green-bg: rgba(63,185,80,0.1);
-    --red: #f85149;
-    --red-bg: rgba(248,81,73,0.1);
-    --yellow: #d29922;
-    --yellow-bg: rgba(210,153,34,0.1);
-    --radius: 8px;
-    --radius-lg: 12px;
+    --bg: #0f1117; --bg2: #161b22; --bg3: #1c2230;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #e6edf3; --text2: #8b949e; --text3: #484f58;
+    --blue: #58a6ff; --blue-bg: rgba(88,166,255,0.1);
+    --green: #3fb950; --green-bg: rgba(63,185,80,0.1);
+    --red: #f85149; --red-bg: rgba(248,81,73,0.1);
+    --yellow: #d29922; --yellow-bg: rgba(210,153,34,0.1);
+    --purple: #a78bfa; --purple-bg: rgba(124,58,237,0.15);
+    --radius: 8px; --radius-lg: 12px;
   }
 
-  body {
-    font-family: 'Syne', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+  body { font-family:'Syne',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
 
-  /* TOP NAV */
-  nav {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-  }
-  .nav-logo {
-    width: 30px; height: 30px;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
-  .nav-title { font-size: 16px; font-weight: 700; color: var(--text); }
-  .nav-tag {
-    font-size: 11px; font-weight: 500;
-    background: var(--blue-bg); color: var(--blue);
-    padding: 3px 10px; border-radius: 99px;
-    border: 1px solid rgba(88,166,255,0.2);
-    letter-spacing: 0.04em;
-  }
-  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-  .status-pill {
-    font-size: 12px; font-family: 'JetBrains Mono', monospace;
-    padding: 4px 12px; border-radius: 99px;
-    border: 1px solid var(--border2);
-    display: flex; align-items: center; gap: 6px;
-    transition: all 0.3s;
-  }
-  .status-pill.loading { color: var(--yellow); border-color: rgba(210,153,34,0.3); background: var(--yellow-bg); }
-  .status-pill.ready { color: var(--green); border-color: rgba(63,185,80,0.3); background: var(--green-bg); }
-  .status-pill.error { color: var(--red); border-color: rgba(248,81,73,0.3); background: var(--red-bg); }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .dot.pulse { animation: pulse 1.4s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  nav { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--border); background:var(--bg2); flex-shrink:0; }
+  .nav-logo { width:30px;height:30px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-radius:8px; display:flex;align-items:center;justify-content:center; font-size:16px; }
+  .nav-title { font-size:16px; font-weight:700; }
+  .nav-tag { font-size:11px; font-weight:500; background:var(--blue-bg); color:var(--blue); padding:3px 10px; border-radius:99px; border:1px solid rgba(88,166,255,0.2); }
+  .nav-right { margin-left:auto; }
+  .status-pill { font-size:12px; font-family:'JetBrains Mono',monospace; padding:4px 12px; border-radius:99px; border:1px solid var(--border2); display:flex;align-items:center;gap:6px; transition:all .3s; }
+  .status-pill.loading { color:var(--yellow); border-color:rgba(210,153,34,.3); background:var(--yellow-bg); }
+  .status-pill.ready   { color:var(--green);  border-color:rgba(63,185,80,.3);  background:var(--green-bg); }
+  .status-pill.error   { color:var(--red);    border-color:rgba(248,81,73,.3);  background:var(--red-bg); }
+  .dot { width:6px;height:6px;border-radius:50%;background:currentColor; }
+  .dot.pulse { animation:pulse 1.4s infinite; }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-  /* MAIN LAYOUT */
-  main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr auto auto;
-    gap: 0;
-    flex: 1;
-    height: calc(100vh - 57px);
-  }
+  main { display:flex; flex-direction:column; flex:1; overflow:hidden; }
 
   /* TOOLBAR */
-  .toolbar {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-    flex-wrap: wrap;
-  }
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px;
-    border-radius: var(--radius);
-    font-size: 13px; font-weight: 500;
-    cursor: pointer; border: 1px solid var(--border2);
-    background: var(--bg3); color: var(--text);
-    font-family: 'Syne', sans-serif;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .btn:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.2); }
-  .btn:active { transform: scale(0.97); }
-  .btn.run {
-    background: #1f6feb; color: white;
-    border-color: #388bfd;
-    box-shadow: 0 0 0 0 rgba(56,139,253,0);
-    transition: all 0.2s;
-  }
-  .btn.run:hover { background: #388bfd; box-shadow: 0 0 12px rgba(56,139,253,0.3); }
-  .btn.run:disabled { background: #1a3a6b; color: #4d7bb5; border-color: #1a3a6b; cursor: not-allowed; box-shadow: none; }
-  .btn.danger { color: var(--red); border-color: rgba(248,81,73,0.3); }
-  .btn.danger:hover { background: var(--red-bg); }
-  .file-badge {
-    font-size: 12px; font-family: 'JetBrains Mono', monospace;
-    padding: 5px 12px; border-radius: 99px;
-    background: var(--bg3); color: var(--text2);
-    border: 1px solid var(--border);
-    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .sep { width: 1px; height: 20px; background: var(--border2); margin: 0 4px; }
-  .ex-label { font-size: 12px; color: var(--text3); }
+  .toolbar { display:flex;align-items:center;gap:8px;padding:10px 20px; border-bottom:1px solid var(--border); background:var(--bg2); flex-wrap:wrap; flex-shrink:0; }
+  .btn { display:inline-flex;align-items:center;gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px;font-weight:500; cursor:pointer; border:1px solid var(--border2); background:var(--bg3); color:var(--text); font-family:'Syne',sans-serif; transition:all .15s; white-space:nowrap; }
+  .btn:hover { background:rgba(255,255,255,.07); }
+  .btn:active { transform:scale(.97); }
+  .btn.run { background:#1f6feb;color:white;border-color:#388bfd; }
+  .btn.run:hover { background:#388bfd; box-shadow:0 0 12px rgba(56,139,253,.3); }
+  .btn.run:disabled { background:#1a3a6b;color:#4d7bb5;border-color:#1a3a6b;cursor:not-allowed;box-shadow:none; }
+  .btn.danger { color:var(--red);border-color:rgba(248,81,73,.3); }
+  .btn.danger:hover { background:var(--red-bg); }
+  .file-badge { font-size:12px;font-family:'JetBrains Mono',monospace; padding:5px 12px;border-radius:99px; background:var(--bg3);color:var(--text2); border:1px solid var(--border); max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .sep { width:1px;height:20px;background:var(--border2);margin:0 4px; }
+  .ex-label { font-size:12px;color:var(--text3); }
+  .ex-chips { display:flex;gap:6px;flex-wrap:wrap; }
+  .ex-chip { font-size:11px;padding:4px 10px;border-radius:99px; background:transparent;border:1px solid var(--border2); color:var(--text2);cursor:pointer;font-family:'Syne',sans-serif;transition:all .15s; }
+  .ex-chip:hover { color:var(--blue);border-color:rgba(88,166,255,.4);background:var(--blue-bg); }
 
-  .ex-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .ex-chip {
-    font-size: 11px; padding: 4px 10px; border-radius: 99px;
-    background: transparent; border: 1px solid var(--border2);
-    color: var(--text2); cursor: pointer; font-family: 'Syne', sans-serif;
-    transition: all 0.15s;
-  }
-  .ex-chip:hover { color: var(--blue); border-color: rgba(88,166,255,0.4); background: var(--blue-bg); }
+  /* DOWNLOAD BANNER */
+  #dl-banner { display:none; align-items:center;gap:12px; padding:9px 20px; background:linear-gradient(90deg,rgba(31,111,235,.15),rgba(16,185,129,.1)); border-bottom:1px solid rgba(88,166,255,.25); flex-shrink:0; }
+  #dl-banner.show { display:flex; }
+  #dl-banner span { font-size:13px;color:var(--text2);flex:1;font-family:'JetBrains Mono',monospace; }
+  .btn-dl { display:inline-flex;align-items:center;gap:7px; padding:8px 18px;border-radius:var(--radius); font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Syne',sans-serif; background:linear-gradient(135deg,#1f6feb,#10B981);color:white;transition:opacity .15s;white-space:nowrap; }
+  .btn-dl:hover { opacity:.88; }
 
-  /* EDITOR PANE */
-  .pane {
-    display: flex; flex-direction: column;
-    border-right: 1px solid var(--border);
-    overflow: hidden;
-  }
-  .pane-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 16px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    font-size: 11px; font-weight: 500;
-    color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase;
-  }
-  .pane-header .file-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; color: var(--text2);
-    text-transform: none; letter-spacing: 0;
-  }
+  /* EDITOR + OUTPUT */
+  .workspace { display:flex; flex:1; overflow:hidden; }
+  .pane { display:flex;flex-direction:column; flex:1;min-width:0; border-right:1px solid var(--border); overflow:hidden; }
+  .pane-header { display:flex;align-items:center;justify-content:space-between; padding:8px 16px; background:var(--bg2); border-bottom:1px solid var(--border); font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.07em;text-transform:uppercase; flex-shrink:0; }
+  .pane-header .file-name { font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);text-transform:none;letter-spacing:0; }
+  .editor-container { display:flex;flex:1;overflow:auto;background:var(--bg); }
+  .line-nums { padding:14px 10px 14px 14px; font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65; color:var(--text3);text-align:right; user-select:none;pointer-events:none; background:var(--bg); min-width:48px; border-right:1px solid var(--border); flex-shrink:0; }
+  .line-nums span { display:block; }
+  #code { flex:1;padding:14px 16px; font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65; background:transparent;color:var(--text); border:none;outline:none;resize:none; tab-size:4;white-space:pre;overflow-wrap:normal;overflow-x:auto; min-height:100%; }
 
-  .editor-container {
-    display: flex; flex: 1; overflow: auto;
-    background: var(--bg);
-  }
-  .line-nums {
-    padding: 14px 10px 14px 14px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; line-height: 1.65;
-    color: var(--text3); text-align: right;
-    user-select: none; pointer-events: none;
-    background: var(--bg);
-    min-width: 48px;
-    border-right: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .line-nums span { display: block; }
+  .output-pane { display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden;background:var(--bg); }
+  .out-actions { display:flex;gap:6px; }
+  #output { flex:1;overflow:auto; padding:14px 18px; font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7; white-space:pre-wrap;word-break:break-all; color:var(--text); }
+  .out-info    { color:var(--text3);font-style:italic; }
+  .out-err     { color:var(--red); }
+  .out-success { color:var(--green); }
+  .out-warn    { color:var(--yellow); }
+  .out-divider { color:var(--text3);display:block;margin:4px 0; }
 
-  #code {
-    flex: 1; padding: 14px 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; line-height: 1.65;
-    background: transparent; color: var(--text);
-    border: none; outline: none; resize: none;
-    tab-size: 4; white-space: pre;
-    overflow-wrap: normal; overflow-x: auto;
-    min-height: 100%;
-  }
+  /* STDIN */
+  .stdin-row { display:none;align-items:center; border-top:1px solid var(--border);background:var(--bg2); flex-shrink:0; }
+  .stdin-prompt { padding:0 12px; font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green); }
+  #stdinInput { flex:1;padding:9px 0; font-family:'JetBrains Mono',monospace;font-size:13px;background:transparent;border:none;outline:none;color:var(--text); }
+  .stdin-send { padding:9px 16px;background:transparent;border:none;border-left:1px solid var(--border); color:var(--text2);cursor:pointer;font-size:12px;font-family:'Syne',sans-serif;transition:all .15s; }
+  .stdin-send:hover { color:var(--text);background:rgba(255,255,255,.04); }
 
-  /* OUTPUT PANE */
-  .output-pane {
-    display: flex; flex-direction: column; overflow: hidden;
-    background: var(--bg);
-  }
-  .out-actions { display: flex; gap: 6px; }
-
-  #output {
-    flex: 1; overflow: auto;
-    padding: 14px 18px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; line-height: 1.7;
-    white-space: pre-wrap; word-break: break-all;
-    color: var(--text);
-  }
-  .out-info { color: var(--text3); font-style: italic; }
-  .out-err { color: var(--red); }
-  .out-success { color: var(--green); }
-  .out-warn { color: var(--yellow); }
-  .out-divider { color: var(--text3); display: block; margin: 4px 0; }
-
-  /* STDIN ROW */
-  .stdin-row {
-    display: none;
-    align-items: center;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
-  }
-  .stdin-prompt {
-    padding: 0 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; color: var(--green);
-  }
-  #stdinInput {
-    flex: 1; padding: 9px 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; background: transparent;
-    border: none; outline: none; color: var(--text);
-  }
-  .stdin-send {
-    padding: 9px 16px;
-    background: transparent; border: none;
-    border-left: 1px solid var(--border);
-    color: var(--text2); cursor: pointer;
-    font-size: 12px; font-family: 'Syne', sans-serif;
-    transition: all 0.15s;
-  }
-  .stdin-send:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  /* GAS PANEL */
+  #gas-panel { display:none;flex-direction:column; border-top:1px solid var(--border); background:var(--bg2); max-height:300px; flex-shrink:0; }
+  #gas-panel.show { display:flex; }
+  .gas-header { display:flex;align-items:center;justify-content:space-between; padding:8px 16px; background:var(--purple-bg); border-bottom:1px solid rgba(124,58,237,.2); font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--purple); flex-shrink:0; }
+  .gas-header-left { display:flex;align-items:center;gap:8px; }
+  .gas-tag { background:rgba(124,58,237,.2);color:#c4b5fd;padding:2px 8px;border-radius:99px;font-size:10px;border:1px solid rgba(124,58,237,.3); }
+  .gas-actions { display:flex;gap:6px; }
+  .gas-btn { padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text2);font-family:'Syne',sans-serif;transition:all .15s;white-space:nowrap; }
+  .gas-btn:hover { background:rgba(255,255,255,.12);color:var(--text); }
+  .gas-btn.primary { background:rgba(124,58,237,.3);border-color:rgba(124,58,237,.5);color:#c4b5fd; }
+  .gas-btn.primary:hover { background:rgba(124,58,237,.45); }
+  #gas-code { flex:1;overflow:auto;padding:14px 18px; font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.65;color:#e2d9f3;white-space:pre; }
 
   /* STATUSBAR */
-  .statusbar {
-    grid-column: 1 / -1;
-    display: flex; align-items: center; gap: 16px;
-    padding: 5px 20px;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
-    font-size: 11px; color: var(--text3);
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .statusbar span { display: flex; align-items: center; gap: 5px; }
+  .statusbar { display:flex;align-items:center;gap:16px; padding:5px 20px; border-top:1px solid var(--border);background:var(--bg2); font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace; flex-shrink:0; }
+  .statusbar span { display:flex;align-items:center;gap:5px; }
 
-  .hidden { display: none !important; }
-  input[type=file] { display: none; }
+  input[type=file] { display:none; }
 
-  /* ── DOWNLOAD HTML BANNER ── */
-  #dl-banner {
-    display: none;
-    grid-column: 1 / -1;
-    align-items: center; gap: 12px;
-    padding: 10px 20px;
-    background: linear-gradient(90deg, rgba(31,111,235,0.15), rgba(16,185,129,0.1));
-    border-bottom: 1px solid rgba(88,166,255,0.25);
-  }
-  #dl-banner.show { display: flex; }
-  /* ── GAS PANEL grid-column fix ── */
-  #gas-panel { grid-column: 1 / -1; }
-  #dl-banner span { font-size: 13px; color: var(--text2); flex: 1; font-family: 'JetBrains Mono', monospace; }
-  .btn-dl {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 18px; border-radius: var(--radius);
-    font-size: 13px; font-weight: 600;
-    cursor: pointer; border: none; font-family: 'Syne', sans-serif;
-    background: linear-gradient(135deg, #1f6feb, #10B981);
-    color: white; transition: opacity 0.15s;
-    white-space: nowrap;
-  }
-  .btn-dl:hover { opacity: 0.88; }
-
-  /* ── GAS PANEL ── */
-  #gas-panel {
-    display: none;
-    grid-column: 1 / -1;
-    flex-direction: column;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
-    max-height: 320px;
-  }
-  #gas-panel.show { display: flex; }
-  .gas-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 16px;
-    background: rgba(124,58,237,0.12);
-    border-bottom: 1px solid rgba(124,58,237,0.2);
-    font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
-    text-transform: uppercase; color: #a78bfa;
-    flex-shrink: 0;
-  }
-  .gas-header-left { display: flex; align-items: center; gap: 8px; }
-  .gas-tag {
-    background: rgba(124,58,237,0.2); color: #c4b5fd;
-    padding: 2px 8px; border-radius: 99px; font-size: 10px;
-    border: 1px solid rgba(124,58,237,0.3);
-  }
-  .gas-actions { display: flex; gap: 6px; }
-  .gas-btn {
-    padding: 4px 12px; border-radius: 6px; font-size: 11px;
-    font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.06); color: var(--text2);
-    font-family: 'Syne', sans-serif; transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .gas-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
-  .gas-btn.primary { background: rgba(124,58,237,0.3); border-color: rgba(124,58,237,0.5); color: #c4b5fd; }
-  .gas-btn.primary:hover { background: rgba(124,58,237,0.45); }
-  #gas-code {
-    flex: 1; overflow: auto; padding: 14px 18px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; line-height: 1.65;
-    color: #e2d9f3; white-space: pre;
-    background: transparent;
+  @media(max-width:768px){
+    .workspace { flex-direction:column; }
+    .pane { border-right:none; border-bottom:1px solid var(--border); min-height:240px; }
   }
 </style>
 </head>
@@ -337,20 +128,13 @@
 </nav>
 
 <main>
+  <!-- TOOLBAR -->
   <div class="toolbar">
-    <button class="btn" onclick="document.getElementById('fileInput').click()">
-      📂 Upload .py
-    </button>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">📂 Upload .py</button>
     <input type="file" id="fileInput" accept=".py">
     <span class="file-badge" id="fileBadge">untitled.py</span>
-
-    <button class="btn run" id="runBtn" onclick="runCode()" disabled>
-      ▶ Jalankan
-    </button>
-    <button class="btn danger" onclick="clearOutput()">
-      🗑 Bersihkan
-    </button>
-
+    <button class="btn run" id="runBtn" onclick="runCode()" disabled>▶ Jalankan</button>
+    <button class="btn danger" onclick="clearOutput()">🗑 Bersihkan</button>
     <div class="sep"></div>
     <span class="ex-label">Contoh:</span>
     <div class="ex-chips">
@@ -363,48 +147,44 @@
     </div>
   </div>
 
-  <!-- DOWNLOAD HTML BANNER -->
+  <!-- DOWNLOAD BANNER -->
   <div id="dl-banner">
     <span id="dl-filename">📄 file.html siap didownload</span>
-    <button class="btn-dl" id="dl-btn" onclick="downloadHtml()">⬇ Download HTML</button>
+    <button class="btn-dl" onclick="downloadHtml()">⬇ Download HTML</button>
   </div>
 
-  <div class="pane">
-    <div class="pane-header">
-      <span>Editor</span>
-      <span class="file-name" id="editorFileName">untitled.py</span>
-    </div>
-    <div class="editor-container">
-      <div class="line-nums" id="lineNums"><span>1</span></div>
-      <textarea id="code" spellcheck="false" placeholder="# Tulis kode Python di sini atau upload file .py">print("Halo, dunia!")
+  <!-- EDITOR + OUTPUT -->
+  <div class="workspace">
+    <div class="pane">
+      <div class="pane-header">
+        <span>Editor</span>
+        <span class="file-name" id="editorFileName">untitled.py</span>
+      </div>
+      <div class="editor-container">
+        <div class="line-nums" id="lineNums"><span>1</span></div>
+        <textarea id="code" spellcheck="false" placeholder="# Tulis kode Python di sini atau upload file .py">print("Halo, dunia!")
 print("Selamat datang di Python Runner!")</textarea>
-    </div>
-  </div>
-
-  <div class="output-pane">
-    <div class="pane-header">
-      <span>Output</span>
-      <div class="out-actions">
-        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="copyOutput()">📋 Salin</button>
       </div>
     </div>
-    <div id="output">
-      <span class="out-info">Menunggu runtime Python selesai dimuat...
-Runtime akan diunduh otomatis (~10MB, sekali saja).
-Setelah siap, klik ▶ Jalankan untuk menjalankan kode.</span>
-    </div>
-    <div class="stdin-row" id="stdinRow">
-      <span class="stdin-prompt">›</span>
-      <input type="text" id="stdinInput" placeholder="Masukkan input, tekan Enter...">
-      <button class="stdin-send" onclick="submitInput()">Kirim ↵</button>
-    </div>
-  </div>
 
-  <div class="statusbar">
-    <span>🐍 Python 3.11</span>
-    <span id="sbLines">Baris: 2</span>
-    <span id="sbCursor">Kolom: 1</span>
-    <span id="sbTime"></span>
+    <div class="output-pane">
+      <div class="pane-header">
+        <span>Output</span>
+        <div class="out-actions">
+          <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="copyOutput()">📋 Salin</button>
+        </div>
+      </div>
+      <div id="output">
+        <span class="out-info">Menunggu runtime Python selesai dimuat...
+Runtime diunduh otomatis (~10MB, sekali saja).
+Setelah siap, klik ▶ Jalankan untuk menjalankan kode.</span>
+      </div>
+      <div class="stdin-row" id="stdinRow">
+        <span class="stdin-prompt">›</span>
+        <input type="text" id="stdinInput" placeholder="Masukkan input, tekan Enter...">
+        <button class="stdin-send" onclick="submitInput()">Kirim ↵</button>
+      </div>
+    </div>
   </div>
 
   <!-- GAS PANEL -->
@@ -416,201 +196,208 @@ Setelah siap, klik ▶ Jalankan untuk menjalankan kode.</span>
       </div>
       <div class="gas-actions">
         <button class="gas-btn primary" onclick="salinGAS()">📋 Salin Semua</button>
-        <button class="gas-btn" onclick="tutupGAS()">✕ Tutup</button>
+        <button class="gas-btn" onclick="document.getElementById('gas-panel').classList.remove('show')">✕ Tutup</button>
       </div>
     </div>
     <pre id="gas-code"></pre>
+  </div>
+
+  <!-- STATUSBAR -->
+  <div class="statusbar">
+    <span>🐍 Python 3.11</span>
+    <span id="sbLines">Baris: 2</span>
+    <span id="sbCursor">Kolom: 1</span>
+    <span id="sbTime"></span>
   </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 <script>
+// ── State ────────────────────────────────────────────────────────────
 let pyodide = null;
 let pyReady = false;
 let inputResolve = null;
 let runStart = null;
+let capturedHtml = null;   // {path, content}
+let capturedGAS  = null;   // string kode GAS
 
-// ── State untuk intercept output ──────────────────────────────
-let _capturedHtmlContent = null;   // isi file HTML yang di-write
-let _capturedHtmlPath    = null;   // path file HTML
-let _capturedGAS         = '';     // kode GAS yang diprint
-let _inGasBlock          = false;  // apakah sedang dalam blok GAS
-let _printBuffer         = '';     // buffer output yang sudah keluar
-
-// Load Pyodide
+// ── Init Pyodide ─────────────────────────────────────────────────────
 async function initPy() {
   try {
     pyodide = await loadPyodide({
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/"
     });
 
-    // ── Intercept open() untuk tangkap file HTML yang ditulis ──────────
+    // Patch open() di Python agar tangkap write ke .html
+    // Juga redirect write ke path /storage/... ke path /tmp/ supaya tidak error
     pyodide.runPython(`
-import builtins as _bi
+import builtins as _bi, os as _os
+
 _real_open = _bi.open
-_intercepted_files = {}
+_html_captures = {}   # path -> content
 
-class _InterceptedFile:
-    def __init__(self, path, mode, real_file):
+class _HtmlCaptureFile:
+    def __init__(self, path):
         self._path = path
-        self._mode = mode
-        self._real = real_file
-        self._buf = []
+        self._chunks = []
     def write(self, data):
-        self._buf.append(data)
-        return self._real.write(data)
-    def __enter__(self):
-        return self
-    def __exit__(self, *a):
-        self._real.__exit__(*a)
-        if 'w' in self._mode and self._buf:
-            content = ''.join(self._buf)
-            _intercepted_files[self._path] = content
-    def flush(self): return self._real.flush()
-    def close(self): return self._real.close()
+        self._chunks.append(str(data))
+        return len(data)
+    def flush(self): pass
+    def close(self):
+        _html_captures[self._path] = ''.join(self._chunks)
+    def __enter__(self): return self
+    def __exit__(self, *a): self.close()
 
-def _patched_open(path, mode='r', **kw):
-    f = _real_open(path, mode, **kw)
-    if 'w' in mode and str(path).endswith('.html'):
-        return _InterceptedFile(str(path), mode, f)
-    return f
+def _open_patched(file, mode='r', **kw):
+    path = str(file)
+    # Redirect path Android/Windows ke /tmp
+    if ('\\\\' in path or path.startswith('/storage') or path[1:3] == ':\\\\' or
+        (len(path) > 2 and path[1] == ':' and path[2] == '\\\\')):
+        fname = path.replace('\\\\', '/').split('/')[-1]
+        path = '/tmp/' + fname
+    # Tangkap write ke .html
+    if 'w' in str(mode) and path.endswith('.html'):
+        return _HtmlCaptureFile(path)
+    try:
+        return _real_open(path, mode, **kw)
+    except Exception:
+        return _real_open('/tmp/_fallback', str(mode), **kw)
 
-_bi.open = _patched_open
+_bi.open = _open_patched
 `);
 
-    pyodide.setStdout({ batched: (s) => interceptOut(s, 'text') });
+    pyodide.setStdout({ batched: (s) => handleStdout(s) });
     pyodide.setStderr({ batched: (s) => appendOut(s, 'err') });
     pyodide.setStdin({ stdin: () => waitForInput() });
+
     pyReady = true;
     setStatus('ready', '🟢 Python siap');
     document.getElementById('runBtn').disabled = false;
-    setOutput('<span class="out-success">✓ Python runtime siap! Klik ▶ Jalankan atau upload file .py</span>\n');
+    setOutput('<span class="out-success">✓ Python runtime siap! Upload file .py lalu klik ▶ Jalankan</span>\n');
   } catch(e) {
     setStatus('error', '❌ Gagal memuat');
-    setOutput(`<span class="out-err">Gagal memuat Pyodide:\n${e.message}\n\nPastikan koneksi internet tersedia.</span>`);
+    setOutput(`<span class="out-err">Gagal memuat Pyodide:\n${e.message}</span>`);
   }
 }
 
-// ── Intercept stdout: pisahkan GAS dari output biasa ──────────────────
-function interceptOut(text, type) {
-  _printBuffer += text + '\n';
+// ── Stdout handler — pisahkan GAS dari output normal ─────────────────
+// Kode GAS ada di antara baris "── APPS SCRIPT" dan baris "═══...═══" penutup
+let _gasBuffer  = '';
+let _inGas      = false;
+let _gasStarted = false;
 
-  // Deteksi baris separator GAS dari Python script
-  // GAS dimulai setelah "── APPS SCRIPT" dan sebelum separator "=" berikutnya
+function handleStdout(text) {
   const lines = text.split('\n');
-  for (const line of lines) {
-    // Masuk ke blok GAS
-    if (!_inGasBlock && (
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Deteksi awal blok GAS
+    if (!_inGas && (
       line.includes('APPS SCRIPT') ||
-      line.includes('salin & ganti seluruh editor GAS') ||
-      line.includes('salin & ganti')
+      line.includes('salin & ganti seluruh editor GAS')
     )) {
-      _inGasBlock = true;
-      _capturedGAS = '';
-      // Tampilkan baris ini ke output normal sebagai info
+      _inGas = true;
+      _gasBuffer = '';
+      _gasStarted = true;
       appendOut(line, 'warn');
       continue;
     }
 
-    // Keluar dari blok GAS (baris separator panjang setelah GAS)
-    if (_inGasBlock) {
-      // Akhir GAS ditandai garis "===" panjang (>=20 char =)
-      if (/^={20,}/.test(line.trim())) {
-        _inGasBlock = false;
-        tampilGAS(_capturedGAS.trim());
+    if (_inGas) {
+      // Deteksi akhir blok GAS: baris berisi minimal 20 karakter "═" atau "="
+      if (/^[=═]{20,}/.test(line.trim())) {
+        _inGas = false;
+        tampilGAS(_gasBuffer.trim());
         appendOut(line, 'warn');
         continue;
       }
-      _capturedGAS += line + '\n';
+      _gasBuffer += line + '\n';
       // Jangan tampilkan ke output biasa
-      continue;
+    } else {
+      appendOut(line, 'text');
     }
-
-    // Baris normal — tampilkan
-    if (line !== '') appendOut(line, type);
   }
 }
 
-function tampilGAS(gasCode) {
-  if (!gasCode) return;
-  const panel = document.getElementById('gas-panel');
-  const el    = document.getElementById('gas-code');
-  el.textContent = gasCode;
-  panel.classList.add('show');
-  // Scroll ke panel GAS
-  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
-}
-
-function salinGAS() {
-  const gas = document.getElementById('gas-code').textContent;
-  navigator.clipboard.writeText(gas).then(() => {
-    const btn = document.querySelector('.gas-btn.primary');
-    btn.textContent = '✓ Tersalin!';
-    setTimeout(() => btn.textContent = '📋 Salin Semua', 2000);
-  });
-}
-
-function tutupGAS() {
-  document.getElementById('gas-panel').classList.remove('show');
-}
-
-// ── Download HTML hasil generate ──────────────────────────────────────
-function downloadHtml() {
-  if (!_capturedHtmlContent) return;
-  const blob = new Blob([_capturedHtmlContent], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  // Ambil nama file dari path
-  const parts = (_capturedHtmlPath || 'output.html').replace(/\\/g, '/').split('/');
-  a.download  = parts[parts.length - 1] || 'output.html';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function cekHtmlTergenerate() {
-  try {
-    const files = pyodide.globals.get('_intercepted_files').toJs();
-    if (files && files.size > 0) {
-      for (const [path, content] of files) {
-        if (path.endsWith('.html')) {
-          _capturedHtmlContent = content;
-          _capturedHtmlPath    = path;
-          const parts = path.replace(/\\/g, '/').split('/');
-          const fname = parts[parts.length - 1];
-          document.getElementById('dl-filename').textContent = `📄 ${fname} (${(content.length/1024).toFixed(1)} KB) siap didownload`;
-          document.getElementById('dl-banner').classList.add('show');
-          break;
-        }
-      }
-    }
-  } catch(e) { /* silent */ }
-}
-  const pill = document.getElementById('statusPill');
-  const dot = pill.querySelector('.dot');
-  pill.className = 'status-pill ' + type;
-  dot.className = 'dot' + (type === 'loading' ? ' pulse' : '');
-  document.getElementById('statusText').textContent = text;
-}
-
+// ── Output helpers ───────────────────────────────────────────────────
 function setOutput(html) {
   document.getElementById('output').innerHTML = html;
 }
 
 function appendOut(text, type) {
   const out = document.getElementById('output');
-  const el = document.createElement('span');
-  if (type === 'err') el.className = 'out-err';
-  else if (type === 'warn') el.className = 'out-warn';
-  el.textContent = text + '\n';
-  if (out.querySelector('.out-info, .out-success')) {
-    const stale = out.querySelector('.out-info, .out-success');
-    if (stale && out.children.length === 1) out.innerHTML = '';
-  }
-  out.appendChild(el);
+  // Hapus placeholder saat ada output pertama
+  const ph = out.querySelector('.out-info, .out-success');
+  if (ph && out.children.length === 1) out.innerHTML = '';
+  if (text === '' && type === 'text') return; // skip baris kosong murni
+  const span = document.createElement('span');
+  if (type === 'err')  span.className = 'out-err';
+  if (type === 'warn') span.className = 'out-warn';
+  span.textContent = text + '\n';
+  out.appendChild(span);
   out.scrollTop = out.scrollHeight;
 }
 
+function setStatus(type, text) {
+  const pill = document.getElementById('statusPill');
+  const dot  = pill.querySelector('.dot');
+  pill.className = 'status-pill ' + type;
+  dot.className  = 'dot' + (type === 'loading' ? ' pulse' : '');
+  document.getElementById('statusText').textContent = text;
+}
+
+// ── GAS panel ────────────────────────────────────────────────────────
+function tampilGAS(code) {
+  if (!code) return;
+  capturedGAS = code;
+  document.getElementById('gas-code').textContent = code;
+  document.getElementById('gas-panel').classList.add('show');
+}
+
+function salinGAS() {
+  if (!capturedGAS) return;
+  navigator.clipboard.writeText(capturedGAS).then(() => {
+    const btn = document.querySelector('.gas-btn.primary');
+    const ori = btn.textContent;
+    btn.textContent = '✓ Tersalin!';
+    setTimeout(() => btn.textContent = ori, 2000);
+  });
+}
+
+// ── Download HTML ─────────────────────────────────────────────────────
+function cekHtmlCapture() {
+  try {
+    const captures = pyodide.globals.get('_html_captures').toJs();
+    if (!captures || captures.size === 0) return;
+    for (const [path, content] of captures) {
+      if (content && content.length > 100) {
+        capturedHtml = { path, content };
+        const fname = path.split('/').pop();
+        const kb    = (content.length / 1024).toFixed(1);
+        document.getElementById('dl-filename').textContent =
+          `📄 ${fname}  —  ${kb} KB siap didownload`;
+        document.getElementById('dl-banner').classList.add('show');
+        break;
+      }
+    }
+  } catch(e) { /* silent */ }
+}
+
+function downloadHtml() {
+  if (!capturedHtml) return;
+  const blob = new Blob([capturedHtml.content], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = capturedHtml.path.split('/').pop() || 'output.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── stdin ─────────────────────────────────────────────────────────────
 function waitForInput() {
   return new Promise(res => {
     document.getElementById('stdinRow').style.display = 'flex';
@@ -618,34 +405,31 @@ function waitForInput() {
     inputResolve = res;
   });
 }
-
 function submitInput() {
   const val = document.getElementById('stdinInput').value;
   if (!inputResolve) return;
-  appendOut('  ▸ ' + val, 'warn');
+  appendOut('  › ' + val, 'warn');
   document.getElementById('stdinInput').value = '';
   document.getElementById('stdinRow').style.display = 'none';
   inputResolve(val);
   inputResolve = null;
 }
-
 document.getElementById('stdinInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') submitInput();
 });
 
+// ── Run code ─────────────────────────────────────────────────────────
 async function runCode() {
   if (!pyReady) { alert('Runtime Python belum siap.'); return; }
   const code = document.getElementById('code').value.trim();
   if (!code) { alert('Kode kosong!'); return; }
 
-  // Reset state intercept
-  _capturedHtmlContent = null;
-  _capturedHtmlPath    = null;
-  _capturedGAS         = '';
-  _inGasBlock          = false;
-  _printBuffer         = '';
-
-  // Sembunyikan panel lama
+  // Reset state
+  capturedHtml = null;
+  capturedGAS  = null;
+  _gasBuffer   = '';
+  _inGas       = false;
+  _gasStarted  = false;
   document.getElementById('dl-banner').classList.remove('show');
   document.getElementById('gas-panel').classList.remove('show');
   document.getElementById('output').innerHTML = '';
@@ -653,27 +437,29 @@ async function runCode() {
   setStatus('loading', '▶ Menjalankan...');
   runStart = Date.now();
 
+  // Reset capture dict di Python
+  try { pyodide.runPython('_html_captures.clear()'); } catch(e) {}
+
   try {
     await pyodide.runPythonAsync(code);
     const ms = Date.now() - runStart;
-    appendOut('', 'text');
-    const divider = document.createElement('span');
-    divider.className = 'out-divider';
-    divider.textContent = `─── selesai dalam ${ms}ms ───`;
-    document.getElementById('output').appendChild(divider);
+    const div = document.createElement('span');
+    div.className   = 'out-divider';
+    div.textContent = `─── selesai dalam ${ms}ms ───`;
+    document.getElementById('output').appendChild(div);
     setStatus('ready', `✓ Selesai (${ms}ms)`);
-    // Cek apakah ada file HTML yang ditulis
-    cekHtmlTergenerate();
+    cekHtmlCapture();
   } catch(e) {
     appendOut(e.message, 'err');
     setStatus('error', '✗ Error');
   }
-
   document.getElementById('runBtn').disabled = false;
 }
 
 function clearOutput() {
-  setOutput('<span class="out-info">Output dibersihkan. Siap menjalankan kode baru.</span>');
+  setOutput('<span class="out-info">Output dibersihkan.</span>');
+  document.getElementById('dl-banner').classList.remove('show');
+  document.getElementById('gas-panel').classList.remove('show');
   setStatus('ready', '🟢 Python siap');
 }
 
@@ -686,7 +472,7 @@ function copyOutput() {
   });
 }
 
-// File upload
+// ── File upload ───────────────────────────────────────────────────────
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const f = e.target.files[0];
   if (!f) return;
@@ -698,30 +484,28 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     updateLines();
   };
   reader.readAsText(f);
+  // Reset input supaya file yang sama bisa diupload ulang
+  this.value = '';
 });
 
-// Line numbers & cursor pos
+// ── Line numbers & cursor ─────────────────────────────────────────────
 function updateLines() {
-  const val = document.getElementById('code').value;
-  const lines = val.split('\n');
+  const lines = document.getElementById('code').value.split('\n');
   document.getElementById('lineNums').innerHTML =
     lines.map((_, i) => `<span>${i+1}</span>`).join('');
   document.getElementById('sbLines').textContent = `Baris: ${lines.length}`;
 }
-
 document.getElementById('code').addEventListener('input', updateLines);
 document.getElementById('code').addEventListener('keyup', updateCursor);
 document.getElementById('code').addEventListener('click', updateCursor);
-
 function updateCursor() {
-  const el = document.getElementById('code');
-  const val = el.value.substring(0, el.selectionStart);
-  const lines = val.split('\n');
+  const el  = document.getElementById('code');
+  const val = el.value.substring(0, el.selectionStart).split('\n');
   document.getElementById('sbCursor').textContent =
-    `Ln ${lines.length}, Kol ${lines[lines.length-1].length + 1}`;
+    `Ln ${val.length}, Kol ${val[val.length-1].length + 1}`;
 }
 
-// Tab support
+// ── Tab & Ctrl+Enter ──────────────────────────────────────────────────
 document.getElementById('code').addEventListener('keydown', function(e) {
   if (e.key === 'Tab') {
     e.preventDefault();
@@ -730,21 +514,18 @@ document.getElementById('code').addEventListener('keydown', function(e) {
     this.selectionStart = this.selectionEnd = s + 4;
     updateLines();
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    runCode();
-  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runCode();
 });
 
-// Example snippets
+// ── Contoh kode ───────────────────────────────────────────────────────
 const examples = {
   hello: `# Hello World\nprint("Halo, dunia!")\nprint("Selamat belajar Python!")`,
-  fib: `# Deret Fibonacci\ndef fibonacci(n):\n    a, b = 0, 1\n    hasil = []\n    for _ in range(n):\n        hasil.append(a)\n        a, b = b, a + b\n    return hasil\n\nhasil = fibonacci(15)\nprint("Deret Fibonacci:")\nprint(hasil)\nprint(f"\\nJumlah 15 angka pertama: {sum(hasil)}")`,
-  loop: `# List dan Loop\nbuah = ["apel", "mangga", "jeruk", "pisang", "rambutan"]\n\nprint("Daftar buah:")\nfor i, b in enumerate(buah, 1):\n    print(f"  {i}. {b.capitalize()}")\n\nprint(f"\\nTotal: {len(buah)} buah")\nprint(f"Diurutkan: {sorted(buah)}")`,
-  math: `import math\n\nprint("=== Operasi Matematika ===")\n\n# Akar kuadrat\nfor n in [4, 9, 16, 25, 36, 49]:\n    print(f"  √{n:2d} = {math.sqrt(n):.1f}")\n\n# Konstanta\nprint(f"\\nPI  = {math.pi:.8f}")\nprint(f"e   = {math.e:.8f}")\n\n# Trigonometri\nprint(f"\\nsin(90°) = {math.sin(math.radians(90)):.4f}")\nprint(f"cos(60°) = {math.cos(math.radians(60)):.4f}")`,
-  oop: `# OOP - Class\nclass Kendaraan:\n    def __init__(self, merk, kecepatan_max):\n        self.merk = merk\n        self.kecepatan_max = kecepatan_max\n        self.kecepatan = 0\n\n    def gas(self, tambah):\n        self.kecepatan = min(self.kecepatan + tambah, self.kecepatan_max)\n        print(f"{self.merk}: {self.kecepatan} km/h")\n\n    def rem(self):\n        self.kecepatan = 0\n        print(f"{self.merk}: berhenti")\n\n\nmobil = Kendaraan("Toyota", 200)\nmotor = Kendaraan("Honda", 150)\n\nprint("--- Gas ---")\nmobil.gas(80)\nmobil.gas(80)\nmobil.gas(80)  # terbatas 200\n\nmotor.gas(60)\n\nprint("--- Rem ---")\nmobil.rem()`,
-  input: `# Contoh input() dari pengguna\nnama = input("Siapa namamu? ")\nukur = int(input("Berapa umurmu? "))\n\nprint(f"\\nHalo, {nama}!")\nprint(f"Umurmu {ukur} tahun.")\n\nif ukur < 18:\n    print("Kamu masih di bawah umur.")\nelif ukur < 60:\n    print("Kamu dewasa.")\nelse:\n    print("Kamu lansia.")`
+  fib:   `# Deret Fibonacci\ndef fibonacci(n):\n    a, b = 0, 1\n    hasil = []\n    for _ in range(n):\n        hasil.append(a)\n        a, b = b, a+b\n    return hasil\n\nprint(fibonacci(15))`,
+  loop:  `# List dan Loop\nbuah = ["apel","mangga","jeruk","pisang"]\nfor i,b in enumerate(buah,1):\n    print(f"  {i}. {b.capitalize()}")`,
+  math:  `import math\nfor n in [4,9,16,25]:\n    print(f"sqrt({n}) = {math.sqrt(n):.1f}")\nprint(f"PI = {math.pi:.8f}")`,
+  oop:   `class Kendaraan:\n    def __init__(self,merk,maks):\n        self.merk=merk; self.maks=maks; self.v=0\n    def gas(self,n):\n        self.v=min(self.v+n,self.maks)\n        print(f"{self.merk}: {self.v} km/h")\n\nmobil=Kendaraan("Toyota",200)\nmobil.gas(80); mobil.gas(80); mobil.gas(80)`,
+  input: `nama = input("Nama kamu? ")\numur = int(input("Umur? "))\nprint(f"Halo {nama}, umur {umur} tahun!")`
 };
-
 function loadExample(key) {
   document.getElementById('code').value = examples[key];
   document.getElementById('fileBadge').textContent = key + '.py (contoh)';
@@ -752,7 +533,7 @@ function loadExample(key) {
   updateLines();
 }
 
-// Clock in statusbar
+// ── Jam di statusbar ──────────────────────────────────────────────────
 setInterval(() => {
   document.getElementById('sbTime').textContent =
     new Date().toLocaleTimeString('id-ID');
