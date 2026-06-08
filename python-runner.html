@@ -82,7 +82,7 @@
   main {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr auto auto;
     gap: 0;
     flex: 1;
     height: calc(100vh - 57px);
@@ -252,6 +252,74 @@
 
   .hidden { display: none !important; }
   input[type=file] { display: none; }
+
+  /* ── DOWNLOAD HTML BANNER ── */
+  #dl-banner {
+    display: none;
+    grid-column: 1 / -1;
+    align-items: center; gap: 12px;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, rgba(31,111,235,0.15), rgba(16,185,129,0.1));
+    border-bottom: 1px solid rgba(88,166,255,0.25);
+  }
+  #dl-banner.show { display: flex; }
+  /* ── GAS PANEL grid-column fix ── */
+  #gas-panel { grid-column: 1 / -1; }
+  #dl-banner span { font-size: 13px; color: var(--text2); flex: 1; font-family: 'JetBrains Mono', monospace; }
+  .btn-dl {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 18px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; font-family: 'Syne', sans-serif;
+    background: linear-gradient(135deg, #1f6feb, #10B981);
+    color: white; transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn-dl:hover { opacity: 0.88; }
+
+  /* ── GAS PANEL ── */
+  #gas-panel {
+    display: none;
+    grid-column: 1 / -1;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    max-height: 320px;
+  }
+  #gas-panel.show { display: flex; }
+  .gas-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(124,58,237,0.12);
+    border-bottom: 1px solid rgba(124,58,237,0.2);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; color: #a78bfa;
+    flex-shrink: 0;
+  }
+  .gas-header-left { display: flex; align-items: center; gap: 8px; }
+  .gas-tag {
+    background: rgba(124,58,237,0.2); color: #c4b5fd;
+    padding: 2px 8px; border-radius: 99px; font-size: 10px;
+    border: 1px solid rgba(124,58,237,0.3);
+  }
+  .gas-actions { display: flex; gap: 6px; }
+  .gas-btn {
+    padding: 4px 12px; border-radius: 6px; font-size: 11px;
+    font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06); color: var(--text2);
+    font-family: 'Syne', sans-serif; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .gas-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+  .gas-btn.primary { background: rgba(124,58,237,0.3); border-color: rgba(124,58,237,0.5); color: #c4b5fd; }
+  .gas-btn.primary:hover { background: rgba(124,58,237,0.45); }
+  #gas-code {
+    flex: 1; overflow: auto; padding: 14px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; line-height: 1.65;
+    color: #e2d9f3; white-space: pre;
+    background: transparent;
+  }
 </style>
 </head>
 <body>
@@ -295,6 +363,12 @@
     </div>
   </div>
 
+  <!-- DOWNLOAD HTML BANNER -->
+  <div id="dl-banner">
+    <span id="dl-filename">📄 file.html siap didownload</span>
+    <button class="btn-dl" id="dl-btn" onclick="downloadHtml()">⬇ Download HTML</button>
+  </div>
+
   <div class="pane">
     <div class="pane-header">
       <span>Editor</span>
@@ -332,6 +406,21 @@ Setelah siap, klik ▶ Jalankan untuk menjalankan kode.</span>
     <span id="sbCursor">Kolom: 1</span>
     <span id="sbTime"></span>
   </div>
+
+  <!-- GAS PANEL -->
+  <div id="gas-panel">
+    <div class="gas-header">
+      <div class="gas-header-left">
+        <span>Google Apps Script</span>
+        <span class="gas-tag">GAS</span>
+      </div>
+      <div class="gas-actions">
+        <button class="gas-btn primary" onclick="salinGAS()">📋 Salin Semua</button>
+        <button class="gas-btn" onclick="tutupGAS()">✕ Tutup</button>
+      </div>
+    </div>
+    <pre id="gas-code"></pre>
+  </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
@@ -341,13 +430,55 @@ let pyReady = false;
 let inputResolve = null;
 let runStart = null;
 
+// ── State untuk intercept output ──────────────────────────────
+let _capturedHtmlContent = null;   // isi file HTML yang di-write
+let _capturedHtmlPath    = null;   // path file HTML
+let _capturedGAS         = '';     // kode GAS yang diprint
+let _inGasBlock          = false;  // apakah sedang dalam blok GAS
+let _printBuffer         = '';     // buffer output yang sudah keluar
+
 // Load Pyodide
 async function initPy() {
   try {
     pyodide = await loadPyodide({
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/"
     });
-    pyodide.setStdout({ batched: (s) => appendOut(s, 'text') });
+
+    // ── Intercept open() untuk tangkap file HTML yang ditulis ──────────
+    pyodide.runPython(`
+import builtins as _bi
+_real_open = _bi.open
+_intercepted_files = {}
+
+class _InterceptedFile:
+    def __init__(self, path, mode, real_file):
+        self._path = path
+        self._mode = mode
+        self._real = real_file
+        self._buf = []
+    def write(self, data):
+        self._buf.append(data)
+        return self._real.write(data)
+    def __enter__(self):
+        return self
+    def __exit__(self, *a):
+        self._real.__exit__(*a)
+        if 'w' in self._mode and self._buf:
+            content = ''.join(self._buf)
+            _intercepted_files[self._path] = content
+    def flush(self): return self._real.flush()
+    def close(self): return self._real.close()
+
+def _patched_open(path, mode='r', **kw):
+    f = _real_open(path, mode, **kw)
+    if 'w' in mode and str(path).endswith('.html'):
+        return _InterceptedFile(str(path), mode, f)
+    return f
+
+_bi.open = _patched_open
+`);
+
+    pyodide.setStdout({ batched: (s) => interceptOut(s, 'text') });
     pyodide.setStderr({ batched: (s) => appendOut(s, 'err') });
     pyodide.setStdin({ stdin: () => waitForInput() });
     pyReady = true;
@@ -360,7 +491,101 @@ async function initPy() {
   }
 }
 
-function setStatus(type, text) {
+// ── Intercept stdout: pisahkan GAS dari output biasa ──────────────────
+function interceptOut(text, type) {
+  _printBuffer += text + '\n';
+
+  // Deteksi baris separator GAS dari Python script
+  // GAS dimulai setelah "── APPS SCRIPT" dan sebelum separator "=" berikutnya
+  const lines = text.split('\n');
+  for (const line of lines) {
+    // Masuk ke blok GAS
+    if (!_inGasBlock && (
+      line.includes('APPS SCRIPT') ||
+      line.includes('salin & ganti seluruh editor GAS') ||
+      line.includes('salin & ganti')
+    )) {
+      _inGasBlock = true;
+      _capturedGAS = '';
+      // Tampilkan baris ini ke output normal sebagai info
+      appendOut(line, 'warn');
+      continue;
+    }
+
+    // Keluar dari blok GAS (baris separator panjang setelah GAS)
+    if (_inGasBlock) {
+      // Akhir GAS ditandai garis "===" panjang (>=20 char =)
+      if (/^={20,}/.test(line.trim())) {
+        _inGasBlock = false;
+        tampilGAS(_capturedGAS.trim());
+        appendOut(line, 'warn');
+        continue;
+      }
+      _capturedGAS += line + '\n';
+      // Jangan tampilkan ke output biasa
+      continue;
+    }
+
+    // Baris normal — tampilkan
+    if (line !== '') appendOut(line, type);
+  }
+}
+
+function tampilGAS(gasCode) {
+  if (!gasCode) return;
+  const panel = document.getElementById('gas-panel');
+  const el    = document.getElementById('gas-code');
+  el.textContent = gasCode;
+  panel.classList.add('show');
+  // Scroll ke panel GAS
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function salinGAS() {
+  const gas = document.getElementById('gas-code').textContent;
+  navigator.clipboard.writeText(gas).then(() => {
+    const btn = document.querySelector('.gas-btn.primary');
+    btn.textContent = '✓ Tersalin!';
+    setTimeout(() => btn.textContent = '📋 Salin Semua', 2000);
+  });
+}
+
+function tutupGAS() {
+  document.getElementById('gas-panel').classList.remove('show');
+}
+
+// ── Download HTML hasil generate ──────────────────────────────────────
+function downloadHtml() {
+  if (!_capturedHtmlContent) return;
+  const blob = new Blob([_capturedHtmlContent], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  // Ambil nama file dari path
+  const parts = (_capturedHtmlPath || 'output.html').replace(/\\/g, '/').split('/');
+  a.download  = parts[parts.length - 1] || 'output.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function cekHtmlTergenerate() {
+  try {
+    const files = pyodide.globals.get('_intercepted_files').toJs();
+    if (files && files.size > 0) {
+      for (const [path, content] of files) {
+        if (path.endsWith('.html')) {
+          _capturedHtmlContent = content;
+          _capturedHtmlPath    = path;
+          const parts = path.replace(/\\/g, '/').split('/');
+          const fname = parts[parts.length - 1];
+          document.getElementById('dl-filename').textContent = `📄 ${fname} (${(content.length/1024).toFixed(1)} KB) siap didownload`;
+          document.getElementById('dl-banner').classList.add('show');
+          break;
+        }
+      }
+    }
+  } catch(e) { /* silent */ }
+}
   const pill = document.getElementById('statusPill');
   const dot = pill.querySelector('.dot');
   pill.className = 'status-pill ' + type;
@@ -413,6 +638,16 @@ async function runCode() {
   const code = document.getElementById('code').value.trim();
   if (!code) { alert('Kode kosong!'); return; }
 
+  // Reset state intercept
+  _capturedHtmlContent = null;
+  _capturedHtmlPath    = null;
+  _capturedGAS         = '';
+  _inGasBlock          = false;
+  _printBuffer         = '';
+
+  // Sembunyikan panel lama
+  document.getElementById('dl-banner').classList.remove('show');
+  document.getElementById('gas-panel').classList.remove('show');
   document.getElementById('output').innerHTML = '';
   document.getElementById('runBtn').disabled = true;
   setStatus('loading', '▶ Menjalankan...');
@@ -427,6 +662,8 @@ async function runCode() {
     divider.textContent = `─── selesai dalam ${ms}ms ───`;
     document.getElementById('output').appendChild(divider);
     setStatus('ready', `✓ Selesai (${ms}ms)`);
+    // Cek apakah ada file HTML yang ditulis
+    cekHtmlTergenerate();
   } catch(e) {
     appendOut(e.message, 'err');
     setStatus('error', '✗ Error');
