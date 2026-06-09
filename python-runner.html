@@ -151,7 +151,6 @@ main{display:flex;flex-direction:column;flex:1;overflow:hidden}
 .py-action{flex:1;padding:7px;background:transparent;border:none;color:var(--text2);font-size:11px;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:500}
 .py-action:hover{background:rgba(255,255,255,.05);color:var(--text)}
 .py-action.load:hover{color:var(--blue)}
-.py-action.run-now:hover{color:var(--green)}
 .py-action.del:hover{color:var(--red)}
 .py-action+.py-action{border-left:1px solid var(--border)}
 
@@ -297,6 +296,8 @@ print("Selamat datang di Python Runner!")</textarea>
       <div class="lib-panel" id="panelHtml">
         <div class="lib-search">
           <input type="text" id="searchHtml" placeholder="Cari file HTML..." oninput="renderHtmlList()">
+          <button class="btn" onclick="document.getElementById('fileInputHtml').click()">+ Upload HTML</button>
+          <input type="file" id="fileInputHtml" accept=".html,.htm">
         </div>
         <div id="htmlList"></div>
       </div>
@@ -371,16 +372,20 @@ function fmtDate(iso){
 }
 
 // ── Render PY list ───────────────────────────────────────
+// Simpan referensi array aktif agar onclick bisa akses by index
+let _pyItems = [];
+let _htmlItems = [];
+
 function renderPyList(){
-  const list   = loadLib(LIB_PY);
-  const q      = (document.getElementById('searchPy').value||'').toLowerCase();
-  const items  = q ? list.filter(f=>f.name.toLowerCase().includes(q)) : list;
-  const el     = document.getElementById('pyList');
-  if(!items.length){
+  const list  = loadLib(LIB_PY);
+  const q     = (document.getElementById('searchPy').value||'').toLowerCase();
+  _pyItems    = q ? list.filter(f=>f.name.toLowerCase().includes(q)) : list;
+  const el    = document.getElementById('pyList');
+  if(!_pyItems.length){
     el.innerHTML=`<div class="empty-state"><div class="icon">🐍</div><p>Belum ada file Python tersimpan.<br>Upload file .py lalu simpan ke library.</p></div>`;
     return;
   }
-  el.innerHTML=`<div class="file-grid">${items.map((f,i)=>`
+  el.innerHTML=`<div class="file-grid">${_pyItems.map((f,i)=>`
     <div class="py-card">
       <div class="py-card-top">
         <div class="py-icon">🐍</div>
@@ -390,16 +395,14 @@ function renderPyList(){
         </div>
       </div>
       <div class="py-card-actions">
-        <button class="py-action load" onclick="muatPy(${JSON.stringify(f.name)})">📝 Muat</button>
-        <button class="py-action run-now" onclick="muatDanJalankan(${JSON.stringify(f.name)})">▶ Jalankan</button>
-        <button class="py-action del" onclick="hapusPy(${JSON.stringify(f.name)})">🗑</button>
+        <button class="py-action load" onclick="muatPy(${i})">📝 Muat ke Editor</button>
+        <button class="py-action del"  onclick="hapusPy(${i})">🗑 Hapus</button>
       </div>
     </div>`).join('')}</div>`;
 }
 
-function muatPy(name){
-  const list = loadLib(LIB_PY);
-  const f    = list.find(x=>x.name===name);
+function muatPy(i){
+  const f = _pyItems[i];
   if(!f) return;
   document.getElementById('code').value = f.code;
   document.getElementById('fileBadge').textContent = f.name;
@@ -409,32 +412,28 @@ function muatPy(name){
   toast('✓ '+f.name+' dimuat ke editor');
 }
 
-async function muatDanJalankan(name){
-  muatPy(name);
-  await new Promise(r=>setTimeout(r,100));
-  runCode();
-}
-
-function hapusPy(name){
-  if(!confirm('Hapus "'+name+'" dari library?')) return;
-  const list = loadLib(LIB_PY).filter(f=>f.name!==name);
+function hapusPy(i){
+  const f = _pyItems[i];
+  if(!f) return;
+  if(!confirm('Hapus "'+f.name+'" dari library?')) return;
+  const list = loadLib(LIB_PY).filter(x=>x.name!==f.name);
   saveLib(LIB_PY, list);
   renderPyList();
   updateLibCount();
-  toast('🗑 '+name+' dihapus');
+  toast('🗑 '+f.name+' dihapus');
 }
 
 // ── Render HTML list ─────────────────────────────────────
 function renderHtmlList(){
   const list  = loadLib(LIB_HTML);
   const q     = (document.getElementById('searchHtml').value||'').toLowerCase();
-  const items = q ? list.filter(f=>f.name.toLowerCase().includes(q)) : list;
+  _htmlItems  = q ? list.filter(f=>f.name.toLowerCase().includes(q)) : list;
   const el    = document.getElementById('htmlList');
-  if(!items.length){
-    el.innerHTML=`<div class="empty-state"><div class="icon">🌐</div><p>Belum ada file HTML tersimpan.<br>Jalankan script yang menghasilkan HTML,<br>lalu klik "Simpan ke Library" di banner.</p></div>`;
+  if(!_htmlItems.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">🌐</div><p>Belum ada file HTML tersimpan.<br>Jalankan script atau upload file HTML.</p></div>`;
     return;
   }
-  el.innerHTML=`<div class="file-grid">${items.map(f=>`
+  el.innerHTML=`<div class="file-grid">${_htmlItems.map((f,i)=>`
     <div class="html-card">
       <div class="html-card-top">
         <div class="html-icon">🌐</div>
@@ -444,39 +443,39 @@ function renderHtmlList(){
         </div>
       </div>
       <div class="html-card-actions">
-        <button class="html-action preview" onclick="previewHtml(${JSON.stringify(f.name)})">👁 Preview</button>
-        <button class="html-action dl" onclick="downloadHtmlLib(${JSON.stringify(f.name)})">⬇ Download</button>
-        <button class="html-action del" onclick="hapusHtml(${JSON.stringify(f.name)})">🗑</button>
+        <button class="html-action preview" onclick="previewHtml(${i})">👁 Preview</button>
+        <button class="html-action dl"      onclick="downloadHtmlLib(${i})">⬇ Download</button>
+        <button class="html-action del"     onclick="hapusHtml(${i})">🗑 Hapus</button>
       </div>
     </div>`).join('')}</div>`;
 }
 
-function previewHtml(name){
-  const list = loadLib(LIB_HTML);
-  const f    = list.find(x=>x.name===name);
+function previewHtml(i){
+  const f = _htmlItems[i];
   if(!f) return;
   const blob = new Blob([f.content],{type:'text/html;charset=utf-8'});
   window.open(URL.createObjectURL(blob),'_blank');
 }
 
-function downloadHtmlLib(name){
-  const list = loadLib(LIB_HTML);
-  const f    = list.find(x=>x.name===name);
+function downloadHtmlLib(i){
+  const f = _htmlItems[i];
   if(!f) return;
   const blob = new Blob([f.content],{type:'text/html;charset=utf-8'});
-  const a    = document.createElement('a');
+  const a = document.createElement('a');
   a.href=URL.createObjectURL(blob); a.download=f.name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   toast('⬇ Mendownload '+f.name);
 }
 
-function hapusHtml(name){
-  if(!confirm('Hapus "'+name+'" dari library?')) return;
-  const list = loadLib(LIB_HTML).filter(f=>f.name!==name);
+function hapusHtml(i){
+  const f = _htmlItems[i];
+  if(!f) return;
+  if(!confirm('Hapus "'+f.name+'" dari library?')) return;
+  const list = loadLib(LIB_HTML).filter(x=>x.name!==f.name);
   saveLib(LIB_HTML, list);
   renderHtmlList();
   updateLibCount();
-  toast('🗑 '+name+' dihapus');
+  toast('🗑 '+f.name+' dihapus');
 }
 
 // ── Modal ────────────────────────────────────────────────
@@ -503,7 +502,17 @@ document.getElementById('fileInput2').addEventListener('change',function(e){
   reader.readAsText(f); this.value='';
 });
 
-// ── Toast ─────────────────────────────────────────────────
+// ── Upload HTML ke library ────────────────────────────────
+document.getElementById('fileInputHtml').addEventListener('change',function(e){
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    simpanHtml(f.name, ev.target.result);
+    renderHtmlList();
+    toast('✓ '+f.name+' disimpan ke library HTML');
+  };
+  reader.readAsText(f); this.value='';
+});
 let _toastTimer=null;
 function toast(msg){
   const el=document.getElementById('toast');
