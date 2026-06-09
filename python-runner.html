@@ -103,6 +103,10 @@ main{display:flex;flex-direction:column;flex:1;overflow:hidden}
 /* STATUSBAR */
 .statusbar{display:flex;align-items:center;gap:14px;padding:4px 18px;border-top:1px solid var(--border);background:var(--bg2);font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;flex-shrink:0}
 .statusbar span{display:flex;align-items:center;gap:4px}
+/* Pane action buttons (Save / Save As) */
+.pane-act{padding:2px 9px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,.04);color:var(--text2);font-family:'Syne',sans-serif;transition:all .15s;white-space:nowrap}
+.pane-act:hover{background:rgba(255,255,255,.10);color:var(--text)}
+#btnSave:hover{color:var(--green);border-color:rgba(63,185,80,.4)}
 
 /* ═══════════════════════ LIBRARY MODAL ═══════════════════════ */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px}
@@ -166,6 +170,7 @@ main{display:flex;flex-direction:column;flex:1;overflow:hidden}
 .html-action{flex:1;padding:7px;background:transparent;border:none;color:var(--text2);font-size:11px;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:500}
 .html-action:hover{background:rgba(255,255,255,.05);color:var(--text)}
 .html-action.preview:hover{color:var(--blue)}
+.html-action.load:hover{color:var(--purple)}
 .html-action.dl:hover{color:var(--green)}
 .html-action.del:hover{color:var(--red)}
 .html-action+.html-action{border-left:1px solid var(--border)}
@@ -194,8 +199,8 @@ input[type=file]{display:none}
 
 <main>
   <div class="toolbar">
-    <button class="btn" onclick="document.getElementById('fileInput').click()">📂 Upload .py</button>
-    <input type="file" id="fileInput" accept=".py">
+    <button class="btn" onclick="document.getElementById('fileInput').click()">📂 Upload</button>
+    <input type="file" id="fileInput" accept=".py,.html,.htm">
     <span class="file-badge" id="fileBadge">untitled.py</span>
     <button class="btn run" id="runBtn" onclick="runCode()" disabled>▶ Jalankan</button>
     <button class="btn danger" onclick="clearOutput()">🗑 Bersihkan</button>
@@ -220,8 +225,12 @@ input[type=file]{display:none}
   <div class="workspace">
     <div class="pane">
       <div class="pane-header">
-        <span>Editor</span>
-        <span class="file-name" id="editorFileName">untitled.py</span>
+        <span>Editor &nbsp;<span id="unsavedDot" title="Ada perubahan belum disimpan" style="display:none;color:var(--yellow);font-size:14px;line-height:1">●</span></span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="file-name" id="editorFileName">untitled.py</span>
+          <button class="pane-act" id="btnSave" onclick="simpanEditorKeLib()" title="Simpan (Ctrl+S)">💾 Simpan</button>
+          <button class="pane-act" onclick="simpanSebagai()" title="Simpan dengan nama baru">📋 Save As</button>
+        </div>
       </div>
       <div class="editor-container">
         <div class="line-nums" id="lineNums"><span>1</span></div>
@@ -317,6 +326,30 @@ let pyodide=null, pyReady=false, inputResolve=null, runStart=null;
 let capturedHtml=null, capturedGAS=null;
 let _gasBuffer='', _inGas=false, _afterAppsScriptLine=false;
 
+// File aktif di editor: {name, type='py'|'html', dirty=false}
+let activeFile = { name:'untitled.py', type:'py', dirty:false };
+
+function setActiveFile(name, type){
+  activeFile = { name, type, dirty:false };
+  document.getElementById('editorFileName').textContent = name;
+  document.getElementById('fileBadge').textContent = name;
+  document.getElementById('unsavedDot').style.display = 'none';
+  // Sembunyikan tombol Jalankan jika file HTML
+  document.getElementById('runBtn').style.display = (type==='html') ? 'none' : '';
+}
+
+function markDirty(){
+  if(!activeFile.dirty){
+    activeFile.dirty = true;
+    document.getElementById('unsavedDot').style.display = '';
+  }
+}
+
+function markClean(){
+  activeFile.dirty = false;
+  document.getElementById('unsavedDot').style.display = 'none';
+}
+
 // ══════════════════════════════════════════════
 //  LIBRARY (localStorage)
 // ══════════════════════════════════════════════
@@ -404,9 +437,9 @@ function renderPyList(){
 function muatPy(i){
   const f = _pyItems[i];
   if(!f) return;
+  if(activeFile.dirty && !confirm('Ada perubahan belum disimpan. Lanjutkan?')) return;
   document.getElementById('code').value = f.code;
-  document.getElementById('fileBadge').textContent = f.name;
-  document.getElementById('editorFileName').textContent = f.name;
+  setActiveFile(f.name, 'py');
   updateLines();
   tutupLibrary();
   toast('✓ '+f.name+' dimuat ke editor');
@@ -443,11 +476,23 @@ function renderHtmlList(){
         </div>
       </div>
       <div class="html-card-actions">
+        <button class="html-action load" onclick="muatHtmlKeEditor(${i})">📝 Muat</button>
         <button class="html-action preview" onclick="previewHtml(${i})">👁 Preview</button>
         <button class="html-action dl"      onclick="downloadHtmlLib(${i})">⬇ Download</button>
         <button class="html-action del"     onclick="hapusHtml(${i})">🗑 Hapus</button>
       </div>
     </div>`).join('')}</div>`;
+}
+
+function muatHtmlKeEditor(i){
+  const f = _htmlItems[i];
+  if(!f) return;
+  if(activeFile.dirty && !confirm('Ada perubahan belum disimpan. Lanjutkan?')) return;
+  document.getElementById('code').value = f.content;
+  setActiveFile(f.name, 'html');
+  updateLines();
+  tutupLibrary();
+  toast('✓ '+f.name+' dimuat ke editor');
 }
 
 function previewHtml(i){
@@ -476,6 +521,35 @@ function hapusHtml(i){
   renderHtmlList();
   updateLibCount();
   toast('🗑 '+f.name+' dihapus');
+}
+
+// ── Simpan editor ke library ──────────────────────────────
+function simpanEditorKeLib(){
+  const code = document.getElementById('code').value;
+  const name = activeFile.name;
+  if(activeFile.type==='html'){
+    simpanHtml(name, code); renderHtmlList();
+    toast('💾 '+name+' disimpan ke library HTML');
+  } else {
+    simpanPy(name, code); renderPyList();
+    toast('💾 '+name+' disimpan ke library Python');
+  }
+  markClean(); updateLibCount();
+}
+
+function simpanSebagai(){
+  const ext = activeFile.type==='html' ? '.html' : '.py';
+  const nama = prompt('Simpan sebagai:', activeFile.name);
+  if(!nama || !nama.trim()) return;
+  const finalName = (nama.trim().endsWith('.html')||nama.trim().endsWith('.htm')||nama.trim().endsWith('.py'))
+    ? nama.trim() : nama.trim()+ext;
+  const isHtml = finalName.endsWith('.html')||finalName.endsWith('.htm');
+  const code = document.getElementById('code').value;
+  if(isHtml){ simpanHtml(finalName, code); renderHtmlList(); }
+  else { simpanPy(finalName, code); renderPyList(); }
+  setActiveFile(finalName, isHtml?'html':'py');
+  markClean(); updateLibCount();
+  toast('💾 Disimpan sebagai '+finalName);
 }
 
 // ── Modal ────────────────────────────────────────────────
@@ -740,13 +814,17 @@ function copyOutput(){
 // ══════════════════════════════════════════════
 document.getElementById('fileInput').addEventListener('change',function(e){
   const f=e.target.files[0]; if(!f) return;
+  const isHtml = f.name.endsWith('.html')||f.name.endsWith('.htm');
   const reader=new FileReader();
   reader.onload=ev=>{
-    document.getElementById('code').value=ev.target.result;
-    document.getElementById('fileBadge').textContent=f.name;
-    document.getElementById('editorFileName').textContent=f.name;
+    const content = ev.target.result;
+    document.getElementById('code').value = content;
+    setActiveFile(f.name, isHtml?'html':'py');
     updateLines();
-    simpanPy(f.name,ev.target.result);
+    // Simpan otomatis ke library yang sesuai
+    if(isHtml){ simpanHtml(f.name, content); renderHtmlList(); }
+    else { simpanPy(f.name, content); renderPyList(); }
+    updateLibCount();
     toast('✓ '+f.name+' diupload & disimpan ke library');
   };
   reader.readAsText(f); this.value='';
@@ -760,7 +838,7 @@ function updateLines(){
   document.getElementById('lineNums').innerHTML=lines.map((_,i)=>`<span>${i+1}</span>`).join('');
   document.getElementById('sbLines').textContent=`Baris: ${lines.length}`;
 }
-document.getElementById('code').addEventListener('input',updateLines);
+document.getElementById('code').addEventListener('input',()=>{ updateLines(); markDirty(); });
 document.getElementById('code').addEventListener('keyup',updateCursor);
 document.getElementById('code').addEventListener('click',updateCursor);
 function updateCursor(){
@@ -776,6 +854,7 @@ document.getElementById('code').addEventListener('keydown',function(e){
     this.selectionStart=this.selectionEnd=s+4; updateLines();
   }
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter') runCode();
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); simpanEditorKeLib(); }
 });
 
 // ══════════════════════════════════════════════
@@ -790,9 +869,9 @@ const examples={
   input:`nama=input("Nama kamu? ")\numur=int(input("Umur? "))\nprint(f"Halo {nama}, umur {umur} tahun!")`
 };
 function loadExample(key){
+  if(activeFile.dirty && !confirm('Ada perubahan belum disimpan. Lanjutkan?')) return;
   document.getElementById('code').value=examples[key];
-  document.getElementById('fileBadge').textContent=key+'.py (contoh)';
-  document.getElementById('editorFileName').textContent=key+'.py';
+  setActiveFile(key+'.py','py');
   updateLines();
 }
 
