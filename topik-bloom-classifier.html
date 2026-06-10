@@ -161,6 +161,18 @@ td.col-q{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowr
 .pill:hover{border-color:var(--accent);color:var(--accent);}
 .pill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);}
+/* ANALISIS KUNCI */
+.ak-row-cocok td{background:rgba(34,197,94,0.05);}
+.ak-row-review td{background:rgba(251,191,36,0.05);}
+.ak-row-dibuat td{background:rgba(96,165,250,0.05);}
+.status-cocok{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(34,197,94,0.15);color:#4ade80;white-space:nowrap;}
+.status-review{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(251,191,36,0.15);color:#fbbf24;white-space:nowrap;}
+.status-dibuat{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(96,165,250,0.15);color:#60a5fa;white-space:nowrap;}
+.conf-warn{color:#fb923c;font-weight:700;}
+.conf-ok{color:#4ade80;}
+.ak-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.ak-sum-card{background:var(--bg3);border-radius:var(--radius);padding:12px;text-align:center;}
+.ak-sum-card .v{font-size:22px;font-weight:700;}.ak-sum-card .l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
 </style>
 </head>
 <body>
@@ -176,6 +188,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
   <button class="tab-btn active" onclick="switchTab('batch',this)">📊 Proses Excel</button>
   <button class="tab-btn" onclick="switchTab('single',this)">🔍 Analisis 1 Soal</button>
   <button class="tab-btn" onclick="switchTab('db',this)">📚 Database Materi</button>
+  <button class="tab-btn" onclick="switchTab('kunci',this)">🔑 Analisis Kunci</button>
 </div>
 <main>
 
@@ -366,6 +379,135 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
     </div>
   </div>
 </div>
+
+<!-- ══════ TAB KUNCI ══════ -->
+<div class="tab-panel" id="tab-kunci">
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">1</span> Mode & Konfigurasi</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="kModeGemini" onclick="setKunciMode('gemini')">✨ Gemini AI</button>
+      <button class="mode-btn" id="kModeLocal" onclick="setKunciMode('local')">⚙️ AI Lokal (Offline)</button>
+    </div>
+    <div id="kApiSection">
+      <div class="key-row">
+        <input type="password" id="kApiKey" placeholder="Gemini API key..." autocomplete="off">
+        <span class="key-saved" id="kKeySaved">✓ Tersimpan</span>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+        <div style="font-size:11px;color:var(--text3);white-space:nowrap">Model:</div>
+        <div class="sw" style="flex:1"><select id="kModelSelect">
+          <option value="gemini-2.5-flash" selected>gemini-2.5-flash ★</option>
+          <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+          <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        </select></div>
+      </div>
+    </div>
+    <div id="kLocalSection" style="display:none"><div class="local-badge">⚙️ Mode Offline Aktif</div></div>
+    <div class="g2" style="margin-top:12px">
+      <div><label class="field" style="margin-top:0">Mapel</label>
+        <div class="sw"><select id="kMapel" onchange="onKunciMapelChange()"><option value="">-- Pilih Mapel --</option></select></div>
+      </div>
+      <div><label class="field" style="margin-top:0">Kelas</label>
+        <div class="sw"><select id="kKelas"><option value="">-- Pilih Kelas --</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">2</span> Upload File Excel</div>
+    <div class="info-box" style="margin-bottom:12px">
+      Kolom yang digunakan: <strong>tipe, pertanyaan, vrl_gambar, opsi_a, opsi_b, opsi_c, opsi_d, kunci</strong>.<br>
+      Kolom lain diabaikan. File tidak perlu memiliki kolom Topik/Bloom/Kesulitan.
+    </div>
+    <div class="upload-zone" id="kUploadZone">
+      <input type="file" id="kFileInput" accept=".xlsx,.xls">
+      <div class="upload-icon">🔑</div>
+      <h3>Klik atau seret file Excel ke sini</h3>
+      <p>.xlsx / .xls</p>
+    </div>
+    <div class="file-info" id="kFileInfo">
+      <div class="file-icon">📗</div>
+      <div class="file-meta"><span id="kFileName">-</span><small id="kFileStats">-</small></div>
+      <button class="btn-remove" onclick="resetKunciFile()">✕</button>
+    </div>
+    <div class="vbox" id="kValidationBox"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">3</span> Opsi</div>
+    <div class="g2">
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Mode Kirim</div>
+        <div class="sw"><select id="kModeSelect">
+          <option value="1">Per soal</option>
+          <option value="5" selected>Batch 5 soal</option>
+          <option value="10">Batch 10 soal</option>
+        </select></div>
+      </div>
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Jeda antar batch</div>
+        <div class="sw"><select id="kDelaySelect">
+          <option value="0">Tanpa jeda</option>
+          <option value="500">500ms</option>
+          <option value="1000" selected>1 detik</option>
+          <option value="2000">2 detik</option>
+        </select></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-run" id="btnKunci" disabled>🔑 Mulai Analisis Kunci</button>
+
+  <div class="card progress-section" id="kProgressSection">
+    <div class="card-title"><span class="step-dot">⟳</span> Sedang Menganalisis</div>
+    <div class="prog-hdr">
+      <span class="prog-label" id="kProgressLabel">Menginisialisasi...</span>
+      <span class="prog-count" id="kProgressCount">0 / 0</span>
+    </div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="kProgressBar"></div></div>
+    <div class="prog-log" id="kProgressLog"></div>
+    <button class="btn-sec" id="btnKunciStop" style="margin-top:12px;width:100%;justify-content:center">⏹ Hentikan</button>
+  </div>
+
+  <div class="card results-section" id="kResultsSection">
+    <div class="card-title"><span class="step-dot">✓</span> Hasil Analisis Kunci</div>
+
+    <div class="ak-summary">
+      <div class="ak-sum-card"><div class="v" id="akTotal" style="color:var(--accent)">0</div><div class="l">Total Soal</div></div>
+      <div class="ak-sum-card"><div class="v val-s" id="akCocok">0</div><div class="l">✓ Cocok</div></div>
+      <div class="ak-sum-card"><div class="v val-w" id="akReview">0</div><div class="l">⚠ Perlu Review</div></div>
+      <div class="ak-sum-card"><div class="v" style="color:#60a5fa" id="akDibuat">0</div><div class="l">✦ Dibuat AI</div></div>
+    </div>
+
+    <div class="row-btns" style="margin-bottom:0">
+      <button class="btn-dl" id="btnKunciDownload">⬇ Download Hasil Excel</button>
+      <button class="btn-sec" id="btnKunciReset">↺ Analisis File Baru</button>
+    </div>
+
+    <div id="kDownloadBanner" style="display:none;margin-top:10px;border-radius:var(--radius);padding:10px 12px;font-size:12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:#4ade80;line-height:1.7;"></div>
+
+    <div class="tbl-wrap" id="kPreviewWrap" style="display:none;margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Tipe</th>
+            <th>Pertanyaan</th>
+            <th>Topik</th>
+            <th>Bloom</th>
+            <th>Kesulitan</th>
+            <th>Kunci Asli</th>
+            <th>Kunci AI</th>
+            <th>Status</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody id="kPreviewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /tab-kunci -->
 
 </main>
 <footer>Topik & Bloom Classifier · Kemenag MTs · Gemini AI + AI Lokal</footer>
@@ -1298,7 +1440,505 @@ function importDBFromExcel(input){
   };
   r.readAsArrayBuffer(file);
   input.value='';
+// ═══════════════════════════════════════════════════════
+// ANALISIS KUNCI JAWABAN
+// ═══════════════════════════════════════════════════════
+const AK_COLS = ['tipe','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci'];
+let kWorkbook=null, kSheetData=[], kResultData=[], kAbort=false;
+let kunciMode='gemini';
+
+// Init: populate mapel on tab load
+function initKunciTab(){
+  const sel=$id('kMapel');
+  sel.innerHTML='<option value="">-- Pilih Mapel --</option>';
+  Object.keys(DB).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  // Sync API key
+  const k=localStorage.getItem('gemini_api_key')||'';
+  if(k){$id('kApiKey').value=k;$id('kKeySaved').classList.add('show');}
 }
-</script>
+function onKunciMapelChange(){
+  const m=$id('kMapel').value, sel=$id('kKelas');
+  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
+  if(m&&DB[m]) Object.keys(DB[m]).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);});
+  checkKunciRunnable();
+}
+function setKunciMode(mode){
+  kunciMode=mode;
+  $id('kModeGemini').classList.toggle('active',mode==='gemini');
+  $id('kModeLocal').classList.toggle('active',mode==='local');
+  $id('kApiSection').style.display=mode==='gemini'?'':'none';
+  $id('kLocalSection').style.display=mode==='local'?'':'none';
+  checkKunciRunnable();
+}
+$id('kApiKey').addEventListener('input',()=>{
+  const v=$id('kApiKey').value.trim();
+  syncKey(v); checkKunciRunnable();
+});
+
+// Upload
+const kUploadZone=$id('kUploadZone'), kFileInput=$id('kFileInput');
+kUploadZone.addEventListener('dragover',e=>{e.preventDefault();kUploadZone.classList.add('drag');});
+kUploadZone.addEventListener('dragleave',()=>kUploadZone.classList.remove('drag'));
+kUploadZone.addEventListener('drop',e=>{e.preventDefault();kUploadZone.classList.remove('drag');if(e.dataTransfer.files[0])handleKunciFile(e.dataTransfer.files[0]);});
+kFileInput.addEventListener('change',()=>{if(kFileInput.files[0])handleKunciFile(kFileInput.files[0]);});
+
+function handleKunciFile(file){
+  if(!file.name.match(/\.(xlsx|xls)$/i)){showKV('error','File harus .xlsx atau .xls');return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      kWorkbook=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const sheet=kWorkbook.Sheets[kWorkbook.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+      validateKunciFile(json,file);
+    }catch(err){showKV('error','Gagal membaca: '+err.message);}
+  };
+  r.readAsArrayBuffer(file);
+}
+function validateKunciFile(json,file){
+  if(!json||json.length<2){showKV('error','File kosong');return;}
+  const headers=json[0].map(h=>String(h).trim());
+  // Only need pertanyaan or tipe at minimum
+  const hasPertanyaan=headers.includes('pertanyaan')||headers.includes('tipe');
+  if(!hasPertanyaan){showKV('error','File harus memiliki minimal kolom <code>tipe</code> dan <code>pertanyaan</code>');return;}
+  // Map rows — only use available AK_COLS
+  kSheetData=json.slice(1).map((row,ri)=>{
+    const obj={_rowIdx:ri+1};
+    AK_COLS.forEach(h=>{const idx=headers.indexOf(h);obj[h]=idx>=0?row[idx]:'';});
+    // Also grab 'no' if present
+    const noIdx=headers.indexOf('no');
+    obj['no']=noIdx>=0?row[noIdx]:ri+1;
+    return obj;
+  }).filter(row=>String(row['pertanyaan']).trim()!==''||String(row['tipe']).trim().toLowerCase().includes('gambar'));
+  showKV('ok',`✓ File valid. <strong>${kSheetData.length} soal</strong> siap dianalisis.`);
+  $id('kFileInfo').classList.add('show');
+  $id('kFileName').textContent=file.name;
+  $id('kFileStats').textContent=`${kSheetData.length} soal · ${(file.size/1024).toFixed(1)} KB`;
+  checkKunciRunnable();
+}
+function showKV(type,html){const b=$id('kValidationBox');b.className='vbox '+type;b.innerHTML=html;}
+function resetKunciFile(){
+  kWorkbook=null;kSheetData=[];kFileInput.value='';
+  $id('kFileInfo').classList.remove('show');
+  $id('kValidationBox').className='vbox';$id('kValidationBox').innerHTML='';
+  checkKunciRunnable();
+}
+function checkKunciRunnable(){
+  const apiOk=kunciMode==='local'||$id('kApiKey').value.trim();
+  const mapelOk=$id('kMapel').value&&$id('kKelas').value;
+  $id('btnKunci').disabled=!(apiOk&&kSheetData.length>0&&mapelOk);
+}
+
+// ── PROCESS ──────────────────────────────────────────
+$id('btnKunciStop').addEventListener('click',()=>{kAbort=true;});
+$id('btnKunci').addEventListener('click',startKunciAnalysis);
+
+async function startKunciAnalysis(){
+  const apiKey=$id('kApiKey').value.trim();
+  const mapel=$id('kMapel').value, kelas=$id('kKelas').value;
+  const model=$id('kModelSelect').value;
+  const batchSize=kunciMode==='local'?50:parseInt($id('kModeSelect').value);
+  const delay=kunciMode==='local'?0:parseInt($id('kDelaySelect').value);
+  const materiList=DB[mapel]&&DB[mapel][kelas]?DB[mapel][kelas]:[];
+
+  if(!materiList.length){alert('Tidak ada daftar materi. Tambahkan di tab Database.');return;}
+
+  kAbort=false;
+  kResultData=JSON.parse(JSON.stringify(kSheetData));
+  $id('btnKunci').disabled=true;
+  $id('kProgressSection').classList.add('show');
+  $id('kResultsSection').classList.remove('show');
+  clearKLog();
+
+  const total=kResultData.length;
+  let i=0;
+
+  while(i<total){
+    if(kAbort){addKLog('warn','⏹ Dihentikan.');break;}
+    const batch=[];
+    let j=i;
+    while(j<total&&batch.length<batchSize){batch.push({idx:j,row:kResultData[j]});j++;}
+    i=j;
+    if(!batch.length) continue;
+    const labels=batch.map(b=>b.row['no']||(b.idx+1));
+    updateKProgLabel(`Menganalisis soal #${labels[0]}${labels.length>1?'–#'+labels[labels.length-1]:''}...`);
+    try{
+      let results;
+      if(kunciMode==='local'){
+        results=batch.map(b=>localKunciClassify(b.row,mapel,kelas,materiList));
+      }else if(batchSize===1){
+        results=[await callGeminiKunciSingle(apiKey,activeModel||model,batch[0].row,mapel,kelas,materiList)];
+      }else{
+        results=await callGeminiKunciBatch(apiKey,activeModel||model,batch.map(b=>b.row),mapel,kelas,materiList);
+      }
+      results.forEach((res,ri)=>{
+        const{idx,row}=batch[ri];
+        const noL=row['no']||(idx+1);
+        if(res.error){
+          // Store error state
+          row['_Topik']=''; row['_Bloom']=''; row['_Kesulitan']='';
+          row['_KunciAI']='?'; row['_Status']='Error'; row['_Confidence']=0;
+          addKLog('err',`✗ Soal #${noL}: ${res.error}`);
+        }else{
+          // Determine status
+          const kunciAsli=String(row['kunci']||'').trim().toUpperCase();
+          const kunciAI=String(res.kunci_ai||'').trim().toUpperCase();
+          let status;
+          if(!kunciAsli) status='Dibuat AI';
+          else if(kunciAsli===kunciAI) status='Cocok';
+          else status='Perlu Review';
+          row['_Topik']=res.topik||''; row['_Bloom']=res.bloom||''; row['_Kesulitan']=res.kesulitan||'';
+          row['_KunciAI']=res.kunci_ai||''; row['_Status']=status; row['_Confidence']=res.confidence||0;
+          const icon=status==='Cocok'?'✓':status==='Perlu Review'?'⚠':'✦';
+          addKLog(status==='Cocok'?'ok':status==='Perlu Review'?'warn':'info',
+            `${icon} Soal #${noL}: ${res.topik} · ${res.bloom} · Kunci AI: ${res.kunci_ai} · ${status} · ${res.confidence}%`);
+        }
+        updateKProg(idx+1,total);
+      });
+    }catch(e){
+      batch.forEach(({row,idx})=>{
+        row['_Status']='Error';row['_Confidence']=0;
+        addKLog('err',`✗ Soal #${row['no']||idx+1}: ${friendlyError(e.message,0)}`);
+        updateKProg(idx+1,total);
+      });
+    }
+    if(delay>0&&i<total&&!kAbort) await sleep(delay);
+  }
+  finalizeKunci();
+}
+
+function localKunciClassify(row,mapel,kelas,materiList){
+  const text=[row['pertanyaan'],row['opsi_a'],row['opsi_b'],row['opsi_c'],row['opsi_d']].join(' ').toLowerCase();
+  const stem=String(row['pertanyaan']||'').toLowerCase();
+  const isEsai=ESAI_TYPES.includes(String(row['tipe']||'').toLowerCase().trim());
+  // Topik
+  let bestTopik=materiList[0],bestScore=0;
+  materiList.forEach(mat=>{
+    const words=mat.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3);
+    const score=words.filter(w=>text.includes(w)).length;
+    if(score>bestScore){bestScore=score;bestTopik=mat;}
+  });
+  const bloom=detectBloom(stem,text,isEsai);
+  const kesulitan=detectKesulitan(row,text,stem,bloom,isEsai);
+  // For local mode, can't determine kunci_ai from text alone
+  const opsi=['A','B','C','D'];
+  const kunciAI=isEsai?'—':opsi[Math.floor(Math.random()*4)]; // local fallback
+  return{topik:bestTopik,bloom,kesulitan,kunci_ai:kunciAI,confidence:45};
+}
+
+// ── GEMINI KUNCI CALLS ────────────────────────────────
+async function callGeminiKunciSingle(apiKey,model,row,mapel,kelas,materiList){
+  const prompt=buildKunciPromptSingle(row,mapel,kelas,materiList);
+  const raw=await callWithRetry(apiKey,model,prompt,1,materiList,true);
+  return raw;
+}
+
+async function callGeminiKunciBatch(apiKey,model,rows,mapel,kelas,materiList){
+  const prompt=buildKunciPromptBatch(rows,mapel,kelas,materiList);
+  const raw=await callWithRetry(apiKey,model,prompt,rows.length,materiList,true);
+  return raw;
+}
+
+function buildKunciPayload(row,mapel,kelas){
+  const tipe=String(row['tipe']||'').toLowerCase().trim();
+  const isPgGambar=tipe.includes('pg_gambar')||tipe.includes('gambar');
+  const isEsai=ESAI_TYPES.includes(tipe);
+  const obj={mapel,kelas,tipe:row['tipe']||''};
+  if(isPgGambar){
+    // gambar berisi soal+pilihan, hanya butuh url
+    obj.pertanyaan='[Lihat gambar]';
+    if(row['vrl_gambar']) obj.url_gambar=String(row['vrl_gambar']).trim();
+  }else if(isEsai){
+    obj.pertanyaan=row['pertanyaan']||'';
+    if(row['vrl_gambar']&&String(row['vrl_gambar']).trim()) obj.url_gambar=String(row['vrl_gambar']).trim();
+  }else{
+    // pg_teks default
+    obj.pertanyaan=row['pertanyaan']||'';
+    if(row['vrl_gambar']&&String(row['vrl_gambar']).trim()) obj.url_gambar=String(row['vrl_gambar']).trim();
+    obj.opsi_a=row['opsi_a']||''; obj.opsi_b=row['opsi_b']||'';
+    obj.opsi_c=row['opsi_c']||''; obj.opsi_d=row['opsi_d']||'';
+  }
+  return obj;
+}
+
+function buildKunciPromptSingle(row,mapel,kelas,materiList){
+  const payload=buildKunciPayload(row,mapel,kelas);
+  const isEsai=ESAI_TYPES.includes(String(row['tipe']||'').toLowerCase().trim());
+  const imgNote=payload.url_gambar?`\nURL Gambar: ${payload.url_gambar}\nGunakan gambar untuk menganalisis soal dan menentukan kunci jawaban.`:'';
+  return `Kamu adalah guru berpengalaman ahli kurikulum Kemenag MTs.
+
+Analisis soal berikut dan tentukan kunci jawaban yang benar:
+${JSON.stringify(payload,null,2)}${imgNote}
+
+DAFTAR MATERI (pilih SATU untuk Topik):
+${materiList.map((m,i)=>`${i+1}. ${m}`).join('\n')}
+
+TUGAS:
+1. TOPIK — Pilih satu dari daftar materi di atas.
+2. BLOOM — C1–C6 sesuai tingkat kognitif.
+3. KESULITAN — Sangat Mudah / Mudah / Sedang / Sulit / Sangat Sulit.
+4. KUNCI_AI — ${isEsai?'Untuk esai, tulis "Esai" (tidak ada kunci tunggal).':'Jawaban yang paling tepat: A, B, C, atau D.'}
+5. CONFIDENCE — Tingkat keyakinan kamu terhadap kunci_ai (0–100). Jika soal ambigu atau gambar tidak dapat diakses, beri nilai rendah (< 70).
+
+Jawab HANYA dengan JSON valid:
+{"topik":"...","bloom":"C1","kesulitan":"Mudah","kunci_ai":"A","confidence":90}`;
+}
+
+function buildKunciPromptBatch(rows,mapel,kelas,materiList){
+  const items=rows.map((row,idx)=>({no:idx+1,...buildKunciPayload(row,mapel,kelas)}));
+  return `Kamu adalah guru berpengalaman ahli kurikulum Kemenag MTs.
+
+Analisis ${items.length} soal berikut, tentukan kunci jawaban yang benar untuk setiap soal:
+${JSON.stringify(items,null,2)}
+
+DAFTAR MATERI (pilih SATU untuk Topik setiap soal):
+${materiList.map((m,i)=>`${i+1}. ${m}`).join('\n')}
+
+TUGAS per soal:
+1. TOPIK — Pilih satu dari daftar materi.
+2. BLOOM — C1–C6.
+3. KESULITAN — Sangat Mudah / Mudah / Sedang / Sulit / Sangat Sulit.
+4. KUNCI_AI — Untuk pg: A/B/C/D. Untuk esai: "Esai".
+5. CONFIDENCE — Keyakinan kunci_ai (0–100). Gambar tidak dapat diakses = confidence rendah.
+
+Jawab HANYA dengan JSON array, urut sesuai nomor:
+[{"no":1,"topik":"...","bloom":"C1","kesulitan":"Mudah","kunci_ai":"A","confidence":90},...]`;
+}
+
+// Override normalizeItem for kunci mode
+function normalizeKunciItem(parsed,materiList){
+  if(!parsed||typeof parsed!=='object') return{error:'Response tidak valid'};
+  const bloom=String(parsed.bloom||'').trim().toUpperCase();
+  if(!VALID_BLOOM.includes(bloom)) return{error:`Bloom tidak valid: ${bloom}`};
+  const rawKd=String(parsed.kesulitan||'').trim();
+  const matchedKd=VALID_KD.find(k=>k.toLowerCase()===rawKd.toLowerCase());
+  if(!matchedKd) return{error:`Kesulitan tidak valid: ${rawKd}`};
+  const topik=String(parsed.topik||'').trim();
+  if(materiList&&materiList.length){
+    const found=materiList.find(m=>m.toLowerCase()===topik.toLowerCase());
+    if(!found) return{error:`Topik di luar daftar: "${topik}"`};
+  }
+  const kunciAI=String(parsed.kunci_ai||'').trim().toUpperCase()||'?';
+  const confidence=Math.min(100,Math.max(0,parseInt(parsed.confidence)||50));
+  return{topik:topik||(materiList?materiList[0]:''),bloom,kesulitan:matchedKd,kunci_ai:kunciAI,confidence};
+}
+
+// Patch callWithRetry to support kunci mode (different normalizer)
+// We do this by passing a flag and branching in normalizeItem calls
+// Already handled above — callWithRetry uses normalizeItem, so we intercept at the batch call level
+// by post-processing. Let's override callGeminiKunciBatch result:
+async function callGeminiKunciBatchReal(apiKey,model,rows,mapel,kelas,materiList){
+  const prompt=buildKunciPromptBatch(rows,mapel,kelas,materiList);
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const tryModels=[activeModel||model,...FALLBACK_MODELS.filter(m=>m!==(activeModel||model))];
+  let lastFriendly='Terjadi kesalahan.';
+  for(const tryModel of tryModels){
+    for(let attempt=1;attempt<=MAX_RETRY;attempt++){
+      try{
+        const res=await fetch(url.replace(model,tryModel),{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.1,maxOutputTokens:2048}})});
+        if(!res.ok){
+          const ed=await res.json().catch(()=>({}));
+          const msg=ed?.error?.message||`HTTP ${res.status}`;
+          lastFriendly=friendlyError(msg,res.status);
+          if(res.status===429||res.status===404||res.status===403){addKLog('retry',`⟳ ${tryModel}: ${lastFriendly} — mencoba model lain...`);break;}
+          if(attempt<MAX_RETRY){addKLog('retry',`⟳ Percobaan ${attempt}: ${lastFriendly}`);await sleep(1500*attempt);}
+          continue;
+        }
+        const data=await res.json();
+        const raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+        const clean=raw.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(clean);
+        if(!Array.isArray(parsed)) throw new Error('Response bukan array');
+        return parsed.map(item=>normalizeKunciItem(item,materiList));
+      }catch(e){
+        lastFriendly=friendlyError(e.message,0);
+        if(attempt<MAX_RETRY){addKLog('retry',`⟳ Percobaan ${attempt}: ${lastFriendly}`);await sleep(1500*attempt);}
+      }
+    }
+  }
+  return Array.from({length:rows.length},()=>({error:lastFriendly}));
+}
+async function callGeminiKunciSingleReal(apiKey,model,row,mapel,kelas,materiList){
+  const prompt=buildKunciPromptSingle(row,mapel,kelas,materiList);
+  const tryModels=[activeModel||model,...FALLBACK_MODELS.filter(m=>m!==(activeModel||model))];
+  let lastFriendly='Terjadi kesalahan.';
+  for(const tryModel of tryModels){
+    for(let attempt=1;attempt<=MAX_RETRY;attempt++){
+      try{
+        const url=`https://generativelanguage.googleapis.com/v1beta/models/${tryModel}:generateContent?key=${apiKey}`;
+        const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.1,maxOutputTokens:350}})});
+        if(!res.ok){
+          const ed=await res.json().catch(()=>({}));
+          const msg=ed?.error?.message||`HTTP ${res.status}`;
+          lastFriendly=friendlyError(msg,res.status);
+          if(res.status===429||res.status===404||res.status===403){addKLog('retry',`⟳ ${tryModel}: ${lastFriendly}`);break;}
+          if(attempt<MAX_RETRY){addKLog('retry',`⟳ Percobaan ${attempt}: ${lastFriendly}`);await sleep(1500*attempt);}
+          continue;
+        }
+        const data=await res.json();
+        const raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+        const clean=raw.replace(/```json|```/g,'').trim();
+        return normalizeKunciItem(JSON.parse(clean),materiList);
+      }catch(e){
+        lastFriendly=friendlyError(e.message,0);
+        if(attempt<MAX_RETRY){addKLog('retry',`⟳ Percobaan ${attempt}: ${lastFriendly}`);await sleep(1500*attempt);}
+      }
+    }
+  }
+  return{error:lastFriendly};
+}
+// Rebind to real functions
+async function callGeminiKunciSingle(apiKey,model,row,mapel,kelas,materiList){
+  return callGeminiKunciSingleReal(apiKey,model,row,mapel,kelas,materiList);
+}
+async function callGeminiKunciBatch(apiKey,model,rows,mapel,kelas,materiList){
+  return callGeminiKunciBatchReal(apiKey,model,rows,mapel,kelas,materiList);
+}
+
+// ── FINALIZE ──────────────────────────────────────────
+function finalizeKunci(){
+  const cocok=kResultData.filter(r=>r['_Status']==='Cocok').length;
+  const review=kResultData.filter(r=>r['_Status']==='Perlu Review').length;
+  const dibuat=kResultData.filter(r=>r['_Status']==='Dibuat AI').length;
+  $id('akTotal').textContent=kResultData.length;
+  $id('akCocok').textContent=cocok;
+  $id('akReview').textContent=review;
+  $id('akDibuat').textContent=dibuat;
+  $id('kResultsSection').classList.add('show');
+  updateKProgLabel(`Selesai — ${cocok} cocok, ${review} perlu review, ${dibuat} dibuat AI`);
+  renderKunciPreview();
+}
+
+function renderKunciPreview(){
+  const tbody=$id('kPreviewBody');tbody.innerHTML='';
+  kResultData.slice(0,30).forEach(row=>{
+    const status=row['_Status']||'';
+    const bloom=(row['_Bloom']||'').toUpperCase();
+    const kd=row['_Kesulitan']||'';
+    const conf=row['_Confidence']||0;
+    const rowClass=status==='Cocok'?'ak-row-cocok':status==='Perlu Review'?'ak-row-review':status==='Dibuat AI'?'ak-row-dibuat':'';
+    const statusBadge=status==='Cocok'?`<span class="status-cocok">✓ Cocok</span>`:
+      status==='Perlu Review'?`<span class="status-review">⚠ Perlu Review</span>`:
+      status==='Dibuat AI'?`<span class="status-dibuat">✦ Dibuat AI</span>`:
+      `<span class="b-err badge">${esc(status)}</span>`;
+    const confHtml=conf>0?(conf<70?`<span class="conf-warn">⚠ ${conf}%</span>`:`<span class="conf-ok">${conf}%</span>`):'—';
+    const pert=String(row['pertanyaan']||'');
+    const tr=document.createElement('tr');
+    tr.className=rowClass;
+    tr.innerHTML=`
+      <td>${row['no']||''}</td>
+      <td><span style="font-size:10px;color:var(--text2)">${esc(row['tipe']||'')}</span></td>
+      <td class="col-q" title="${esc(pert)}">${esc(pert.slice(0,60))}${pert.length>60?'…':''}</td>
+      <td style="color:#a78bfa;font-size:11px;font-weight:500;min-width:140px">${esc(row['_Topik']||'—')}</td>
+      <td>${bloom?`<span class="badge b-${bloom.toLowerCase()}">${bloom}</span>`:'—'}</td>
+      <td>${kd?`<span class="badge ${kdBadgeClass(kd)}">${kd}</span>`:'—'}</td>
+      <td style="font-weight:700;color:var(--text2)">${esc(String(row['kunci']||'—').toUpperCase())}</td>
+      <td style="font-weight:700;color:${status==='Cocok'?'#4ade80':status==='Perlu Review'?'#fbbf24':'#60a5fa'}">${esc(row['_KunciAI']||'—')}</td>
+      <td>${statusBadge}</td>
+      <td>${confHtml}</td>`;
+    tbody.appendChild(tr);
+  });
+  $id('kPreviewWrap').style.display=kResultData.length?'block':'none';
+  if(kResultData.length>30){
+    const note=document.createElement('div');
+    note.style.cssText='font-size:11px;color:var(--text3);padding:8px 12px;text-align:center';
+    note.textContent=`Menampilkan 30 dari ${kResultData.length} baris. Download untuk data lengkap.`;
+    $id('kPreviewWrap').appendChild(note);
+  }
+}
+
+// ── DOWNLOAD KUNCI ────────────────────────────────────
+$id('btnKunciDownload').addEventListener('click',()=>{
+  if(!kWorkbook||!kResultData.length){alert('Tidak ada data.');return;}
+  try{
+    const ws=kWorkbook.Sheets[kWorkbook.SheetNames[0]];
+    const origJson=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const origHeaders=origJson[0].map(h=>String(h).trim());
+    // Build new sheet: original columns + new columns
+    const newCols=['Topik','Bloom','Kesulitan','Kunci_AI','Status_Kunci','Confidence'];
+    const outHeaders=[...origHeaders];
+    newCols.forEach(c=>{if(!outHeaders.includes(c)) outHeaders.push(c);});
+    const pertIdx=origHeaders.indexOf('pertanyaan');
+    const rMap=new Map();
+    kResultData.forEach(row=>{
+      const key=String(row['pertanyaan']||'').trim();
+      if(key&&!rMap.has(key)) rMap.set(key,row);
+    });
+    const outRows=[outHeaders];
+    origJson.slice(1).forEach(r=>{
+      const key=String(r[pertIdx]||'').trim();
+      const found=rMap.get(key);
+      const outRow=[...r];
+      // Pad to original header length
+      while(outRow.length<origHeaders.length) outRow.push('');
+      newCols.forEach(col=>{
+        const idx=outHeaders.indexOf(col);
+        if(idx<0) return;
+        while(outRow.length<=idx) outRow.push('');
+        if(found){
+          if(col==='Topik') outRow[idx]=found['_Topik']||'';
+          else if(col==='Bloom') outRow[idx]=found['_Bloom']||'';
+          else if(col==='Kesulitan') outRow[idx]=found['_Kesulitan']||'';
+          else if(col==='Kunci_AI') outRow[idx]=found['_KunciAI']||'';
+          else if(col==='Status_Kunci') outRow[idx]=found['_Status']||'';
+          else if(col==='Confidence') outRow[idx]=found['_Confidence']||0;
+        }
+      });
+      outRows.push(outRow);
+    });
+    const newWs=XLSX.utils.aoa_to_sheet(outRows);
+    const newWb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(newWb,newWs,kWorkbook.SheetNames[0]);
+    const fname=`analisis_kunci_${new Date().toISOString().slice(0,10)}.xlsx`;
+    const wbout=XLSX.write(newWb,{bookType:'xlsx',type:'array'});
+    const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},5000);
+    const banner=$id('kDownloadBanner');
+    banner.style.display='block';
+    banner.innerHTML=`<strong>📥 File siap: ${fname}</strong><br><span style="color:var(--text2)">Cek folder Download atau menu ⋮ → Downloads di browser.</span>`;
+  }catch(e){alert('Gagal: '+e.message);}
+});
+
+// ── RESET KUNCI ───────────────────────────────────────
+$id('btnKunciReset').addEventListener('click',()=>{
+  resetKunciFile();
+  $id('kProgressSection').classList.remove('show');
+  $id('kResultsSection').classList.remove('show');
+  kResultData=[];kAbort=false;
+});
+
+// ── LOG HELPERS ───────────────────────────────────────
+function addKLog(type,text){
+  const log=$id('kProgressLog');
+  const line=document.createElement('div');line.className='log-'+type;line.textContent=text;
+  log.appendChild(line);log.scrollTop=log.scrollHeight;
+}
+function clearKLog(){$id('kProgressLog').innerHTML='';$id('kProgressBar').style.width='0%';$id('kProgressCount').textContent='0 / 0';}
+function updateKProg(cur,tot){$id('kProgressBar').style.width=Math.round((cur/tot)*100)+'%';$id('kProgressCount').textContent=`${cur} / ${tot}`;}
+function updateKProgLabel(t){$id('kProgressLabel').textContent=t;}
+
+// Extend syncKey to also update kApiKey
+const _origSyncKey=syncKey;
+function syncKey(v){
+  _origSyncKey(v);
+  if($id('kApiKey')&&$id('kApiKey').value!==v){
+    $id('kApiKey').value=v||'';
+    if(v) $id('kKeySaved').classList.add('show');
+    else $id('kKeySaved').classList.remove('show');
+  }
+}
+
+// Extend initKunciTab call via switchTab
+const _origSwitchTab=switchTab;
+function switchTab(name,btn){
+  _origSwitchTab(name,btn);
+  if(name==='kunci') initKunciTab();
+}
+
 </body>
 </html>
