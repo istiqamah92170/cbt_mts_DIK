@@ -3,525 +3,267 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CBT Sekolah — Dashboard Guru</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Dashboard Guru — CBT Sekolah</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════
-   TOKENS
-═══════════════════════════════════════════════ */
+/* ── TOKENS ─────────────────────────────────── */
 :root {
-  --bg:        #F0EDE8;
-  --bg2:       #E8E4DE;
-  --card:      #FAFAF8;
-  --border:    #DDD9D2;
-  --border2:   #C8C4BC;
-  --ink:       #1A1714;
-  --ink2:      #4A4642;
-  --ink3:      #8A8480;
-  --ink4:      #B4B0AA;
-  --accent:    #2B5CE6;
-  --accent2:   #1A3FA8;
-  --accent-bg: #EBF0FD;
-  --green:     #1B7A4A;
-  --green-bg:  #E6F5ED;
-  --red:       #C03030;
-  --red-bg:    #FDECEA;
-  --amber:     #B45A08;
-  --amber-bg:  #FEF3E2;
-  --purple:    #6B3FA0;
-  --purple-bg: #F0EAFA;
-  --teal:      #0D7A6E;
-  --teal-bg:   #E0F5F3;
-  --sidebar-w: 240px;
-  --topbar-h:  56px;
-  --r:         10px;
-  --r-lg:      16px;
-  --sh:        0 1px 3px rgba(26,23,20,.06), 0 4px 12px rgba(26,23,20,.04);
-  --sh-lg:     0 4px 20px rgba(26,23,20,.10), 0 1px 4px rgba(26,23,20,.06);
+  --bg:#F2EFE9;--bg2:#E8E4DC;--card:#FAFAF7;--border:#DDD8D0;--border2:#C8C3BA;
+  --ink:#1A1714;--ink2:#46423E;--ink3:#8A8480;--ink4:#B8B4AF;
+  --accent:#2B5CE6;--accent2:#1A3FA8;--accent-bg:#EBF0FD;--accent-light:#C5D6F7;
+  --green:#1A7A4A;--green-bg:#E6F5ED;--red:#C03030;--red-bg:#FDECEA;
+  --amber:#B45A08;--amber-bg:#FEF3E2;--purple:#6B3FA0;--purple-bg:#F0EAFA;
+  --teal:#0D7A6E;--teal-bg:#E0F5F3;
+  --sidebar-w:260px;--topbar-h:56px;
+  --r:8px;--r-lg:14px;
+  --sh:0 1px 3px rgba(26,23,20,.06),0 4px 12px rgba(26,23,20,.04);
+  --sh-lg:0 4px 24px rgba(26,23,20,.10);
+  --mono:'JetBrains Mono',monospace;
+  --font:'Plus Jakarta Sans',sans-serif;
 }
 [data-theme="dark"] {
-  --bg:        #111210;
-  --bg2:       #1A1916;
-  --card:      #1E1D1B;
-  --border:    #2E2C28;
-  --border2:   #3E3C38;
-  --ink:       #F0EDE8;
-  --ink2:      #B8B4AE;
-  --ink3:      #706C68;
-  --ink4:      #504C48;
-  --accent:    #4B78F0;
-  --accent2:   #6B94F8;
-  --accent-bg: #1A2448;
-  --green:     #3DB876;
-  --green-bg:  #0E2A1C;
-  --red:       #E05050;
-  --red-bg:    #2C1010;
-  --amber:     #E07828;
-  --amber-bg:  #2C1A08;
-  --purple:    #9B6FD0;
-  --purple-bg: #1E1430;
-  --teal:      #2DB8A8;
-  --teal-bg:   #0A2420;
-  --sh:        0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
-  --sh-lg:     0 4px 20px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.3);
+  --bg:#111210;--bg2:#1A1916;--card:#1E1D1B;--border:#2E2C28;--border2:#3E3C38;
+  --ink:#F0EDE8;--ink2:#B8B4AE;--ink3:#706C68;--ink4:#504C48;
+  --accent:#4B78F0;--accent2:#6B94F8;--accent-bg:#1A2448;--accent-light:#2A3A68;
+  --green:#3DB876;--green-bg:#0E2A1C;--red:#E05050;--red-bg:#2C1010;
+  --amber:#E07828;--amber-bg:#2C1A08;--purple:#9B6FD0;--purple-bg:#1E1430;
+  --teal:#2DB8A8;--teal-bg:#0A2420;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;transition:background .25s,color .25s}
+a{text-decoration:none;color:var(--accent)}
+button{font-family:var(--font);cursor:pointer}
+input,select,textarea{font-family:var(--font)}
+
+/* ── SIDEBAR ────────────────────────────────── */
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
+  background:var(--card);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:300;
+  transition:transform .25s,background .25s,border-color .25s;
+  overflow:hidden;
+}
+.sb-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sb-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo i{color:#fff;font-size:16px}
+.sb-brand{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.sb-brand span{color:var(--accent)}
+
+.sb-user{padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+.sb-user-chip{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:5px;font-size:10px;font-weight:600;background:var(--accent-bg);color:var(--accent)}
+
+.sb-nav{flex:1;overflow-y:auto;padding:8px 10px;scrollbar-width:thin}
+.sb-section{font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.8px;padding:10px 8px 4px}
+
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:8px;cursor:pointer;
+  font-size:13px;font-weight:500;color:var(--ink2);
+  transition:all .15s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;
+}
+.nav-item:hover{background:var(--bg);color:var(--ink)}
+.nav-item.active{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.nav-item .ni-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-item .ni-lbl{flex:1}
+.nav-item .ni-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px}
+.nav-item .ni-badge.show{display:flex}
+.nav-item .ni-arr{font-size:11px;color:var(--ink4);transition:transform .2s}
+.nav-item.open .ni-arr{transform:rotate(90deg)}
+
+.nav-sub{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.nav-sub.open{max-height:300px}
+.nav-sub-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px 7px 36px;border-radius:7px;cursor:pointer;
+  font-size:12px;font-weight:500;color:var(--ink3);
+  transition:all .15s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;
+}
+.nav-sub-item:hover{background:var(--bg);color:var(--ink)}
+.nav-sub-item.active{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.nav-sub-item::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0}
+
+.nav-divider{border:none;border-top:1px solid var(--border);margin:6px 0}
+
+.sb-foot{padding:10px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0}
+.btn-dark{flex:1;display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border);font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;transition:all .15s}
+.btn-dark:hover{border-color:var(--border2)}
+.btn-out{padding:8px 11px;border-radius:8px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:500;color:var(--ink3);cursor:pointer;transition:all .15s}
+.btn-out:hover{background:var(--red-bg);color:var(--red);border-color:#F5C0C0}
+
+/* ── MAIN ───────────────────────────────────── */
+.main{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .25s}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);height:var(--topbar-h);display:none;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:200}
+.page-wrap{padding:24px;max-width:1140px}
+.page-hd{margin-bottom:20px}
+.page-hd h2{font-size:20px;font-weight:700;letter-spacing:-.4px}
+.page-hd p{font-size:13px;color:var(--ink3);margin-top:3px}
+
+/* ── CARDS ──────────────────────────────────── */
+.cbt-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh)}
+.cbt-card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cbt-card-title{font-size:14px;font-weight:600;letter-spacing:-.2px}
+.cbt-card-body{padding:16px 18px}
+
+/* ── STAT CARDS ─────────────────────────────── */
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;right:-12px;top:-12px;width:64px;height:64px;border-radius:50%;opacity:.07}
+.sc-blue::after{background:var(--accent)} .sc-green::after{background:var(--green)}
+.sc-amber::after{background:var(--amber)} .sc-red::after{background:var(--red)}
+.sc-purple::after{background:var(--purple)} .sc-teal::after{background:var(--teal)}
+.stat-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:15px}
+.sc-blue .stat-ico{background:var(--accent-bg);color:var(--accent)}
+.sc-green .stat-ico{background:var(--green-bg);color:var(--green)}
+.sc-amber .stat-ico{background:var(--amber-bg);color:var(--amber)}
+.sc-red .stat-ico{background:var(--red-bg);color:var(--red)}
+.sc-purple .stat-ico{background:var(--purple-bg);color:var(--purple)}
+.sc-teal .stat-ico{background:var(--teal-bg);color:var(--teal)}
+.stat-num{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1;margin-bottom:2px;font-family:var(--mono)}
+.sc-blue .stat-num{color:var(--accent)} .sc-green .stat-num{color:var(--green)}
+.sc-amber .stat-num{color:var(--amber)} .sc-red .stat-num{color:var(--red)}
+.sc-purple .stat-num{color:var(--purple)} .sc-teal .stat-num{color:var(--teal)}
+.stat-lbl{font-size:11px;color:var(--ink3);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+
+/* ── BUTTONS ────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:7px;font-size:13px;font-weight:600;transition:all .15s;border:none;cursor:pointer;white-space:nowrap;font-family:var(--font)}
+.btn-primary{background:var(--accent);color:#fff} .btn-primary:hover{background:var(--accent2)}
+.btn-success{background:var(--green);color:#fff} .btn-success:hover{opacity:.88}
+.btn-danger{background:var(--red);color:#fff} .btn-danger:hover{opacity:.88}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--ink2)} .btn-ghost:hover{border-color:var(--border2);background:var(--bg)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-block{width:100%;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── BADGE ──────────────────────────────────── */
+.cbt-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600}
+.cb-blue{background:var(--accent-bg);color:var(--accent)}
+.cb-green{background:var(--green-bg);color:var(--green)}
+.cb-amber{background:var(--amber-bg);color:var(--amber)}
+.cb-red{background:var(--red-bg);color:var(--red)}
+.cb-gray{background:var(--bg2);color:var(--ink3)}
+.cb-purple{background:var(--purple-bg);color:var(--purple)}
+.cb-teal{background:var(--teal-bg);color:var(--teal)}
+.cb-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* ── FORM ───────────────────────────────────── */
+.fg{margin-bottom:13px}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;color:var(--ink);background:var(--bg);transition:border-color .15s,background .25s;font-family:var(--font)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);background:var(--card);outline:none}
+.fg-hint{font-size:11px;color:var(--ink3);margin-top:3px}
+.pass-wrap{position:relative} .pass-wrap input{padding-right:40px}
+.pass-eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink3);font-size:14px;cursor:pointer;padding:0;line-height:1}
+
+/* ── TABLE ──────────────────────────────────── */
+.cbt-table{width:100%;border-collapse:collapse;font-size:12px}
+.cbt-table th{background:var(--bg2);padding:8px 11px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink3);border-bottom:1px solid var(--border)}
+.cbt-table td{padding:9px 11px;border-bottom:1px solid var(--border);color:var(--ink)}
+.cbt-table tr:last-child td{border-bottom:none}
+.cbt-table tbody tr:hover td{background:var(--bg)}
+
+/* ── LOADING / EMPTY ────────────────────────── */
+.cbt-loading{display:flex;align-items:center;gap:8px;color:var(--ink3);font-size:13px;padding:14px 0}
+.cbt-spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cbt-empty{text-align:center;padding:40px 20px;color:var(--ink3)}
+.cbt-empty .ee{font-size:36px;opacity:.35;margin-bottom:10px}
+.cbt-empty h3{font-size:14px;font-weight:600;color:var(--ink2);margin-bottom:4px}
+.cbt-empty p{font-size:12px;line-height:1.6}
+
+/* ── TOAST ──────────────────────────────────── */
+.toast-cbt{position:fixed;bottom:22px;right:22px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:var(--sh-lg);transform:translateY(80px);opacity:0;transition:all .25s;z-index:9999}
+.toast-cbt.show{transform:translateY(0);opacity:1}
+.toast-cbt.success{background:var(--green);color:#fff}
+.toast-cbt.error{background:var(--red);color:#fff}
+
+/* ── TOKEN / LINK BOX ───────────────────────── */
+.token-display{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:11px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.token-val{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:3px;color:var(--accent)}
+.link-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.link-url{font-size:11px;font-family:var(--mono);color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── KODE SOAL PICKER ───────────────────────── */
+.kode-item{border:1.5px solid var(--border);border-radius:var(--r);padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;background:var(--card);margin-bottom:7px}
+.kode-item:hover{border-color:var(--accent);background:var(--accent-bg)}
+.kode-item.sel{border-color:var(--accent);background:var(--accent-bg)}
+.kode-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px}
+.kode-item.sel .kode-check{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── ESAI KOREKSI ───────────────────────────── */
+.jawaban-item{border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;display:flex;gap:13px;align-items:flex-start;background:var(--bg);margin-bottom:8px}
+.nilai-input{width:68px;padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;font-family:var(--mono);text-align:center;color:var(--ink);background:var(--card)}
+.nilai-input:focus{border-color:var(--accent);outline:none}
+.nilai-input.saved{border-color:var(--green)}
+
+/* ── SESI STRIP ─────────────────────────────── */
+.sesi-strip{background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--r-lg);padding:16px 20px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.sesi-strip-timer{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-1px}
+
+/* ── BANK SOAL ──────────────────────────────── */
+.soal-row{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:7px}
+.soal-row-hd{padding:10px 13px;display:flex;align-items:center;gap:9px;cursor:pointer;background:var(--card);transition:background .15s}
+.soal-row-hd:hover{background:var(--bg)}
+.soal-row-body{padding:11px 13px;background:var(--bg);border-top:1px solid var(--border);display:none}
+.soal-row.expanded .soal-row-body{display:block}
+
+/* ── JADWAL ─────────────────────────────────── */
+.jadwal-item{border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;display:flex;align-items:center;gap:13px;background:var(--card);margin-bottom:7px}
+
+/* ── ANALISIS ───────────────────────────────── */
+.dist-bar{height:8px;border-radius:4px;overflow:hidden;display:flex;gap:2px;margin:8px 0}
+.top3-item{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--bg);border-radius:7px;margin-bottom:5px}
+
+/* ── RAKIT PAKET ────────────────────────────── */
+.rakit-tabs{display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:3px;margin-bottom:14px;border:1px solid var(--border)}
+.rakit-tab{flex:1;padding:7px;font-size:12px;font-weight:600;text-align:center;border-radius:6px;color:var(--ink3);background:transparent;cursor:pointer;transition:all .15s;border:none;font-family:var(--font)}
+.rakit-tab.active{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
+.keranjang-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);height:280px;overflow-y:auto}
+
+/* ── LOGIN ──────────────────────────────────── */
+#screen-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.login-card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--sh-lg);overflow:hidden}
+.login-top{background:linear-gradient(135deg,var(--accent),var(--accent2));padding:28px 30px;text-align:center;color:#fff}
+.login-top h1{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}
+.login-top p{font-size:12px;opacity:.75}
+.login-body{padding:24px 28px 28px}
+.err-msg{background:var(--red-bg);border:1px solid #F5C0C0;color:var(--red);font-size:12px;padding:9px 12px;border-radius:7px;margin-bottom:12px;display:none}
+.err-msg.show{display:block}
+.btn-login{width:100%;padding:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:8px;font-size:14px;font-weight:700;border:none;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.btn-login:hover{opacity:.9} .btn-login:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── RESPONSIVE ─────────────────────────────── */
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299}
+.sidebar-backdrop.show{display:block}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0);box-shadow:var(--sh-lg)}
+  .main{margin-left:0}
+  .topbar{display:flex}
+  .page-wrap{padding:14px}
 }
 
-/* ═══════════════════════════════════════════════
-   RESET
-═══════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; transition: background .3s, color .3s; }
-button { font-family: 'Sora', sans-serif; cursor: pointer; border: none; outline: none; }
-input, select, textarea { font-family: 'Sora', sans-serif; outline: none; }
-a { text-decoration: none; color: var(--accent); }
-
-/* ═══════════════════════════════════════════════
-   LOGIN SCREEN
-═══════════════════════════════════════════════ */
-#screen-login {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: var(--bg);
-  position: relative;
-  overflow: hidden;
-}
-#screen-login::before {
-  content: '';
-  position: absolute;
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, var(--accent-bg) 0%, transparent 70%);
-  top: -200px; right: -200px;
-  pointer-events: none;
-}
-.login-card {
-  width: 100%; max-width: 400px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: var(--sh-lg);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-.login-top {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  padding: 32px 32px 28px;
-  text-align: center;
-  color: #fff;
-}
-.login-logo {
-  width: 48px; height: 48px;
-  background: rgba(255,255,255,.2);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 14px;
-  font-size: 22px;
-}
-.login-top h1 { font-size: 20px; font-weight: 700; letter-spacing: -.4px; margin-bottom: 4px; }
-.login-top p  { font-size: 12px; opacity: .75; font-weight: 400; }
-.login-body   { padding: 28px 32px 32px; }
-.err-msg {
-  background: var(--red-bg); border: 1px solid #F5C0C0; color: var(--red);
-  font-size: 12px; padding: 10px 13px; border-radius: 8px; margin-bottom: 14px; display: none;
-}
-.err-msg.show { display: block; }
-.fg { margin-bottom: 14px; }
-.fg label { display: block; font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-.fg input, .fg select {
-  width: 100%; padding: 10px 13px; border: 1.5px solid var(--border);
-  border-radius: 8px; font-size: 14px; color: var(--ink); background: var(--bg);
-  transition: border-color .15s, background .3s;
-}
-.fg input:focus, .fg select:focus { border-color: var(--accent); background: var(--card); }
-.pass-wrap { position: relative; }
-.pass-wrap input { padding-right: 42px; }
-.pass-eye {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; color: var(--ink3); font-size: 15px; cursor: pointer; padding: 0; line-height: 1;
-}
-.btn-login {
-  width: 100%; padding: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff; border-radius: 9px; font-size: 14px; font-weight: 700;
-  transition: opacity .2s, transform .1s;
-  margin-top: 6px;
-}
-.btn-login:hover { opacity: .92; transform: translateY(-1px); }
-.btn-login:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-/* ═══════════════════════════════════════════════
-   APP LAYOUT
-═══════════════════════════════════════════════ */
-#screen-app { display: none; min-height: 100vh; }
-
-/* Sidebar */
-.sidebar {
-  position: fixed; left: 0; top: 0; bottom: 0;
-  width: var(--sidebar-w);
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  z-index: 200;
-  transition: background .3s, border-color .3s, transform .3s;
-}
-.sidebar-head {
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-.sidebar-logo {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.sidebar-logo svg { width: 18px; height: 18px; fill: #fff; }
-.sidebar-brand { font-size: 14px; font-weight: 700; letter-spacing: -.3px; }
-.sidebar-brand span { color: var(--accent); }
-
-.sidebar-guru {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.guru-name { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.guru-meta { font-size: 11px; color: var(--ink3); margin-top: 1px; }
-.guru-badge { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--accent-bg); color: var(--accent); margin-top: 3px; }
-
-.sidebar-nav { flex: 1; overflow-y: auto; padding: 10px 10px; }
-.nav-section { font-size: 10px; font-weight: 600; color: var(--ink4); text-transform: uppercase; letter-spacing: .8px; padding: 10px 8px 4px; }
-.nav-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 9px 10px; border-radius: 8px; cursor: pointer;
-  font-size: 13px; font-weight: 500; color: var(--ink2);
-  transition: all .15s; margin-bottom: 1px; position: relative;
-}
-.nav-item:hover { background: var(--bg); color: var(--ink); }
-.nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
-.nav-item .ico { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
-.nav-item .badge-dot {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  background: var(--red); color: #fff; font-size: 10px; font-weight: 700;
-  min-width: 16px; height: 16px; border-radius: 8px; display: none;
-  align-items: center; justify-content: center; padding: 0 4px;
-}
-.nav-item .badge-dot.show { display: flex; }
-.nav-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
-
-.sidebar-foot {
-  padding: 12px 10px;
-  border-top: 1px solid var(--border);
-  display: flex; align-items: center; gap: 8px;
-}
-.btn-darkmode {
-  flex: 1; display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: 8px; background: var(--bg);
-  border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--ink2);
-  transition: all .15s; cursor: pointer;
-}
-.btn-darkmode:hover { border-color: var(--border2); }
-.btn-logout-sm {
-  padding: 8px 10px; border-radius: 8px; background: var(--bg);
-  border: 1px solid var(--border); font-size: 11px; font-weight: 500; color: var(--ink3);
-  transition: all .15s; cursor: pointer;
-}
-.btn-logout-sm:hover { background: var(--red-bg); color: var(--red); border-color: #F5C0C0; }
-
-/* Main */
-.main-content {
-  margin-left: var(--sidebar-w);
-  min-height: 100vh;
-  transition: margin-left .3s;
-}
-.topbar-mobile {
-  display: none;
-  background: var(--card); border-bottom: 1px solid var(--border);
-  padding: 0 16px; height: var(--topbar-h);
-  align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 100;
-}
-.page-content { padding: 24px; max-width: 1100px; }
-.page-head { margin-bottom: 20px; }
-.page-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -.4px; }
-.page-head p  { font-size: 13px; color: var(--ink3); margin-top: 3px; }
-
-/* ═══════════════════════════════════════════════
-   CARDS & COMPONENTS
-═══════════════════════════════════════════════ */
-.card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r-lg); box-shadow: var(--sh);
-  transition: background .3s, border-color .3s;
-}
-.card-head {
-  padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.card-title { font-size: 14px; font-weight: 600; letter-spacing: -.2px; }
-.card-body  { padding: 18px 20px; }
-
-/* Stat grid */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-.stat-card {
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 16px 18px; position: relative; overflow: hidden;
-  transition: background .3s, border-color .3s;
-}
-.stat-card::before {
-  content: ''; position: absolute; right: -10px; top: -10px;
-  width: 60px; height: 60px; border-radius: 50%;
-  opacity: .08;
-}
-.stat-card.blue::before { background: var(--accent); }
-.stat-card.green::before { background: var(--green); }
-.stat-card.amber::before { background: var(--amber); }
-.stat-card.red::before { background: var(--red); }
-.stat-card.purple::before { background: var(--purple); }
-.stat-card.teal::before { background: var(--teal); }
-.stat-ico {
-  width: 34px; height: 34px; border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; margin-bottom: 10px;
-}
-.stat-ico.blue   { background: var(--accent-bg); }
-.stat-ico.green  { background: var(--green-bg); }
-.stat-ico.amber  { background: var(--amber-bg); }
-.stat-ico.red    { background: var(--red-bg); }
-.stat-ico.purple { background: var(--purple-bg); }
-.stat-ico.teal   { background: var(--teal-bg); }
-.stat-num  { font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; margin-bottom: 3px; font-family: 'JetBrains Mono', monospace; }
-.stat-lbl  { font-size: 11px; color: var(--ink3); font-weight: 500; text-transform: uppercase; letter-spacing: .4px; }
-.stat-card.blue .stat-num   { color: var(--accent); }
-.stat-card.green .stat-num  { color: var(--green); }
-.stat-card.amber .stat-num  { color: var(--amber); }
-.stat-card.red .stat-num    { color: var(--red); }
-.stat-card.purple .stat-num { color: var(--purple); }
-.stat-card.teal .stat-num   { color: var(--teal); }
-
-/* Buttons */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: all .15s; cursor: pointer; white-space: nowrap; border: none; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent2); }
-.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
-.btn-success { background: var(--green); color: #fff; }
-.btn-success:hover { opacity: .88; }
-.btn-danger  { background: var(--red); color: #fff; }
-.btn-danger:hover  { opacity: .88; }
-.btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--ink2); }
-.btn-ghost:hover   { border-color: var(--border2); color: var(--ink); background: var(--bg); }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn-block { width: 100%; justify-content: center; }
-
-/* Badge */
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-.badge-blue   { background: var(--accent-bg); color: var(--accent); }
-.badge-green  { background: var(--green-bg); color: var(--green); }
-.badge-amber  { background: var(--amber-bg); color: var(--amber); }
-.badge-red    { background: var(--red-bg); color: var(--red); }
-.badge-gray   { background: var(--bg2); color: var(--ink3); }
-.badge-purple { background: var(--purple-bg); color: var(--purple); }
-.badge .dot   { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-
-/* Form */
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
-.field input, .field select, .field textarea {
-  width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px;
-  font-size: 14px; color: var(--ink); background: var(--bg);
-  transition: border-color .15s, background .3s;
-}
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); background: var(--card); }
-.field-hint { font-size: 11px; color: var(--ink3); margin-top: 3px; }
-.field-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-/* Empty state */
-.empty { text-align: center; padding: 48px 20px; color: var(--ink3); }
-.empty .ei  { font-size: 40px; margin-bottom: 12px; opacity: .4; }
-.empty h3   { font-size: 15px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; }
-.empty p    { font-size: 13px; line-height: 1.6; }
-
-/* Loading */
-.loading { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 13px; padding: 16px 0; }
-.spin { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; flex-shrink: 0; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 24px; right: 24px;
-  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px;
-  font-size: 13px; font-weight: 500; box-shadow: var(--sh-lg);
-  transform: translateY(80px); opacity: 0; transition: all .25s; z-index: 9999;
-}
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.success { background: var(--green); color: #fff; }
-.toast.error   { background: var(--red); color: #fff; }
-
-/* ═══════════════════════════════════════════════
-   DASHBOARD (halaman beranda)
-═══════════════════════════════════════════════ */
-.sesi-strip {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  border-radius: var(--r-lg); padding: 18px 20px; color: #fff;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-  margin-bottom: 20px;
-}
-.sesi-strip-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-.sesi-strip-info p  { font-size: 12px; opacity: .8; }
-.sesi-strip-timer   { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 600; letter-spacing: -1px; }
-.sesi-strip-timer.urgent { color: #FFD0D0; animation: blink 1s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
-
-/* ═══════════════════════════════════════════════
-   BUAT UJIAN
-═══════════════════════════════════════════════ */
-.kode-list { display: flex; flex-direction: column; gap: 8px; }
-.kode-item {
-  border: 1.5px solid var(--border); border-radius: var(--r); padding: 12px 15px;
-  display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; transition: all .15s; background: var(--card);
-}
-.kode-item:hover  { border-color: var(--accent); background: var(--accent-bg); }
-.kode-item.sel    { border-color: var(--accent); background: var(--accent-bg); }
-.kode-nama  { font-size: 13px; font-weight: 600; }
-.kode-meta  { font-size: 11px; color: var(--ink3); margin-top: 2px; }
-.kode-check {
-  width: 18px; height: 18px; border-radius: 50%;
-  border: 2px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-}
-.kode-item.sel .kode-check { background: var(--accent); border-color: var(--accent); color: #fff; font-size: 10px; }
-.kode-item.sel .kode-check::after { content: '✓'; }
-
-.token-display {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
-}
-.token-val { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: 3px; color: var(--accent); }
-.link-box  {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 9px 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-}
-.link-url { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--ink2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ═══════════════════════════════════════════════
-   MONITOR
-═══════════════════════════════════════════════ */
-.mon-tabs { display: flex; gap: 2px; background: var(--bg); border-radius: 8px; padding: 3px; margin-bottom: 14px; border: 1px solid var(--border); }
-.mon-tab  { flex: 1; padding: 7px; font-size: 12px; font-weight: 600; text-align: center; border-radius: 6px; color: var(--ink3); background: transparent; cursor: pointer; transition: all .15s; }
-.mon-tab.active { background: var(--card); color: var(--ink); box-shadow: var(--sh); }
-
-/* ═══════════════════════════════════════════════
-   KOREKSI ESAI
-═══════════════════════════════════════════════ */
-.esai-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.esai-nav .info { flex: 1; font-size: 13px; font-weight: 600; }
-.esai-nav .sub  { font-size: 10px; color: var(--ink3); font-family: 'JetBrains Mono', monospace; }
-.jawaban-item { border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; background: var(--bg); margin-bottom: 8px; }
-.jawaban-siswa { font-size: 13px; font-weight: 600; min-width: 110px; }
-.jawaban-teks  { flex: 1; font-size: 13px; color: var(--ink2); line-height: 1.6; }
-.nilai-input {
-  width: 70px; padding: 7px 10px; border: 1.5px solid var(--border); border-radius: 8px;
-  font-size: 15px; font-family: 'JetBrains Mono', monospace; text-align: center; color: var(--ink);
-  background: var(--card);
-}
-.nilai-input:focus { border-color: var(--accent); }
-.nilai-input.saved { border-color: var(--green); }
-.kunci-bar { background: var(--green-bg); border-radius: 8px; padding: 9px 13px; font-size: 12px; color: var(--green); margin-bottom: 12px; }
-
-/* ═══════════════════════════════════════════════
-   ANALISIS BUTIR SOAL
-═══════════════════════════════════════════════ */
-.dist-bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; gap: 2px; margin: 8px 0; }
-.dist-seg { transition: width .4s ease; }
-.top3-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--bg); border-radius: 8px; margin-bottom: 6px; }
-.top3-rank { font-size: 15px; width: 24px; text-align: center; }
-.top3-nama { flex: 1; font-size: 13px; font-weight: 500; }
-.top3-nilai{ font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600; }
-
-/* ═══════════════════════════════════════════════
-   JADWAL UJIAN
-═══════════════════════════════════════════════ */
-.jadwal-item {
-  border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px;
-  display: flex; align-items: center; gap: 14px; margin-bottom: 8px; background: var(--card);
-}
-.jadwal-tgl { text-align: center; min-width: 44px; }
-.jadwal-tgl .day { font-size: 22px; font-weight: 700; line-height: 1; font-family: 'JetBrains Mono', monospace; }
-.jadwal-tgl .mon { font-size: 10px; color: var(--ink3); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.jadwal-divider { width: 1px; height: 40px; background: var(--border); flex-shrink: 0; }
-.jadwal-info { flex: 1; }
-.jadwal-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-.jadwal-info p  { font-size: 11px; color: var(--ink3); }
-
-/* ═══════════════════════════════════════════════
-   BANK SOAL
-═══════════════════════════════════════════════ */
-.bank-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.bank-filter  { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--bg); color: var(--ink2); cursor: pointer; transition: all .15s; }
-.bank-filter.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
-.soal-row {
-  border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 8px;
-}
-.soal-row-head {
-  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
-  cursor: pointer; background: var(--card);
-}
-.soal-row-head:hover { background: var(--bg); }
-.soal-no { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--ink3); min-width: 28px; }
-.soal-teks { flex: 1; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.soal-row-body { padding: 12px 14px; background: var(--bg); border-top: 1px solid var(--border); display: none; }
-.soal-row.expanded .soal-row-body { display: block; }
-.soal-kunci  { font-size: 12px; color: var(--green); font-weight: 600; margin-bottom: 6px; }
-.soal-pemb   { font-size: 12px; color: var(--ink2); line-height: 1.6; }
-
-/* ═══════════════════════════════════════════════
-   REKAP PAS/PAT/PTS
-═══════════════════════════════════════════════ */
-.rekap-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.rekap-table th { background: var(--bg2); padding: 9px 12px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink3); border-bottom: 1px solid var(--border); }
-.rekap-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--ink); }
-.rekap-table tr:last-child td { border-bottom: none; }
-.rekap-table tr:hover td { background: var(--bg); }
-.nilai-chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 5px; }
-.nilai-chip.A { background: var(--green-bg); color: var(--green); }
-.nilai-chip.B { background: var(--teal-bg); color: var(--teal); }
-.nilai-chip.C { background: var(--amber-bg); color: var(--amber); }
-.nilai-chip.D { background: var(--red-bg); color: var(--red); }
-
-/* ═══════════════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); box-shadow: var(--sh-lg); }
-  .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 199; }
-  .sidebar-backdrop.show { display: block; }
-  .main-content { margin-left: 0; }
-  .topbar-mobile { display: flex; }
-  .stat-grid { grid-template-columns: 1fr 1fr; }
-  .field-row { grid-template-columns: 1fr; }
-  .page-content { padding: 16px; }
-}
+/* ── SUB-PAGE ───────────────────────────────── */
+.sub-page{display:none}
+.sub-page.active-sub{display:block}
 </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══════════════════════════════════ -->
+<!-- ════ LOGIN ══════════════════════════════════ -->
 <div id="screen-login">
   <div class="login-card">
     <div class="login-top">
-      <div class="login-logo">📚</div>
+      <div style="font-size:36px;margin-bottom:10px">📚</div>
       <h1>CBT Sekolah</h1>
       <p>Dashboard Guru — masuk dengan ID dan password Anda</p>
     </div>
     <div class="login-body">
       <div class="err-msg" id="login-err"></div>
-      <div class="fg">
-        <label>ID Guru</label>
-        <input type="text" id="inp-id" placeholder="Contoh: G01" autocomplete="username">
-      </div>
-      <div class="fg">
-        <label>Password</label>
+      <div class="fg"><label>ID Guru</label><input type="text" id="inp-id" placeholder="Contoh: G01" autocomplete="username"></div>
+      <div class="fg"><label>Password</label>
         <div class="pass-wrap">
           <input type="password" id="inp-pass" placeholder="Password Anda" autocomplete="current-password">
           <button class="pass-eye" onclick="togglePass()" id="btn-pass-eye">👁</button>
@@ -532,392 +274,505 @@ a { text-decoration: none; color: var(--accent); }
   </div>
 </div>
 
-<!-- ══ APP ════════════════════════════════════ -->
-<div id="screen-app">
+<!-- ════ APP ════════════════════════════════════ -->
+<div id="screen-app" style="display:none">
+  <div class="sidebar-backdrop" id="sb-backdrop" onclick="closeSidebar()"></div>
 
-  <!-- Sidebar backdrop (mobile) -->
-  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
-
-  <!-- Sidebar -->
+  <!-- ── SIDEBAR ── -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-head">
-      <div class="sidebar-logo"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-      <div>
-        <div class="sidebar-brand">CBT <span>Sekolah</span></div>
-      </div>
+    <div class="sb-head">
+      <div class="sb-logo"><i class="bi bi-layers-fill"></i></div>
+      <div><div class="sb-brand">CBT <span>Sekolah</span></div></div>
     </div>
-    <div class="sidebar-guru">
-      <div class="guru-name" id="sb-nama">—</div>
-      <div class="guru-meta" id="sb-mapel-kelas">—</div>
-      <span class="guru-badge" id="sb-badge">Guru</span>
+    <div class="sb-user">
+      <div class="sb-user-name" id="sb-nama">—</div>
+      <div class="sb-user-sub" id="sb-sub">—</div>
+      <span class="sb-user-chip" id="sb-chip">Guru</span>
     </div>
-    <nav class="sidebar-nav">
-      <div class="nav-section">Utama</div>
-      <div class="nav-item active" onclick="gotoPage('dashboard')" id="nav-dashboard">
-        <span class="ico">🏠</span> Dashboard
-      </div>
-      <div class="nav-item" onclick="gotoPage('buat-ujian')" id="nav-buat-ujian">
-        <span class="ico">✏️</span> Buat Ujian
-        <span class="badge-dot" id="dot-buat"></span>
-      </div>
-      <div class="nav-item" onclick="gotoPage('jadwal')" id="nav-jadwal">
-        <span class="ico">📅</span> Jadwal Ujian
-      </div>
-      <hr class="nav-divider">
-      <div class="nav-section">Ujian Aktif</div>
-      <div class="nav-item" onclick="gotoPage('monitor')" id="nav-monitor">
-        <span class="ico">📡</span> Monitor
-        <span class="badge-dot" id="dot-monitor"></span>
-      </div>
-      <div class="nav-item" onclick="gotoPage('koreksi')" id="nav-koreksi">
-        <span class="ico">📝</span> Koreksi Esai
-        <span class="badge-dot" id="dot-esai"></span>
-      </div>
-      <hr class="nav-divider">
-      <div class="nav-section">Analisis</div>
-      <div class="nav-item" onclick="gotoPage('rekap')" id="nav-rekap">
-        <span class="ico">📊</span> Rekap PAS/PAT/PTS
-      </div>
-      <div class="nav-item" onclick="gotoPage('analisis')" id="nav-analisis">
-        <span class="ico">🔬</span> Analisis Butir Soal
-      </div>
-      <hr class="nav-divider">
-      <div class="nav-section">Soal</div>
-      <div class="nav-item" onclick="gotoPage('bank-soal')" id="nav-bank-soal">
-        <span class="ico">🗂️</span> Bank Soal
-      </div>
-    </nav>
-    <div class="sidebar-foot">
-      <button class="btn-darkmode" onclick="toggleDark()" id="btn-dark">
-        <span id="dark-ico">🌙</span> <span id="dark-lbl">Dark Mode</span>
+    <nav class="sb-nav">
+      <!-- Dashboard -->
+      <button class="nav-item active" id="nav-dashboard" onclick="gotoPage('dashboard')">
+        <i class="bi bi-house ni-ico"></i><span class="ni-lbl">Dashboard</span>
       </button>
-      <button class="btn-logout-sm" onclick="doLogout()">Keluar</button>
+      <hr class="nav-divider">
+      <div class="sb-section">Bank Soal</div>
+      <!-- Bank Soal -->
+      <button class="nav-item" id="nav-bank-soal" onclick="toggleMenu('bank-soal')">
+        <i class="bi bi-folder2 ni-ico"></i><span class="ni-lbl">Bank Soal</span>
+        <i class="bi bi-chevron-right ni-arr"></i>
+      </button>
+      <div class="nav-sub" id="nsub-bank-soal">
+        <button class="nav-sub-item" id="nsub-bank-soal-daftar" onclick="gotoSubPage(\'bank-soal\',\'daftar\')">Daftar Paket</button>
+        <button class="nav-sub-item" id="nsub-bank-soal-rakit" onclick="gotoSubPage('bank-soal','rakit')">Rakit Paket</button>
+        <button class="nav-sub-item" id="nsub-bank-soal-validasi" onclick="gotoSubPage('bank-soal','validasi')">Validasi Paket</button>
+        <button class="nav-sub-item" id="nsub-bank-soal-statistik" onclick="gotoSubPage('bank-soal','statistik')">Statistik Paket</button>
+      </div>
+      <hr class="nav-divider">
+      <div class="sb-section">Ujian</div>
+      <!-- Ujian -->
+      <button class="nav-item" id="nav-ujian" onclick="toggleMenu('ujian')">
+        <i class="bi bi-clipboard-check ni-ico"></i><span class="ni-lbl">Ujian</span>
+        <i class="bi bi-chevron-right ni-arr"></i>
+      </button>
+      <div class="nav-sub" id="nsub-ujian">
+        <button class="nav-sub-item" id="nsub-ujian-buat" onclick="gotoSubPage(\'ujian\',\'buat\')">Buat Ujian</button>
+        <button class="nav-sub-item" id="nsub-ujian-jadwal" onclick="gotoSubPage('ujian','jadwal')">Jadwal Ujian</button>
+        <button class="nav-sub-item" id="nsub-ujian-sesi-aktif" onclick="gotoSubPage(\'ujian\',\'sesi-aktif\')">
+          Sesi Aktif <span class="ni-badge ms-1" id="dot-monitor"></span>
+        </button>
+        <button class="nav-sub-item" id="nsub-ujian-riwayat" onclick="gotoSubPage('ujian','riwayat')">Riwayat Ujian</button>
+      </div>
+      <!-- Monitoring -->
+      <button class="nav-item" id="nav-monitoring" onclick="toggleMenu('monitoring')">
+        <i class="bi bi-activity ni-ico"></i><span class="ni-lbl">Monitoring</span>
+        <i class="bi bi-chevron-right ni-arr"></i>
+      </button>
+      <div class="nav-sub" id="nsub-monitoring">
+        <button class="nav-sub-item" id="nsub-monitoring-berlangsung" onclick="gotoSubPage('monitoring','berlangsung')">Sedang Berlangsung</button>
+        <button class="nav-sub-item" id="nsub-monitoring-belum" onclick="gotoSubPage('monitoring','belum')">Belum Login</button>
+        <button class="nav-sub-item" id="nsub-monitoring-mengerjakan" onclick="gotoSubPage('monitoring','mengerjakan')">Mengerjakan</button>
+        <button class="nav-sub-item" id="nsub-monitoring-submit" onclick="gotoSubPage('monitoring','submit')">Sudah Submit</button>
+      </div>
+      <hr class="nav-divider">
+      <div class="sb-section">Penilaian</div>
+      <!-- Koreksi Esai -->
+      <button class="nav-item" id="nav-koreksi" onclick="gotoPage('koreksi')">
+        <i class="bi bi-pen ni-ico"></i><span class="ni-lbl">Koreksi Esai</span>
+        <span class="ni-badge" id="dot-esai"></span>
+      </button>
+      <!-- Hasil -->
+      <button class="nav-item" id="nav-hasil" onclick="gotoPage('hasil')">
+        <i class="bi bi-bar-chart ni-ico"></i><span class="ni-lbl">Hasil &amp; Rekap</span>
+      </button>
+      <!-- Analisis -->
+      <button class="nav-item" id="nav-analisis" onclick="toggleMenu('analisis')">
+        <i class="bi bi-pie-chart ni-ico"></i><span class="ni-lbl">Analisis</span>
+        <i class="bi bi-chevron-right ni-arr"></i>
+      </button>
+      <div class="nav-sub" id="nsub-analisis">
+        <button class="nav-sub-item" id="nsub-analisis-distribusi" onclick="gotoSubPage(\'analisis\',\'distribusi\')">Distribusi Nilai</button>
+        <button class="nav-sub-item" id="nsub-analisis-butir" onclick="gotoSubPage('analisis','butir')">Analisis Butir</button>
+        <button class="nav-sub-item" id="nsub-analisis-kesukaran" onclick="gotoSubPage('analisis','kesukaran')">Tingkat Kesukaran</button>
+        <button class="nav-sub-item" id="nsub-analisis-daya" onclick="gotoSubPage('analisis','daya')">Daya Pembeda</button>
+      </div>
+      <hr class="nav-divider">
+      <button class="nav-item" id="nav-pengaturan" onclick="gotoPage('pengaturan')">
+        <i class="bi bi-gear ni-ico"></i><span class="ni-lbl">Pengaturan</span>
+      </button>
+    </nav>
+    <div class="sb-foot">
+      <button class="btn-dark" onclick="toggleDark()">
+        <span id="dark-ico">🌙</span><span id="dark-lbl">Dark Mode</span>
+      </button>
+      <button class="btn-out" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i></button>
     </div>
   </aside>
 
-  <!-- Main -->
-  <div class="main-content">
-
+  <!-- ── MAIN ── -->
+  <div class="main">
     <!-- Mobile topbar -->
-    <div class="topbar-mobile">
-      <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink)" onclick="openSidebar()">☰</button>
+    <div class="topbar">
+      <button style="background:none;border:none;font-size:20px;color:var(--ink);cursor:pointer" onclick="openSidebar()">
+        <i class="bi bi-list"></i>
+      </button>
       <div style="font-size:14px;font-weight:700">CBT <span style="color:var(--accent)">Sekolah</span></div>
       <div style="width:32px"></div>
     </div>
 
-    <div class="page-content">
+    <div class="page-wrap">
 
-      <!-- ── DASHBOARD ─────────────────────── -->
+      <!-- ══ DASHBOARD ══════════════════════════ -->
       <div id="page-dashboard">
-        <div class="page-head">
-          <h2>Dashboard</h2>
-          <p>Selamat datang, <span id="dsh-nama">—</span> — ringkasan aktivitas Anda hari ini</p>
-        </div>
-        <!-- Sesi aktif strip -->
+        <div class="page-hd"><h2>Dashboard</h2><p id="dsh-greeting">Selamat datang</p></div>
         <div id="dsh-sesi-strip" style="display:none"></div>
-        <!-- Stat cards -->
-        <div class="stat-grid" id="dsh-stats">
-          <div class="stat-card blue"><div class="stat-ico blue">🗂️</div><div class="stat-num" id="s-paket">—</div><div class="stat-lbl">Paket Soal</div></div>
-          <div class="stat-card green"><div class="stat-ico green">📡</div><div class="stat-num" id="s-sesi">0</div><div class="stat-lbl">Sesi Aktif</div></div>
-          <div class="stat-card amber"><div class="stat-ico amber">👥</div><div class="stat-num" id="s-submit">0</div><div class="stat-lbl">Peserta Submit</div></div>
-          <div class="stat-card red"><div class="stat-ico red">📝</div><div class="stat-num" id="s-esai">0</div><div class="stat-lbl">Esai Belum Dinilai</div></div>
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3"><div class="stat-card sc-blue"><div class="stat-ico"><i class="bi bi-folder2"></i></div><div class="stat-num" id="s-paket">—</div><div class="stat-lbl">Paket Soal</div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card sc-green"><div class="stat-ico"><i class="bi bi-broadcast"></i></div><div class="stat-num" id="s-sesi">0</div><div class="stat-lbl">Sesi Aktif</div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card sc-amber"><div class="stat-ico"><i class="bi bi-people"></i></div><div class="stat-num" id="s-submit">0</div><div class="stat-lbl">Peserta Submit</div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card sc-red"><div class="stat-ico"><i class="bi bi-pen"></i></div><div class="stat-num" id="s-esai">0</div><div class="stat-lbl">Esai Belum Dinilai</div></div></div>
         </div>
-        <!-- Shortcut grid -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="card" style="cursor:pointer" onclick="gotoPage('buat-ujian')">
-            <div class="card-body" style="display:flex;align-items:center;gap:12px">
-              <div class="stat-ico blue" style="flex-shrink:0">✏️</div>
-              <div><div style="font-size:13px;font-weight:600">Buat Sesi Ujian</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Generate token & link siswa</div></div>
+        <div class="row g-3">
+          <div class="col-6 col-md-3"><div class="cbt-card h-100" style="cursor:pointer" onclick="gotoSubPage('ujian','buat')"><div class="cbt-card-body d-flex align-items-center gap-3"><div class="stat-ico sc-blue" style="margin-bottom:0;flex-shrink:0"><i class="bi bi-plus-circle"></i></div><div><div style="font-size:13px;font-weight:600">Buat Ujian</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Generate token</div></div></div></div></div>
+          <div class="col-6 col-md-3"><div class="cbt-card h-100" style="cursor:pointer" onclick="gotoSubPage('ujian','sesi-aktif')"><div class="cbt-card-body d-flex align-items-center gap-3"><div class="stat-ico sc-green" style="margin-bottom:0;flex-shrink:0"><i class="bi bi-broadcast"></i></div><div><div style="font-size:13px;font-weight:600">Monitor Sesi</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Pantau real-time</div></div></div></div></div>
+          <div class="col-6 col-md-3"><div class="cbt-card h-100" style="cursor:pointer" onclick="gotoPage('koreksi')"><div class="cbt-card-body d-flex align-items-center gap-3"><div class="stat-ico sc-amber" style="margin-bottom:0;flex-shrink:0"><i class="bi bi-pen"></i></div><div><div style="font-size:13px;font-weight:600">Koreksi Esai</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Beri nilai esai</div></div></div></div></div>
+          <div class="col-6 col-md-3"><div class="cbt-card h-100" style="cursor:pointer" onclick="gotoSubPage('analisis','distribusi')"><div class="cbt-card-body d-flex align-items-center gap-3"><div class="stat-ico sc-purple" style="margin-bottom:0;flex-shrink:0"><i class="bi bi-pie-chart"></i></div><div><div style="font-size:13px;font-weight:600">Analisis</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Butir &amp; distribusi</div></div></div></div></div>
+        </div>
+      </div>
+
+      <!-- ══ BANK SOAL ══════════════════════════ -->
+      <div id="page-bank-soal" style="display:none">
+        <div class="page-hd"><h2>Bank Soal</h2><p>Kelola paket soal dari spreadsheet Anda</p></div>
+        <!-- Daftar Paket -->
+        <div class="sub-page" id="sub-bank-soal-daftar">
+          <div class="cbt-card mb-3">
+            <div class="cbt-card-head"><div class="cbt-card-title">Filter &amp; Cari</div></div>
+            <div class="cbt-card-body">
+              <div class="row g-2 mb-2">
+                <div class="col-md-4"><div class="fg mb-0"><label>Kode Soal</label><select id="bank-kode" onchange="loadBankSoal()"><option value="">— Pilih kode —</option></select></div></div>
+                <div class="col-md-4"><div class="fg mb-0"><label>Tipe</label><select id="bank-tipe" onchange="filterBank()"><option value="">Semua</option><option value="pg_teks">PG Teks</option><option value="pg_gambar">PG Gambar</option><option value="esai">Esai</option></select></div></div>
+                <div class="col-md-4"><div class="fg mb-0"><label>Topik</label><select id="bank-topik-sel" onchange="filterBankTopik(this.value)"><option value="">Semua</option></select></div></div>
+              </div>
+              <div id="bank-stats" style="display:none;margin-top:8px"></div>
             </div>
           </div>
-          <div class="card" style="cursor:pointer" onclick="gotoPage('monitor')">
-            <div class="card-body" style="display:flex;align-items:center;gap:12px">
-              <div class="stat-ico green" style="flex-shrink:0">📡</div>
-              <div><div style="font-size:13px;font-weight:600">Monitor Sesi</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Pantau peserta real-time</div></div>
+          <div id="bank-loading" class="cbt-loading" style="display:none"><div class="cbt-spin"></div> Memuat soal...</div>
+          <div id="bank-list"></div>
+        </div>
+        <!-- Rakit Paket -->
+        <div class="sub-page" id="sub-bank-soal-rakit">
+          <div class="rakit-tabs">
+            <button class="rakit-tab active" onclick="switchRakit('manual',this)">Manual</button>
+            <button class="rakit-tab" onclick="switchRakit('otomatis',this)">Otomatis</button>
+            <button class="rakit-tab" onclick="switchRakit('prompt',this)">Prompt Builder</button>
+          </div>
+          <!-- Manual -->
+          <div id="rakit-manual">
+            <div class="row g-3">
+              <div class="col-md-7">
+                <div class="cbt-card">
+                  <div class="cbt-card-head"><div class="cbt-card-title">Pilih Soal</div></div>
+                  <div class="cbt-card-body">
+                    <div class="fg"><label>Kode Soal</label><select id="rakit-kode" onchange="loadBankUntukRakit()"><option value="">— Pilih —</option></select></div>
+                    <div id="rakit-bank-list" style="max-height:400px;overflow-y:auto"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="cbt-card h-100">
+                  <div class="cbt-card-head"><div class="cbt-card-title">Keranjang (<span id="rakit-count">0 soal</span>)</div></div>
+                  <div class="keranjang-box" id="rakit-keranjang"></div>
+                  <div class="cbt-card-body" style="border-top:1px solid var(--border)">
+                    <button class="btn btn-success btn-sm btn-block">💾 Simpan sebagai Paket Baru</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="card" style="cursor:pointer" onclick="gotoPage('koreksi')">
-            <div class="card-body" style="display:flex;align-items:center;gap:12px">
-              <div class="stat-ico amber" style="flex-shrink:0">📝</div>
-              <div><div style="font-size:13px;font-weight:600">Koreksi Esai</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Periksa &amp; beri nilai</div></div>
+          <!-- Otomatis -->
+          <div id="rakit-otomatis" style="display:none">
+            <div class="cbt-card">
+              <div class="cbt-card-head"><div class="cbt-card-title">Rakit Otomatis</div></div>
+              <div class="cbt-card-body">
+                <div class="fg"><label>Sumber Kode Soal</label><select id="ro-kode"><option value="">— Pilih —</option></select></div>
+                <div class="row g-2 mb-3">
+                  <div class="col-4"><div class="fg mb-0"><label>Jumlah PG</label><input type="number" id="ro-pg" value="20" min="0"></div></div>
+                  <div class="col-4"><div class="fg mb-0"><label>PG Gambar</label><input type="number" id="ro-pgg" value="5" min="0"></div></div>
+                  <div class="col-4"><div class="fg mb-0"><label>Jumlah Esai</label><input type="number" id="ro-esai" value="5" min="0"></div></div>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-4"><div class="fg mb-0"><label>% Mudah</label><input type="number" id="ro-mudah" value="33" min="0" max="100"></div></div>
+                  <div class="col-4"><div class="fg mb-0"><label>% Sedang</label><input type="number" id="ro-sedang" value="34" min="0" max="100"></div></div>
+                  <div class="col-4"><div class="fg mb-0"><label>% Sulit</label><input type="number" id="ro-sulit" value="33" min="0" max="100"></div></div>
+                </div>
+                <button class="btn btn-primary" onclick="rakitOtomatis()"><i class="bi bi-magic"></i> Rakit Sekarang</button>
+                <div id="ro-hasil" style="margin-top:14px"></div>
+              </div>
             </div>
           </div>
-          <div class="card" style="cursor:pointer" onclick="gotoPage('analisis')">
-            <div class="card-body" style="display:flex;align-items:center;gap:12px">
-              <div class="stat-ico purple" style="flex-shrink:0">🔬</div>
-              <div><div style="font-size:13px;font-weight:600">Analisis Butir</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">Daya beda &amp; tingkat kesukaran</div></div>
+          <!-- Prompt -->
+          <div id="rakit-prompt" style="display:none">
+            <div class="cbt-card">
+              <div class="cbt-card-head"><div class="cbt-card-title">Prompt Builder</div></div>
+              <div class="cbt-card-body">
+                <div class="fg"><label>Deskripsi Paket (Natural Language)</label>
+                  <textarea id="pb-prompt" rows="3" placeholder="Contoh: Buat paket PAS IPS kelas VIII berisi 30 PG dan 5 Esai, ambil dari PATIPS726 dan LATIPS01, tingkat kesukaran sedang"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="promptBuilder()"><i class="bi bi-stars"></i> Generate Paket</button>
+                <div id="pb-hasil" style="margin-top:12px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Validasi -->
+        <div class="sub-page" id="sub-bank-soal-validasi">
+          <div class="cbt-card">
+            <div class="cbt-card-head">
+              <div class="cbt-card-title">Validasi Paket</div>
+              <button class="btn btn-ghost btn-sm" onclick="runValidasi()"><i class="bi bi-arrow-repeat"></i> Jalankan Validasi</button>
+            </div>
+            <div class="cbt-card-body" id="validasi-result">
+              <div class="cbt-empty"><div class="ee">🔍</div><h3>Pilih kode soal di Daftar Paket dulu</h3></div>
+            </div>
+          </div>
+        </div>
+        <!-- Statistik -->
+        <div class="sub-page" id="sub-bank-soal-statistik">
+          <div class="cbt-card">
+            <div class="cbt-card-head"><div class="cbt-card-title">Statistik Paket</div></div>
+            <div class="cbt-card-body" id="statistik-paket">
+              <div class="cbt-empty"><div class="ee">📊</div><h3>Pilih kode soal di Daftar Paket dulu</h3></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── BUAT UJIAN ─────────────────────── -->
-      <div id="page-buat-ujian" style="display:none">
-        <div class="page-head"><h2>Buat Sesi Ujian</h2><p>Pilih kode soal, atur durasi, dan generate token untuk siswa</p></div>
-        <div id="sesi-aktif-box" style="display:none;margin-bottom:16px"></div>
-        <div id="form-buat-box">
-          <div class="card" style="margin-bottom:14px">
-            <div class="card-head"><div class="card-title">Konfigurasi Ujian</div></div>
-            <div class="card-body">
-              <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-                <span class="badge badge-blue" id="bj-mapel">—</span>
-                <span class="badge badge-gray" id="bj-kelas">—</span>
-              </div>
-              <div class="field">
-                <label>Pilih Kode Soal</label>
-                <div id="kode-loading" class="loading"><div class="spin"></div> Memuat daftar soal...</div>
-                <div id="kode-list" class="kode-list" style="display:none"></div>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label>Durasi (menit)</label>
-                  <input type="number" id="inp-durasi" value="90" min="10" max="300">
+      <!-- ══ UJIAN ══════════════════════════════ -->
+      <div id="page-ujian" style="display:none">
+        <div class="page-hd"><h2>Ujian</h2><p>Buat, jadwalkan, dan kelola sesi ujian</p></div>
+        <!-- Buat Ujian -->
+        <div class="sub-page" id="sub-ujian-buat">
+          <div id="sesi-aktif-box" style="display:none;margin-bottom:14px"></div>
+          <div id="form-buat-box">
+            <div class="cbt-card mb-3">
+              <div class="cbt-card-head"><div class="cbt-card-title">Konfigurasi Ujian</div></div>
+              <div class="cbt-card-body">
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                  <span class="cbt-badge cb-blue" id="bj-mapel">—</span>
+                  <span class="cbt-badge cb-gray" id="bj-kelas">—</span>
                 </div>
-                <div class="field">
-                  <label>Token Siswa <span style="font-weight:400;color:var(--ink3)">(opsional)</span></label>
-                  <input type="text" id="inp-token" placeholder="Auto-generate jika kosong" style="text-transform:uppercase">
+                <div class="fg"><label>Pilih Kode Soal</label>
+                  <div id="kode-loading" class="cbt-loading"><div class="cbt-spin"></div> Memuat...</div>
+                  <div id="kode-list" style="display:none"></div>
                 </div>
+                <div class="row g-2">
+                  <div class="col-md-6"><div class="fg"><label>Durasi (menit)</label><input type="number" id="inp-durasi" value="90" min="10" max="300"></div></div>
+                  <div class="col-md-6"><div class="fg"><label>Token Siswa <span style="font-weight:400;color:var(--ink3)">(opsional)</span></label><input type="text" id="inp-token" placeholder="Auto-generate jika kosong" style="text-transform:uppercase"></div></div>
+                </div>
+                <button class="btn btn-primary btn-block" id="btn-generate" onclick="generateSesi()">
+                  <i class="bi bi-lightning-charge-fill"></i> Generate Ujian &amp; Dapatkan Token
+                </button>
               </div>
-              <button class="btn btn-primary btn-block" id="btn-generate" onclick="generateSesi()">
-                ⚡ Generate Ujian &amp; Dapatkan Token
-              </button>
+            </div>
+            <div class="cbt-card" id="hasil-generate" style="display:none">
+              <div class="cbt-card-head">
+                <div class="cbt-card-title">Ujian Siap Dibagikan</div>
+                <span class="cbt-badge cb-green"><span class="cb-dot"></span> Aktif</span>
+              </div>
+              <div class="cbt-card-body">
+                <div class="mb-3">
+                  <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Token Siswa</div>
+                  <div class="token-display">
+                    <div class="token-val" id="gen-token">——</div>
+                    <button class="btn btn-ghost btn-sm" onclick="copyText(document.getElementById('gen-token').textContent,'Token disalin!')">Salin</button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Link Siswa (WA)</div>
+                  <div class="link-box">
+                    <span class="link-url" id="gen-link-pendek">—</span>
+                    <button class="btn btn-ghost btn-sm" onclick="copyLinkPendek()">Salin</button>
+                  </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-success btn-sm" onclick="bagikanWA()"><i class="bi bi-whatsapp"></i> WhatsApp</button>
+                  <button class="btn btn-ghost btn-sm" onclick="gotoSubPage('ujian','sesi-aktif')"><i class="bi bi-broadcast"></i> Monitor →</button>
+                </div>
+                <input type="hidden" id="gen-link">
+              </div>
             </div>
           </div>
-          <div class="card" id="hasil-generate" style="display:none">
-            <div class="card-head">
-              <div class="card-title">Ujian Siap Dibagikan</div>
-              <span class="badge badge-green"><span class="dot"></span> Aktif</span>
+        </div>
+        <!-- Jadwal -->
+        <div class="sub-page" id="sub-ujian-jadwal">
+          <div class="cbt-card mb-3">
+            <div class="cbt-card-head"><div class="cbt-card-title">Tambah Jadwal</div></div>
+            <div class="cbt-card-body">
+              <div class="row g-2">
+                <div class="col-md-3"><div class="fg mb-0"><label>Tanggal</label><input type="date" id="jdw-tgl"></div></div>
+                <div class="col-md-2"><div class="fg mb-0"><label>Jam</label><input type="time" id="jdw-jam"></div></div>
+                <div class="col-md-2"><div class="fg mb-0"><label>Jenis</label><select id="jdw-jenis"><option>PAS</option><option>PAT</option><option>PTS</option><option>UTS</option><option>Latihan</option></select></div></div>
+                <div class="col-md-2"><div class="fg mb-0"><label>Kode Soal</label><input type="text" id="jdw-kode" placeholder="UTS1"></div></div>
+                <div class="col-md-2"><div class="fg mb-0"><label>Durasi (menit)</label><input type="number" id="jdw-durasi" value="90" min="10"></div></div>
+                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary btn-sm btn-block mb-0" onclick="tambahJadwal()"><i class="bi bi-plus"></i></button></div>
+              </div>
+              <div class="row g-2 mt-1">
+                <div class="col-12"><div class="fg mb-0"><label>Keterangan</label><input type="text" id="jdw-ket" placeholder="Contoh: PTS IPS Kelas VII"></div></div>
+              </div>
             </div>
-            <div class="card-body">
-              <div style="margin-bottom:14px">
-                <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Token Siswa</div>
-                <div class="token-display">
-                  <div class="token-val" id="gen-token">——</div>
-                  <button class="btn btn-ghost btn-sm" onclick="copyText(document.getElementById('gen-token').textContent,'Token disalin!')">Salin</button>
-                </div>
-              </div>
-              <div style="margin-bottom:14px">
-                <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Link Siswa <span style="font-weight:400;color:var(--ink4)">(bagikan via WA)</span></div>
-                <div class="link-box">
-                  <span class="link-url" id="gen-link-pendek">—</span>
-                  <button class="btn btn-ghost btn-sm" onclick="copyLinkPendek()">Salin</button>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn btn-success btn-sm" onclick="bagikanWA()">💬 WhatsApp</button>
-                <button class="btn btn-ghost btn-sm" onclick="gotoPage('monitor')">📡 Buka Monitor →</button>
-              </div>
-              <!-- link lengkap disimpan di dataset -->
-              <input type="hidden" id="gen-link">
+          </div>
+          <div class="cbt-card">
+            <div class="cbt-card-head"><div class="cbt-card-title">Jadwal Mendatang</div></div>
+            <div class="cbt-card-body" id="jadwal-list">
+              <div class="cbt-empty"><div class="ee">📅</div><h3>Belum ada jadwal</h3></div>
+            </div>
+          </div>
+        </div>
+        <!-- Sesi Aktif -->
+        <div class="sub-page" id="sub-ujian-sesi-aktif">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div><h5 class="mb-0">Sesi Aktif</h5></div>
+            <button class="btn btn-ghost btn-sm" onclick="loadStatusSesi()"><i class="bi bi-arrow-repeat"></i> Refresh</button>
+          </div>
+          <div id="mon-nosesi" class="cbt-card"><div class="cbt-card-body"><div class="cbt-empty"><div class="ee">📡</div><h3>Tidak ada sesi aktif</h3><p>Buat sesi ujian terlebih dahulu.</p></div></div></div>
+          <div id="mon-list" style="display:none"></div>
+        </div>
+        <!-- Riwayat -->
+        <div class="sub-page" id="sub-ujian-riwayat">
+          <div class="cbt-card">
+            <div class="cbt-card-head"><div class="cbt-card-title">Riwayat Ujian</div></div>
+            <div class="cbt-card-body" id="riwayat-list">
+              <div class="cbt-empty"><div class="ee">📋</div><h3>Belum ada riwayat</h3></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── JADWAL UJIAN ───────────────────── -->
-      <div id="page-jadwal" style="display:none">
-        <div class="page-head"><h2>Jadwal Ujian</h2><p>Rencanakan dan catat jadwal ujian mendatang</p></div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-head">
-            <div class="card-title">Tambah Jadwal</div>
-          </div>
-          <div class="card-body">
-            <div class="field-row">
-              <div class="field"><label>Tanggal</label><input type="date" id="jdw-tgl"></div>
-              <div class="field"><label>Jam Mulai</label><input type="time" id="jdw-jam"></div>
-            </div>
-            <div class="field-row">
-              <div class="field"><label>Kode Soal</label><input type="text" id="jdw-kode" placeholder="Contoh: UTS1"></div>
-              <div class="field"><label>Durasi (menit)</label><input type="number" id="jdw-durasi" value="90" min="10"></div>
-            </div>
-            <div class="field"><label>Keterangan</label><input type="text" id="jdw-ket" placeholder="Contoh: UTS Semester 1 Kelas VII"></div>
-            <button class="btn btn-primary btn-sm" onclick="tambahJadwal()">+ Tambah</button>
-          </div>
+      <!-- ══ MONITORING ══════════════════════════ -->
+      <div id="page-monitoring" style="display:none">
+        <div class="page-hd"><h2>Monitoring</h2><p>Pantau status peserta ujian secara real-time</p></div>
+        <div class="sub-page" id="sub-monitoring-berlangsung">
+          <div id="mon-detail"><div class="cbt-empty"><div class="ee">📡</div><h3>Tidak ada sesi berlangsung</h3></div></div>
         </div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">Jadwal Mendatang</div></div>
-          <div class="card-body" id="jadwal-list">
-            <div class="empty"><div class="ei">📅</div><h3>Belum ada jadwal</h3><p>Tambahkan jadwal ujian di atas.</p></div>
-          </div>
+        <div class="sub-page" id="sub-monitoring-belum">
+          <div class="cbt-card"><div class="cbt-card-body"><div class="cbt-empty"><div class="ee">⏳</div><h3>Belum Login</h3><p>Data akan tampil saat ujian berlangsung.</p></div></div></div>
+        </div>
+        <div class="sub-page" id="sub-monitoring-mengerjakan">
+          <div class="cbt-card"><div class="cbt-card-body"><div class="cbt-empty"><div class="ee">✍️</div><h3>Sedang Mengerjakan</h3><p>Data akan tampil saat ujian berlangsung.</p></div></div></div>
+        </div>
+        <div class="sub-page" id="sub-monitoring-submit">
+          <div class="cbt-card"><div class="cbt-card-body"><div class="cbt-empty"><div class="ee">✅</div><h3>Sudah Submit</h3><p>Data akan tampil saat ujian berlangsung.</p></div></div></div>
         </div>
       </div>
 
-      <!-- ── MONITOR ─────────────────────────── -->
-      <div id="page-monitor" style="display:none">
-        <div class="page-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div><h2>Monitor Sesi</h2><p>Pantau progress peserta ujian secara real-time</p></div>
-          <button class="btn btn-ghost btn-sm" onclick="loadStatusSesi()">↻ Refresh</button>
-        </div>
-        <div id="mon-nosesi" class="card">
-          <div class="card-body"><div class="empty"><div class="ei">📡</div><h3>Tidak ada sesi aktif</h3><p>Buat sesi ujian terlebih dahulu.</p></div></div>
-        </div>
-        <div id="mon-list" style="display:none"></div>
-      </div>
-
-      <!-- ── KOREKSI ESAI ───────────────────── -->
+      <!-- ══ KOREKSI ESAI ════════════════════════ -->
       <div id="page-koreksi" style="display:none">
-        <div class="page-head"><h2>Koreksi Esai</h2><p>Periksa dan beri nilai jawaban esai siswa</p></div>
-        <div id="esai-nosesi" class="card">
-          <div class="card-body"><div class="empty"><div class="ei">📝</div><h3>Tidak ada data esai</h3><p>Belum ada sesi dengan soal esai.</p></div></div>
-        </div>
-        <div id="esai-picker" style="display:none;margin-bottom:12px">
-          <div class="field"><label>Pilih Sesi</label><select id="esai-sesi-sel" onchange="gantiSesiEsai(this.value)"></select></div>
-        </div>
-        <div id="esai-loading" class="loading" style="display:none"><div class="spin"></div> Memuat jawaban esai...</div>
+        <div class="page-hd"><h2>Koreksi Esai</h2><p>Periksa dan beri nilai jawaban esai siswa</p></div>
+        <div id="esai-nosesi" class="cbt-card"><div class="cbt-card-body"><div class="cbt-empty"><div class="ee">📝</div><h3>Tidak ada data esai</h3><p>Belum ada sesi dengan soal esai.</p></div></div></div>
+        <div id="esai-picker" style="display:none;margin-bottom:12px"><div class="fg"><label>Pilih Sesi</label><select id="esai-sesi-sel" onchange="gantiSesiEsai(this.value)"></select></div></div>
+        <div id="esai-loading" class="cbt-loading" style="display:none"><div class="cbt-spin"></div> Memuat jawaban esai...</div>
         <div id="esai-panel" style="display:none">
-          <div class="card">
-            <div class="card-head">
+          <div class="cbt-card">
+            <div class="cbt-card-head">
               <div>
-                <div class="card-title">Koreksi Jawaban Esai</div>
-                <div id="esai-sesi-label" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;margin-top:2px"></div>
+                <div class="cbt-card-title">Koreksi Jawaban Esai</div>
+                <div id="esai-sesi-label" style="font-size:10px;color:var(--ink3);font-family:var(--mono);margin-top:2px"></div>
               </div>
-              <button class="btn btn-success btn-sm" onclick="simpanSemuaNilai()">💾 Simpan Semua Nilai</button>
+              <button class="btn btn-success btn-sm" onclick="simpanSemuaNilai()"><i class="bi bi-floppy"></i> Simpan Semua</button>
             </div>
-            <div class="card-body">
-              <div class="esai-nav">
-                <button class="btn btn-ghost btn-sm" id="btn-prev-soal" onclick="navSoalEsai(-1)">← Soal Sebelumnya</button>
-                <div class="info">
+            <div class="cbt-card-body">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <button class="btn btn-ghost btn-sm" id="btn-prev-soal" onclick="navSoalEsai(-1)">← Sebelumnya</button>
+                <div style="flex:1;text-align:center">
                   Soal No. <strong id="esai-no-soal">—</strong>
-                  <div class="sub" id="esai-soal-idx"></div>
+                  <span id="esai-soal-idx" style="font-size:11px;color:var(--ink3)"></span>
                 </div>
-                <button class="btn btn-ghost btn-sm" id="btn-next-soal" onclick="navSoalEsai(1)">Soal Berikutnya →</button>
+                <button class="btn btn-ghost btn-sm" id="btn-next-soal" onclick="navSoalEsai(1)">Berikutnya →</button>
               </div>
-              <div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--border)">
-                <div style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Pertanyaan</div>
-                <div style="font-size:14px" id="esai-pertanyaan">—</div>
+              <div style="background:var(--bg);border-radius:var(--r);padding:11px 13px;margin-bottom:10px;border:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Pertanyaan</div>
+                <div style="font-size:13px" id="esai-pertanyaan">—</div>
               </div>
-              <div class="kunci-bar"><strong>Kunci:</strong> <span id="esai-kunci">—</span></div>
+              <div style="background:var(--green-bg);border-radius:var(--r);padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--green)">
+                <strong>Kunci:</strong> <span id="esai-kunci">—</span>
+              </div>
               <div id="jawaban-list"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── REKAP PAS/PAT/PTS ──────────────── -->
-      <div id="page-rekap" style="display:none">
-        <div class="page-head"><h2>Rekap PAS / PAT / PTS</h2><p>Ringkasan hasil ujian dari arsip yang sudah tersimpan</p></div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-head"><div class="card-title">Filter</div></div>
-          <div class="card-body">
-            <div class="field-row">
-              <div class="field">
-                <label>Jenis Ujian</label>
-                <select id="rekap-jenis" onchange="loadRekap()">
-                  <option value="">Semua</option>
-                  <option value="PAS">PAS</option>
-                  <option value="PAT">PAT</option>
-                  <option value="PTS">PTS</option>
-                  <option value="UH">Ulangan Harian</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>Kelas</label>
-                <select id="rekap-kelas" onchange="loadRekap()">
-                  <option value="">Semua</option>
-                  <option value="VII">Kelas VII</option>
-                  <option value="VIII">Kelas VIII</option>
-                  <option value="IX">Kelas IX</option>
-                </select>
-              </div>
+      <!-- ══ HASIL ══════════════════════════════ -->
+      <div id="page-hasil" style="display:none">
+        <div class="page-hd"><h2>Hasil &amp; Rekap</h2><p>Ringkasan hasil ujian dari semua sesi</p></div>
+        <div class="cbt-card mb-3">
+          <div class="cbt-card-head"><div class="cbt-card-title">Filter</div></div>
+          <div class="cbt-card-body">
+            <div class="row g-2">
+              <div class="col-md-4"><div class="fg mb-0"><label>Jenis Ujian</label><select id="rekap-jenis" onchange="loadRekap()"><option value="">Semua</option><option>PAS</option><option>PAT</option><option>PTS</option><option>UTS</option><option>Latihan</option></select></div></div>
+              <div class="col-md-4"><div class="fg mb-0"><label>Kelas</label><select id="rekap-kelas" onchange="loadRekap()"><option value="">Semua</option><option value="VII">Kelas VII</option><option value="VIII">Kelas VIII</option><option value="IX">Kelas IX</option></select></div></div>
             </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">Data Rekap</div></div>
-          <div class="card-body" id="rekap-content">
-            <div class="empty"><div class="ei">📊</div><h3>Pilih filter untuk memuat data</h3><p>Data diambil dari arsip sesi yang sudah diselesaikan.</p></div>
+        <div class="cbt-card">
+          <div class="cbt-card-head">
+            <div class="cbt-card-title">Data Rekap</div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-ghost btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+              <button class="btn btn-ghost btn-sm"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+            </div>
+          </div>
+          <div class="cbt-card-body" id="rekap-content">
+            <div class="cbt-empty"><div class="ee">📊</div><h3>Pilih filter untuk memuat data</h3></div>
           </div>
         </div>
       </div>
 
-      <!-- ── ANALISIS BUTIR SOAL ─────────────── -->
+      <!-- ══ ANALISIS ═══════════════════════════ -->
       <div id="page-analisis" style="display:none">
-        <div class="page-head"><h2>Analisis Butir Soal</h2><p>Tingkat kesukaran, daya beda, dan efektivitas pengecoh</p></div>
-        <div id="analisis-nosesi">
-          <div class="card">
-            <div class="card-body">
-              <div class="field"><label>Pilih Sesi</label><select id="anal-sesi" onchange="loadAnalisis()"><option value="">— Pilih sesi —</option></select></div>
+        <div class="page-hd"><h2>Analisis</h2><p>Distribusi nilai, analisis butir soal, kesukaran, dan daya pembeda</p></div>
+        <div class="cbt-card mb-3">
+          <div class="cbt-card-body"><div class="fg mb-0"><label>Pilih Sesi</label><select id="anal-sesi" onchange="loadAnalisis()"><option value="">— Pilih sesi —</option></select></div></div>
+        </div>
+        <!-- Distribusi -->
+        <div class="sub-page" id="sub-analisis-distribusi">
+          <div id="analisis-content" style="display:none">
+            <div class="row g-3 mb-3" id="anal-stats"></div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-7">
+                <div class="cbt-card">
+                  <div class="cbt-card-head"><div class="cbt-card-title">Distribusi Nilai</div></div>
+                  <div class="cbt-card-body">
+                    <div class="dist-bar" id="anal-dist-bar"></div>
+                    <div class="d-flex flex-wrap gap-2 mt-2" id="anal-dist-leg" style="font-size:11px;color:var(--ink2)"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="cbt-card">
+                  <div class="cbt-card-head"><div class="cbt-card-title">Top 3 Siswa</div></div>
+                  <div class="cbt-card-body" id="anal-top3"></div>
+                </div>
+              </div>
+            </div>
+            <div id="arsip-link-box" style="display:none">
+              <div class="cbt-card">
+                <div class="cbt-card-body d-flex align-items-center justify-content-between gap-3">
+                  <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Arsip di GDrive Sekolah</div><div style="font-size:11px;color:var(--ink3)">Rekap, jawaban, dan analisis lengkap.</div></div>
+                  <a class="btn btn-ghost btn-sm" id="arsip-link-btn" href="#" target="_blank">Buka Arsip →</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="anal-nodata" class="cbt-empty"><div class="ee">📈</div><h3>Pilih sesi untuk melihat analisis</h3></div>
+        </div>
+        <!-- Butir -->
+        <div class="sub-page" id="sub-analisis-butir">
+          <div class="cbt-card">
+            <div class="cbt-card-head"><div class="cbt-card-title">Analisis Butir Soal</div></div>
+            <div class="cbt-card-body" id="analisis-butir-tbl">
+              <div class="cbt-empty"><div class="ee">🔬</div><h3>Pilih sesi di tab Distribusi dulu</h3></div>
             </div>
           </div>
         </div>
-        <div id="analisis-content" style="display:none">
-          <div class="stat-grid" id="anal-stats"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-            <div class="card">
-              <div class="card-head"><div class="card-title">Distribusi Nilai</div></div>
-              <div class="card-body">
-                <div class="dist-bar" id="anal-dist-bar"></div>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--ink2)" id="anal-dist-leg"></div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-head"><div class="card-title">Top 3 Siswa</div></div>
-              <div class="card-body" id="anal-top3"></div>
+        <!-- Kesukaran -->
+        <div class="sub-page" id="sub-analisis-kesukaran">
+          <div class="cbt-card">
+            <div class="cbt-card-head"><div class="cbt-card-title">Tingkat Kesukaran</div></div>
+            <div class="cbt-card-body">
+              <div class="cbt-empty"><div class="ee">📐</div><h3>Tingkat kesukaran</h3><p>Dihitung dari persentase jawaban benar per soal dari seluruh peserta.</p></div>
             </div>
           </div>
-          <div class="card">
-            <div class="card-head">
-              <div class="card-title">Tingkat Kesukaran per Soal</div>
-            </div>
-            <div class="card-body" id="anal-butir">
-              <div class="empty"><div class="ei">🔬</div><h3>Pilih sesi untuk melihat analisis butir</h3></div>
-            </div>
-          </div>
-          <div id="arsip-link-box" style="display:none;margin-top:14px">
-            <div class="card">
-              <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-                <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Arsip tersimpan di GDrive</div><div style="font-size:12px;color:var(--ink3)">Berisi rekap, jawaban, dan analisis lengkap.</div></div>
-                <a class="btn btn-ghost btn-sm" id="arsip-link-btn" href="#" target="_blank">Buka Arsip →</a>
-              </div>
+        </div>
+        <!-- Daya Pembeda -->
+        <div class="sub-page" id="sub-analisis-daya">
+          <div class="cbt-card">
+            <div class="cbt-card-head"><div class="cbt-card-title">Daya Pembeda</div></div>
+            <div class="cbt-card-body">
+              <div class="cbt-empty"><div class="ee">📏</div><h3>Daya pembeda</h3><p>Mengukur kemampuan soal membedakan siswa berkemampuan tinggi dan rendah.</p></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── BANK SOAL ──────────────────────── -->
-      <div id="page-bank-soal" style="display:none">
-        <div class="page-head"><h2>Bank Soal</h2><p>Preview, validasi, dan kelola soal dari spreadsheet Anda</p></div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-head"><div class="card-title">Filter &amp; Cari</div></div>
-          <div class="card-body">
-            <div class="field-row" style="margin-bottom:10px">
-              <div class="field">
-                <label>Kode Soal</label>
-                <select id="bank-kode" onchange="loadBankSoal()">
-                  <option value="">— Pilih kode —</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>Tipe</label>
-                <select id="bank-tipe" onchange="filterBank()">
-                  <option value="">Semua</option>
-                  <option value="pg_teks">PG Teks</option>
-                  <option value="pg_gambar">PG Gambar</option>
-                  <option value="esai">Esai</option>
-                </select>
-              </div>
-            </div>
-            <div class="bank-filters" id="bank-topik-filter"></div>
-          </div>
-        </div>
-        <div id="bank-loading" class="loading" style="display:none"><div class="spin"></div> Memuat soal...</div>
-        <div id="bank-stats" style="display:none;margin-bottom:10px"></div>
-        <div id="bank-list"></div>
+      <!-- ══ PENGATURAN ══════════════════════════ -->
+      <div id="page-pengaturan" style="display:none">
+        <div class="page-hd"><h2>Pengaturan</h2><p>Konfigurasi profil dan preferensi dashboard</p></div>
+        <div id="pengaturan-content"></div>
       </div>
 
-    </div><!-- /page-content -->
-  </div><!-- /main-content -->
+    </div><!-- /page-wrap -->
+  </div><!-- /main -->
 </div><!-- /app -->
 
-<div class="toast" id="toast"></div>
+<div class="toast-cbt" id="toast"></div>
 
 <script>
+
 // ══════════════════════════════════════════════
 //  KONFIGURASI
-// ══════════════════════════════════════════════
+// ═════════════════════════════════════════════
 var URL_SERVER = 'https://script.google.com/macros/s/AKfycbw6lUJeXuAGydnYMGY_-BnW8wpi6O7RYdyF1RMdorJRo-ZJ8MJd_Y8Up0GbVN1VGNjflw/exec';
 var URL_UJIAN  = 'https://istiqamah92170.github.io/cbt_mts_DIK/ujian_siswa.html';   // path ke file HTML ujian siswa
-
 // ══════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════
@@ -1705,6 +1560,489 @@ function esc(s) {
     catch(e) { localStorage.removeItem('cbt_guru'); }
   }
 })();
+
+// ══════════════════════════════════════════════
+//  FUNGSI BARU — SPESIFIKASI v2
+// ══════════════════════════════════════════════
+
+// ── Sub-menu navigation ─────────────────────
+function gotoSubPage(parent, sub) {
+  // Tampilkan parent page, aktifkan sub
+  gotoPage(parent);
+  document.querySelectorAll('.sub-page').forEach(function(el) {
+    el.style.display = 'none';
+  });
+  var subEl = document.getElementById('sub-' + parent + '-' + sub);
+  if(subEl) subEl.style.display = 'block';
+  // Update sidebar active state
+  document.querySelectorAll('.nav-sub-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var navSub = document.getElementById('nsub-' + parent + '-' + sub);
+  if(navSub) navSub.classList.add('active');
+  state.currentSub = sub;
+  closeSidebar();
+  // Hook per sub-page
+  if(parent==='bank-soal' && sub==='daftar') initBankSoal();
+  if(parent==='bank-soal' && sub==='validasi') runValidasi();
+  if(parent==='bank-soal' && sub==='statistik') renderStatistikPaket();
+  if(parent==='ujian' && sub==='buat') { /* sudah di generateSesi */ }
+  if(parent==='ujian' && sub==='jadwal') renderJadwal();
+  if(parent==='ujian' && sub==='sesi-aktif') loadStatusSesi();
+  if(parent==='ujian' && sub==='riwayat') loadRiwayat();
+  if(parent==='monitoring' && sub==='berlangsung') loadMonitoringDetail();
+  if(parent==='analisis' && sub==='distribusi') renderAnalisis(state.analisis);
+  if(parent==='analisis' && sub==='butir') renderAnalisisButir();
+}
+
+// ── Rakit Paket — Manual ────────────────────
+var rakitKeranjang = [];
+
+function toggleRakitSoal(idx) {
+  var pos = rakitKeranjang.indexOf(idx);
+  if(pos >= 0) rakitKeranjang.splice(pos,1);
+  else rakitKeranjang.push(idx);
+  renderKeranjang();
+  // Update checkbox
+  var cb = document.getElementById('rb-cb-'+idx);
+  if(cb) cb.checked = pos < 0;
+}
+
+function renderKeranjang() {
+  var el = document.getElementById('rakit-keranjang');
+  if(!el) return;
+  var list = rakitKeranjang.map(function(i){ return state.bankSoal[i]; }).filter(Boolean);
+  el.innerHTML = list.length === 0
+    ? '<div style="padding:12px;text-align:center;color:var(--ink3);font-size:12px">Belum ada soal dipilih</div>'
+    : list.map(function(s,i){ return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px">'
+        + '<span style="color:var(--ink3);min-width:20px">'+s.no+'</span>'
+        + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.pertanyaan||'(gambar)')+'</span>'
+        + '<button onclick="toggleRakitSoal('+rakitKeranjang[i]+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">×</button>'
+        + '</div>'; }).join('');
+  var cnt = document.getElementById('rakit-count');
+  if(cnt) cnt.textContent = list.length + ' soal';
+}
+
+// ── Rakit Paket — Otomatis ──────────────────
+async function rakitOtomatis() {
+  var jmlPG    = parseInt(document.getElementById('ro-pg').value)||0;
+  var jmlPGG   = parseInt(document.getElementById('ro-pgg').value)||0;
+  var jmlEsai  = parseInt(document.getElementById('ro-esai').value)||0;
+  var pMudah   = parseInt(document.getElementById('ro-mudah').value)||33;
+  var pSedang  = parseInt(document.getElementById('ro-sedang').value)||34;
+  var kode     = document.getElementById('ro-kode').value;
+  if(!kode){ showToast('Pilih kode soal dulu','error'); return; }
+  if(!state.bankSoal || state.bankSoal.length === 0) {
+    document.getElementById('bank-kode').value = kode;
+    await loadBankSoal();
+  }
+  var pool = state.bankSoal.slice();
+  function ambil(tipe, kesulitan, jumlah) {
+    var res = [];
+    pool = pool.filter(function(s) {
+      if(res.length < jumlah && s.tipe === tipe && (!kesulitan || s.kesulitan === kesulitan)) {
+        res.push(s); return false;
+      }
+      return true;
+    });
+    return res;
+  }
+  var hasil = [];
+  var totalPG = jmlPG + jmlPGG;
+  var jMudah  = Math.round(totalPG * pMudah/100);
+  var jSedang = Math.round(totalPG * pSedang/100);
+  var jSulit  = totalPG - jMudah - jSedang;
+  hasil = hasil.concat(ambil('pg_teks','mudah',Math.round(jMudah*jmlPG/totalPG||0)));
+  hasil = hasil.concat(ambil('pg_teks','sedang',Math.round(jSedang*jmlPG/totalPG||0)));
+  hasil = hasil.concat(ambil('pg_teks','sulit',Math.round(jSulit*jmlPG/totalPG||0)));
+  hasil = hasil.concat(ambil('pg_gambar','mudah',Math.round(jMudah*jmlPGG/totalPG||0)));
+  hasil = hasil.concat(ambil('pg_gambar','sedang',Math.round(jSedang*jmlPGG/totalPG||0)));
+  hasil = hasil.concat(ambil('esai','',jmlEsai));
+  // Nomor ulang
+  hasil.forEach(function(s,i){ s._noRakit = i+1; });
+  document.getElementById('ro-hasil').innerHTML = hasil.length === 0
+    ? '<div style="color:var(--ink3);font-size:12px;padding:8px">Tidak ada soal sesuai kriteria.</div>'
+    : '<div style="font-size:12px;margin-bottom:8px;font-weight:600;">'+hasil.length+' soal berhasil dirakit:</div>'
+      + hasil.map(function(s){ return '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">'
+        + s._noRakit+'. ['+esc(s.tipe||'')+'/'+esc(s.kesulitan||'')+'] '+esc(s.pertanyaan||'(gambar)').substring(0,80)+'</div>'; }).join('');
+  showToast('Paket otomatis: '+hasil.length+' soal','success');
+}
+
+// ── Prompt Builder ──────────────────────────
+async function promptBuilder() {
+  var prompt = document.getElementById('pb-prompt').value.trim();
+  if(!prompt){ showToast('Tulis deskripsi paket dulu','error'); return; }
+  document.getElementById('pb-hasil').innerHTML = '<div class="loading"><div class="spin"></div> Memproses prompt...</div>';
+  // Parse sederhana dari prompt
+  var jmlPG   = (prompt.match(/(\d+)\s*PG/i)||[])[1] || 20;
+  var jmlEsai = (prompt.match(/(\d+)\s*[Ee]sai/i)||[])[1] || 5;
+  var kodeMatch = prompt.match(/[A-Z]{2,}[0-9]{2,}/g) || [];
+  document.getElementById('pb-hasil').innerHTML =
+    '<div style="font-size:12px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">'
+    + '<div style="font-weight:600;margin-bottom:6px">Parameter terdeteksi:</div>'
+    + '<div>PG: <strong>'+jmlPG+'</strong></div>'
+    + '<div>Esai: <strong>'+jmlEsai+'</strong></div>'
+    + (kodeMatch.length ? '<div>Kode soal: <strong>'+kodeMatch.join(', ')+'</strong></div>' : '')
+    + '<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="rakitDariPrompt('+jmlPG+','+jmlEsai+',\''+kodeMatch[0]+'\')">' + 'Rakit Sekarang</button></div>'
+    + '</div>';
+}
+
+async function rakitDariPrompt(jmlPG, jmlEsai, kode) {
+  if(kode && document.getElementById('ro-kode')) {
+    document.getElementById('ro-kode').value = kode;
+    document.getElementById('ro-pg').value = jmlPG;
+    document.getElementById('ro-esai').value = jmlEsai;
+    gotoSubPage('bank-soal','rakit');
+    showToast('Parameter dari prompt sudah diisi','success');
+  }
+}
+
+// ── Validasi Paket ──────────────────────────
+function runValidasi() {
+  var el = document.getElementById('validasi-result');
+  if(!el) return;
+  if(!state.bankSoal || state.bankSoal.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="ei">🔍</div><h3>Pilih kode soal di Bank Soal dulu</h3></div>';
+    return;
+  }
+  var errors = [], warnings = [];
+  var nomors = state.bankSoal.map(function(s){ return s.no; });
+  // Cek nomor duplikat
+  var duplikat = nomors.filter(function(n,i){ return nomors.indexOf(n) !== i; });
+  if(duplikat.length) errors.push('Nomor duplikat: ' + duplikat.join(', '));
+  // Cek kunci kosong
+  var tanpaKunci = state.bankSoal.filter(function(s){ return s.tipe !== 'esai' && !s.kunci; });
+  if(tanpaKunci.length) errors.push('Kunci kosong di nomor: ' + tanpaKunci.map(function(s){ return s.no; }).join(', '));
+  // Cek soal kosong
+  var soalKosong = state.bankSoal.filter(function(s){ return !s.pertanyaan && !s.url_gambar; });
+  if(soalKosong.length) errors.push('Soal kosong di nomor: ' + soalKosong.map(function(s){ return s.no; }).join(', '));
+  // Cek nomor loncat
+  for(var i=1; i<nomors.length; i++) {
+    if(parseInt(nomors[i]) - parseInt(nomors[i-1]) > 1) warnings.push('Nomor loncat: '+nomors[i-1]+' → '+nomors[i]);
+  }
+  // Cek gambar (hanya warning jika URL gambar ada tapi tidak dimulai http)
+  var gambarBad = state.bankSoal.filter(function(s){ return s.url_gambar && !s.url_gambar.startsWith('http'); });
+  if(gambarBad.length) warnings.push('URL gambar tidak valid di nomor: ' + gambarBad.map(function(s){ return s.no; }).join(', '));
+  var html = '';
+  if(errors.length === 0 && warnings.length === 0) {
+    html = '<div style="display:flex;align-items:center;gap:10px;padding:16px;background:var(--green-bg);border-radius:var(--r);border:1px solid var(--green)">'
+      + '<span style="font-size:24px">✅</span><div><div style="font-weight:600;color:var(--green)">Paket Valid!</div>'
+      + '<div style="font-size:12px;color:var(--ink3)">'+state.bankSoal.length+' soal, tidak ada masalah ditemukan.</div></div></div>';
+  } else {
+    html = errors.map(function(e){ return '<div style="display:flex;gap:8px;padding:9px 12px;background:var(--red-bg);border-radius:8px;margin-bottom:6px;border:1px solid #F5C0C0;font-size:13px"><span>❌</span><span>'+esc(e)+'</span></div>'; }).join('')
+         + warnings.map(function(w){ return '<div style="display:flex;gap:8px;padding:9px 12px;background:var(--amber-bg);border-radius:8px;margin-bottom:6px;border:1px solid #F5C6A0;font-size:13px"><span>⚠️</span><span>'+esc(w)+'</span></div>'; }).join('');
+  }
+  el.innerHTML = html;
+}
+
+// ── Statistik Paket ─────────────────────────
+function renderStatistikPaket() {
+  var el = document.getElementById('statistik-paket');
+  if(!el || !state.bankSoal || state.bankSoal.length === 0) {
+    if(el) el.innerHTML = '<div class="empty"><div class="ei">📊</div><h3>Pilih kode soal di Bank Soal dulu</h3></div>';
+    return;
+  }
+  var soal = state.bankSoal;
+  var pg  = soal.filter(function(s){ return s.tipe==='pg_teks'; }).length;
+  var pgg = soal.filter(function(s){ return s.tipe==='pg_gambar'; }).length;
+  var es  = soal.filter(function(s){ return s.tipe==='esai'; }).length;
+  var md  = soal.filter(function(s){ return s.kesulitan==='mudah'; }).length;
+  var sd  = soal.filter(function(s){ return s.kesulitan==='sedang'; }).length;
+  var sl  = soal.filter(function(s){ return s.kesulitan==='sulit'; }).length;
+  var topik = {}; soal.forEach(function(s){ if(s.topik) topik[s.topik]=(topik[s.topik]||0)+1; });
+  el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    + statMini('Total Soal', soal.length, 'blue')
+    + statMini('PG Teks', pg, 'green')
+    + statMini('PG Gambar', pgg, 'teal')
+    + statMini('Esai', es, 'amber')
+    + statMini('Mudah', md, 'green')
+    + statMini('Sedang', sd, 'amber')
+    + statMini('Sulit', sl, 'red')
+    + '</div>'
+    + (Object.keys(topik).length ? '<div style="margin-top:14px"><div style="font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Per Topik</div>'
+      + Object.keys(topik).map(function(t){ return '<div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:12px"><span>'+esc(t)+'</span><span class="badge badge-blue">'+topik[t]+'</span></div>'; }).join('')
+      + '</div>' : '');
+}
+
+function statMini(lbl, val, color) {
+  return '<div class="stat-card '+color+'" style="padding:12px">'
+    + '<div class="stat-num" style="font-size:20px">'+val+'</div>'
+    + '<div class="stat-lbl">'+lbl+'</div></div>';
+}
+
+// ── Monitoring Detail ────────────────────────
+function loadMonitoringDetail() {
+  var el = document.getElementById('mon-detail');
+  if(!el) return;
+  if(!state.sesiList || state.sesiList.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="ei">📡</div><h3>Tidak ada sesi aktif</h3></div>';
+    return;
+  }
+  var aktif = state.sesiList.filter(function(s){ return s.status_sesi==='berlangsung'; });
+  if(aktif.length === 0) { el.innerHTML='<div class="empty"><div class="ei">📡</div><h3>Tidak ada sesi berlangsung</h3></div>'; return; }
+  el.innerHTML = aktif.map(function(s) {
+    return '<div class="card" style="margin-bottom:12px"><div class="card-head"><div class="card-title">'+esc(s.mapel)+' — Kelas '+esc(s.kelas)+'</div><span class="badge badge-green"><span class="dot"></span> Live</span></div>'
+      + '<div class="card-body"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+      + '<div style="text-align:center;padding:12px;background:var(--amber-bg);border-radius:var(--r)"><div style="font-size:22px;font-weight:700;color:var(--amber)">—</div><div style="font-size:11px;color:var(--ink3)">Belum Login</div></div>'
+      + '<div style="text-align:center;padding:12px;background:var(--accent-bg);border-radius:var(--r)"><div style="font-size:22px;font-weight:700;color:var(--accent)">—</div><div style="font-size:11px;color:var(--ink3)">Mengerjakan</div></div>'
+      + '<div style="text-align:center;padding:12px;background:var(--green-bg);border-radius:var(--r)"><div style="font-size:22px;font-weight:700;color:var(--green)">'+esc(s.jumlah_siswa||0)+'</div><div style="font-size:11px;color:var(--ink3)">Submit</div></div>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+// ── Riwayat Ujian ────────────────────────────
+function loadRiwayat() {
+  var el = document.getElementById('riwayat-list');
+  if(!el) return;
+  var selesai = state.sesiList.filter(function(s){ return s.status_sesi!=='berlangsung'; });
+  if(selesai.length === 0) { el.innerHTML='<div class="empty"><div class="ei">📋</div><h3>Belum ada riwayat ujian</h3></div>'; return; }
+  el.innerHTML = '<div style="overflow-x:auto"><table class="rekap-table"><thead><tr><th>ID Sesi</th><th>Mapel</th><th>Kelas</th><th>Kode</th><th>Peserta</th><th>Arsip</th></tr></thead><tbody>'
+    + selesai.map(function(s){ return '<tr>'
+      + '<td style="font-family:var(--mono);font-size:10px">'+esc(s.id_sesi)+'</td>'
+      + '<td>'+esc(s.mapel)+'</td><td>'+esc(s.kelas)+'</td><td>'+esc(s.kode_soal)+'</td>'
+      + '<td>'+esc(s.jumlah_siswa||0)+'</td>'
+      + '<td>'+(s.link_arsip?'<a class="btn btn-ghost btn-sm" href="'+esc(s.link_arsip)+'" target="_blank">Buka</a>':'—')+'</td></tr>'; }).join('')
+    + '</tbody></table></div>';
+}
+
+// ── Analisis Butir ───────────────────────────
+function renderAnalisisButir() {
+  var el = document.getElementById('analisis-butir-tbl');
+  if(!el || !state.analisis) {
+    if(el) el.innerHTML='<div class="empty"><div class="ei">🔬</div><h3>Pilih sesi di tab Distribusi dulu</h3></div>';
+    return;
+  }
+  // Data butir dari state.analisis jika tersedia
+  el.innerHTML = state.analisis.soal_tersulit
+    ? '<div style="overflow-x:auto"><table class="rekap-table"><thead><tr><th>Nomor</th><th>Benar</th><th>Salah</th><th>Kesukaran</th><th>Daya Pembeda</th></tr></thead>'
+      + '<tbody><tr><td>' + esc(state.analisis.soal_tersulit||'—') + '</td><td>—</td><td>—</td><td><span class="badge badge-red">Sulit</span></td><td>—</td></tr>'
+      + '<tr><td>' + esc(state.analisis.soal_termudah||'—') + '</td><td>—</td><td>—</td><td><span class="badge badge-green">Mudah</span></td><td>—</td></tr>'
+      + '</tbody></table></div>'
+    : '<div class="empty"><div class="ei">🔬</div><h3>Data butir belum tersedia</h3><p>Selesaikan sesi dan jalankan analisis.</p></div>';
+}
+
+// ── Pengaturan ───────────────────────────────
+function renderPengaturan() {
+  var el = document.getElementById('pengaturan-content');
+  if(!el || !state.guru) return;
+  el.innerHTML = '<div style="display:grid;gap:14px">'
+    + '<div class="card"><div class="card-head"><div class="card-title">Profil Guru</div></div><div class="card-body">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">'
+    + '<div><div style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">ID Guru</div><div style="font-family:var(--mono);font-weight:600">'+esc(state.guru.id_guru)+'</div></div>'
+    + '<div><div style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">Nama</div><div>'+esc(state.guru.nama_guru)+'</div></div>'
+    + '<div><div style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">Mapel</div><div>'+esc(state.guru.mapel)+'</div></div>'
+    + '<div><div style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">Kelas</div><div>'+esc(state.guru.kelas)+'</div></div>'
+    + '</div></div></div>'
+    + '<div class="card"><div class="card-head"><div class="card-title">Tampilan</div></div><div class="card-body">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:13px;font-weight:500">Dark Mode</div><div style="font-size:11px;color:var(--ink3)">Simpan otomatis ke browser</div></div>'
+    + '<button class="btn btn-ghost btn-sm" onclick="toggleDark()" id="peng-dark-btn">'+( document.documentElement.getAttribute('data-theme')=='dark'?'☀️ Light Mode':'🌙 Dark Mode')+'</button></div>'
+    + '</div></div>'
+    + '<div class="card"><div class="card-head"><div class="card-title">URL Server CBT</div></div><div class="card-body">'
+    + '<div style="font-size:11px;font-family:var(--mono);background:var(--bg);padding:10px;border-radius:8px;word-break:break-all;color:var(--ink2)">'+esc(URL_SERVER)+'</div>'
+    + '</div></div>'
+    + '</div>';
+}
+
+// Override gotoPage untuk tambah sub-page default dan pengaturan
+var _origGotoPage = gotoPage;
+gotoPage = function(name) {
+  _origGotoPage(name);
+  if(name === 'pengaturan') renderPengaturan();
+  // Tampilkan sub-page default jika ada
+  var defaults = {
+    'bank-soal':'daftar', 'ujian':'buat',
+    'monitoring':'berlangsung', 'analisis':'distribusi'
+  };
+  if(defaults[name]) {
+    setTimeout(function(){ gotoSubPage(name, defaults[name]); }, 0);
+  }
+};
+
+
+// ══════════════════════════════════════════════
+//  FUNGSI SIDEBAR MENU TOGGLE
+// ══════════════════════════════════════════════
+function toggleMenu(name) {
+  var sub = document.getElementById('nsub-' + name);
+  var nav = document.getElementById('nav-' + name);
+  if(!sub) return;
+  var isOpen = sub.classList.contains('open');
+  // Tutup semua
+  document.querySelectorAll('.nav-sub.open').forEach(function(el){ el.classList.remove('open'); });
+  document.querySelectorAll('.nav-item.open').forEach(function(el){ el.classList.remove('open'); });
+  if(!isOpen) { sub.classList.add('open'); if(nav) nav.classList.add('open'); }
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sb-backdrop').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sb-backdrop').classList.remove('show'); }
+
+// ══════════════════════════════════════════════
+//  OVERRIDE gotoPage — update nav active
+// ══════════════════════════════════════════════
+var _pages = ['dashboard','bank-soal','ujian','monitoring','koreksi','hasil','analisis','pengaturan'];
+var _origGP = gotoPage;
+gotoPage = function(name) {
+  _pages.forEach(function(p) {
+    var el = document.getElementById('page-' + p);
+    if(el) el.style.display = p===name ? 'block' : 'none';
+    var nav = document.getElementById('nav-' + p);
+    if(nav) nav.classList.toggle('active', p===name);
+  });
+  state.currentPage = name;
+  closeSidebar();
+  if(name==='pengaturan') renderPengaturan();
+  if(name==='koreksi')    loadEsai();
+  if(name==='hasil')      loadRekap();
+  // Default sub-page
+  var defs = {'bank-soal':'daftar','ujian':'buat','monitoring':'berlangsung','analisis':'distribusi'};
+  if(defs[name]) {
+    setTimeout(function(){ gotoSubPage(name, defs[name]); }, 10);
+  }
+  if(name==='ujian') { setTimeout(function(){ loadStatusSesi(); }, 50); }
+};
+
+// ══════════════════════════════════════════════
+//  OVERRIDE masukDashboard
+// ══════════════════════════════════════════════
+var _origMD = masukDashboard;
+masukDashboard = function() {
+  document.getElementById('screen-login').style.display='none';
+  document.getElementById('screen-app').style.display='block';
+  var g = state.guru;
+  document.getElementById('sb-nama').textContent   = g.nama_guru;
+  document.getElementById('sb-sub').textContent    = g.mapel + ' — Kelas ' + g.kelas;
+  document.getElementById('sb-chip').textContent   = 'Kelas ' + g.kelas;
+  document.getElementById('dsh-greeting').textContent = 'Selamat datang, ' + g.nama_guru;
+  document.getElementById('bj-mapel').textContent  = g.mapel;
+  document.getElementById('bj-kelas').textContent  = 'Kelas ' + g.kelas;
+  // Populate selects
+  populateKodeSelect('bank-kode');
+  populateKodeSelect('anal-sesi');
+  populateKodeSelect('rakit-kode');
+  populateKodeSelect('ro-kode');
+  loadKodeSoal();
+  loadStatusSesi().catch(function(e){ console.warn('status:', e.message); });
+  gotoPage('dashboard');
+};
+
+// ══════════════════════════════════════════════
+//  OVERRIDE tampilSesiAktif — pakai elemen baru
+// ══════════════════════════════════════════════
+var _origTSA = tampilSesiAktif;
+tampilSesiAktif = function() {
+  var s = state.sesi; if(!s) return;
+  // Strip di dashboard
+  var strip = document.getElementById('dsh-sesi-strip');
+  if(strip) {
+    strip.style.display='block';
+    strip.innerHTML = '<div class="sesi-strip mb-3">'
+      + '<div><div style="font-size:14px;font-weight:700">' + esc(s.mapel||'') + ' — Kelas ' + esc(s.kelas||'') + '</div>'
+      + '<div style="font-size:12px;opacity:.8;margin-top:2px">Token: <strong style="font-family:var(--mono);letter-spacing:2px">' + esc(s.token_siswa||'') + '</strong> &nbsp;|&nbsp; ' + esc(s.kode_soal||'') + '</div></div>'
+      + '<div style="text-align:right"><div style="font-size:10px;opacity:.7;margin-bottom:2px">Sisa Waktu</div><div class="sesi-strip-timer" id="strip-timer">--:--</div></div>'
+      + '<button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.3);color:#fff" onclick="gotoSubPage(\'ujian\',\'sesi-aktif\')">Monitor →</button>'
+      + '</div>';
+  }
+  // Box di form buat
+  var box = document.getElementById('sesi-aktif-box');
+  if(box) {
+    box.style.display='block';
+    box.innerHTML = '<div style="background:var(--accent-bg);border:1px solid var(--accent-light);border-radius:var(--r);padding:11px 15px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+      + '<div><div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Sesi Aktif</div>'
+      + '<div style="font-size:13px;font-weight:500;margin-top:2px">' + esc(s.mapel||'') + ' — ' + esc(s.kode_soal||'') + ' — Token: <span style="font-family:var(--mono);font-weight:700">' + esc(s.token_siswa||'') + '</span></div></div>'
+      + '<div class="d-flex align-items-center gap-2"><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--accent)" id="buat-timer">--:--</div>'
+      + '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesai()">Selesaikan</button></div></div>';
+  }
+  mulaiTimer(s.waktu_kunci);
+  document.getElementById('dot-monitor').classList.add('show');
+};
+
+// ══════════════════════════════════════════════
+//  FUNGSI BANK SOAL TAMBAHAN
+// ══════════════════════════════════════════════
+function filterBankTopik(topik) {
+  var tipe = document.getElementById('bank-tipe').value;
+  var list = state.bankSoal.filter(function(s) {
+    return (!topik || s.topik===topik) && (!tipe || s.tipe===tipe);
+  });
+  renderBankSoal(list);
+}
+
+function switchRakit(mode, btn) {
+  ['manual','otomatis','prompt'].forEach(function(m){
+    var el=document.getElementById('rakit-'+m);
+    if(el) el.style.display=m===mode?'block':'none';
+  });
+  document.querySelectorAll('.rakit-tab').forEach(function(t){ t.classList.remove('active'); });
+  if(btn) btn.classList.add('active');
+}
+
+async function loadBankUntukRakit() {
+  var kode = document.getElementById('rakit-kode').value;
+  if(!kode) return;
+  document.getElementById('bank-kode').value = kode;
+  await loadBankSoal();
+  var list = document.getElementById('rakit-bank-list');
+  if(!list || !state.bankSoal.length) return;
+  list.innerHTML = state.bankSoal.map(function(s,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">'
+      + '<input type="checkbox" id="rb-cb-'+i+'" onchange="toggleRakitSoal('+i+')">'
+      + '<span style="color:var(--ink3);min-width:24px">'+s.no+'</span>'
+      + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.pertanyaan||'(gambar)')+'</span>'
+      + '<span class="cbt-badge cb-gray" style="font-size:10px">'+esc(s.tipe||'')+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  OVERRIDE renderMonitor — update elemen baru
+// ══════════════════════════════════════════════
+var _origRM = typeof renderMonitor !== 'undefined' ? renderMonitor : null;
+renderMonitor = function(list) {
+  var aktif   = list.filter(function(s){ return s.status_sesi==='berlangsung'; });
+  var selesai = list.filter(function(s){ return s.status_sesi!=='berlangsung'; });
+  var html    = '';
+  if(aktif.length > 0) {
+    html += '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;display:flex;align-items:center;gap:5px">'
+      + '<span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span> Sesi Berlangsung ('+aktif.length+')</div>';
+    aktif.forEach(function(s){ html += buatKartuMonitor(s); });
+  }
+  if(selesai.length > 0) {
+    html += '<details style="margin-top:10px"><summary style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;cursor:pointer;padding:6px 0;border-top:1px solid var(--border);list-style:none">▾ Riwayat Selesai ('+selesai.length+')</summary><div style="margin-top:8px">';
+    selesai.forEach(function(s){ html += buatKartuMonitor(s); });
+    html += '</div></details>';
+  }
+  document.getElementById('mon-list').innerHTML = html;
+};
+
+// ══════════════════════════════════════════════
+//  OVERRIDE buatKartuMonitor — pakai class baru
+// ══════════════════════════════════════════════
+buatKartuMonitor = function(s) {
+  var berlangsung = s.status_sesi==='berlangsung';
+  var sisaM=Math.floor((s.sisa_detik||0)/60), sisaS=(s.sisa_detik||0)%60;
+  var sisaTxt = berlangsung ? pad(sisaM)+':'+pad(sisaS) : '—';
+  var h = '<div class="cbt-card mb-3">'
+    + '<div class="cbt-card-head"><div style="flex:1;min-width:0">'
+    + '<div class="cbt-card-title">'+esc(s.mapel)+' — Kelas '+esc(s.kelas)+'</div>'
+    + '<div style="font-size:10px;color:var(--ink3);margin-top:2px;font-family:var(--mono)">'+esc(s.kode_soal)+' | '+esc(s.id_sesi)+'</div></div>'
+    + (berlangsung?'<span class="cbt-badge cb-green"><span class="cb-dot"></span> Live</span>':'<span class="cbt-badge cb-gray">Selesai</span>')
+    + '</div><div class="cbt-card-body">'
+    + '<div class="row g-2 mb-3">'
+    + '<div class="col-4"><div class="stat-card sc-blue" style="padding:10px"><div class="stat-num" style="font-size:20px">'+(s.jumlah_siswa||0)+'</div><div class="stat-lbl">Submit</div></div></div>'
+    + '<div class="col-4"><div class="stat-card" style="padding:10px"><div class="stat-num" style="font-size:18px;color:var(--ink)">'+sisaTxt+'</div><div class="stat-lbl">Sisa</div></div></div>'
+    + '<div class="col-4"><div class="stat-card '+(s.esai_belum>0?'sc-red':'sc-green')+'" style="padding:10px"><div class="stat-num" style="font-size:20px">'+(s.esai_belum||0)+'</div><div class="stat-lbl">Esai ❓</div></div></div>'
+    + '</div>'
+    + '<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">'
+    + '<div><div style="font-size:10px;color:var(--ink3)">Token</div><div style="font-family:var(--mono);font-size:16px;letter-spacing:2px;font-weight:600">'+esc(s.token_siswa)+'</div></div>'
+    + '<div class="d-flex gap-2 flex-wrap">';
+  if(berlangsung) h += '<button class="btn btn-danger btn-sm" onclick="konfirmasiSelesaiSesi(\'' + esc(s.id_sesi) + '\')">Selesaikan</button>';
+  if(s.esai_belum>0) h += '<button class="btn btn-ghost btn-sm" onclick="bukaEsaiDariMonitor(\'' + esc(s.id_sesi) + '\')">Koreksi Esai</button>';
+  if(!berlangsung && s.link_arsip) h += '<a class="btn btn-ghost btn-sm" href="'+esc(s.link_arsip)+'" target="_blank">Arsip</a>';
+  h += '</div></div></div></div>';
+  return h;
+};
+
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
