@@ -176,6 +176,26 @@ main{display:flex;flex-direction:column;flex:1;overflow:hidden}
 .html-action.del:hover{color:var(--red)}
 .html-action+.html-action{border-left:1px solid var(--border)}
 
+/* SESI CBT CARDS */
+.sesi-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;transition:border-color .15s}
+.sesi-card:hover{border-color:rgba(88,166,255,.35)}
+.sesi-top{display:flex;align-items:flex-start;gap:12px;padding:12px 14px 8px}
+.sesi-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.sesi-info{flex:1;min-width:0}
+.sesi-judul{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.sesi-meta{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gas-text{color:rgba(167,139,250,.7)}
+.sesi-link-box{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:5px 9px}
+.sesi-link-text{font-size:10px;color:var(--blue);font-family:'JetBrains Mono',monospace;word-break:break-all;line-height:1.5}
+.sesi-tgl{font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0;margin-top:2px}
+.sesi-actions{display:flex;border-top:1px solid var(--border)}
+.sesi-act{flex:1;padding:7px;background:transparent;border:none;color:var(--text2);font-size:11px;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:500}
+.sesi-act+.sesi-act{border-left:1px solid var(--border)}
+.sesi-act:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.sesi-act.copy:hover{color:var(--blue)}
+.sesi-act.open:hover{color:var(--green)}
+.sesi-act.del:hover{color:var(--red)}
+
 /* Toast */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:9px 18px;font-size:12px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.5);transition:transform .25s,opacity .25s;opacity:0;z-index:200;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
@@ -291,6 +311,9 @@ print("Selamat datang di Python Runner!")</textarea>
       <button class="lib-tab" id="tabHtml" onclick="switchTab('html')">
         🌐 Hasil HTML <span class="badge" id="badgeHtml">0</span>
       </button>
+      <button class="lib-tab" id="tabSesi" onclick="switchTab('sesi')">
+        🔗 Sesi CBT <span class="badge" id="badgeSesi">0</span>
+      </button>
     </div>
     <div class="lib-content">
       <!-- PY FILES -->
@@ -310,6 +333,37 @@ print("Selamat datang di Python Runner!")</textarea>
           <input type="file" id="fileInputHtml" accept=".html,.htm">
         </div>
         <div id="htmlList"></div>
+      </div>
+      <!-- SESI CBT -->
+      <div class="lib-panel" id="panelSesi">
+        <div id="sesiForm" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;letter-spacing:.04em">➕ TAMBAH SESI BARU</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">JUDUL SESI</label>
+              <input id="sesiJudul" type="text" placeholder="cth: Kelas 9A — Matematika" style="width:100%;padding:7px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:12px;color:var(--text);outline:none;font-family:'JetBrains Mono',monospace">
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">FILE HTML (di GitHub Pages)</label>
+              <input id="sesiBaseUrl" type="text" placeholder="https://user.github.io/repo/cbt.html" style="width:100%;padding:7px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:12px;color:var(--text);outline:none;font-family:'JetBrains Mono',monospace">
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">URL GOOGLE APPS SCRIPT</label>
+            <input id="sesiGasUrl" type="text" placeholder="https://script.google.com/macros/s/AKfy.../exec" style="width:100%;padding:7px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:12px;color:var(--text);outline:none;font-family:'JetBrains Mono',monospace">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn run" style="padding:7px 18px" onclick="tambahSesi()">➕ Tambah Sesi</button>
+            <span style="font-size:11px;color:var(--text3)">Link akan otomatis terbentuk dari Base URL + ?gas=URL_GAS</span>
+          </div>
+        </div>
+        <!-- Base URL global shortcut -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px">
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap">📌 Base URL default:</span>
+          <input id="globalBaseUrl" type="text" placeholder="Isi sekali, berlaku untuk semua sesi baru" style="flex:1;padding:5px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:11px;color:var(--text2);outline:none;font-family:'JetBrains Mono',monospace" oninput="simpanBaseUrl()">
+          <span style="font-size:10px;color:var(--text3);white-space:nowrap">auto-isi form</span>
+        </div>
+        <div id="sesiList"></div>
       </div>
     </div>
   </div>
@@ -356,6 +410,7 @@ function markClean(){
 // ══════════════════════════════════════════════
 const LIB_PY   = 'pyrunner_py_files';
 const LIB_HTML = 'pyrunner_html_files';
+const LIB_SESI = 'pyrunner_sesi';
 
 function loadLib(key){ try{ return JSON.parse(localStorage.getItem(key)||'[]') }catch(e){ return [] } }
 function saveLib(key,data){ localStorage.setItem(key,JSON.stringify(data)) }
@@ -386,10 +441,12 @@ function simpanHtml(name, content){
 function updateLibCount(){
   const py   = loadLib(LIB_PY).length;
   const html = loadLib(LIB_HTML).length;
-  const total = py+html;
+  const sesi = loadLib(LIB_SESI).length;
+  const total = py+html+sesi;
   document.getElementById('libCount').textContent = total>0 ? `(${total})` : '';
   document.getElementById('badgePy').textContent   = py;
   document.getElementById('badgeHtml').textContent = html;
+  document.getElementById('badgeSesi').textContent = sesi;
 }
 
 function fmtSize(b){
@@ -564,20 +621,147 @@ function simpanSebagai(){
   toast('💾 Disimpan sebagai '+finalName);
 }
 
+// ══════════════════════════════════════════════
+//  SESI CBT
+// ══════════════════════════════════════════════
+let _sesiItems = [];
+
+function simpanBaseUrl(){
+  const val = document.getElementById('globalBaseUrl').value.trim();
+  localStorage.setItem('pyrunner_base_url', val);
+  // auto-isi field base url di form jika kosong
+  const formBase = document.getElementById('sesiBaseUrl');
+  if(!formBase.value.trim()) formBase.value = val;
+}
+
+function buatLinkSesi(baseUrl, gasUrl){
+  const base = baseUrl.trim().replace(/\/$/, '');
+  const gas  = encodeURIComponent(gasUrl.trim());
+  return `${base}?gas=${gas}`;
+}
+
+function tambahSesi(){
+  const judul   = document.getElementById('sesiJudul').value.trim();
+  const baseUrl = document.getElementById('sesiBaseUrl').value.trim();
+  const gasUrl  = document.getElementById('sesiGasUrl').value.trim();
+
+  if(!judul)   { toast('⚠ Isi judul sesi dulu!'); document.getElementById('sesiJudul').focus(); return; }
+  if(!baseUrl) { toast('⚠ Isi URL file HTML dulu!'); document.getElementById('sesiBaseUrl').focus(); return; }
+  if(!gasUrl)  { toast('⚠ Isi URL GAS dulu!'); document.getElementById('sesiGasUrl').focus(); return; }
+  if(!gasUrl.includes('script.google.com')) { toast('⚠ URL GAS tidak valid!'); return; }
+
+  const list  = loadLib(LIB_SESI);
+  const link  = buatLinkSesi(baseUrl, gasUrl);
+  const entry = {
+    id      : Date.now(),
+    judul,
+    baseUrl,
+    gasUrl,
+    link,
+    dibuat  : new Date().toISOString()
+  };
+  list.unshift(entry);
+  saveLib(LIB_SESI, list);
+
+  // simpan base URL global
+  localStorage.setItem('pyrunner_base_url', baseUrl);
+  document.getElementById('globalBaseUrl').value = baseUrl;
+
+  // reset form (kecuali base URL)
+  document.getElementById('sesiJudul').value = '';
+  document.getElementById('sesiGasUrl').value = '';
+
+  renderSesiList();
+  updateLibCount();
+  toast('✓ Sesi "'+judul+'" ditambahkan');
+}
+
+function hapusSesi(i){
+  const f = _sesiItems[i];
+  if(!f) return;
+  if(!confirm('Hapus sesi "'+f.judul+'"?')) return;
+  const list = loadLib(LIB_SESI).filter(x=>x.id!==f.id);
+  saveLib(LIB_SESI, list);
+  renderSesiList();
+  updateLibCount();
+  toast('🗑 Sesi "'+f.judul+'" dihapus');
+}
+
+function salinLinkSesi(i){
+  const f = _sesiItems[i];
+  if(!f) return;
+  navigator.clipboard.writeText(f.link).then(()=>{
+    toast('📋 Link sesi "'+f.judul+'" tersalin!');
+  });
+}
+
+function bukaLinkSesi(i){
+  const f = _sesiItems[i];
+  if(!f) return;
+  window.open(f.link, '_blank');
+}
+
+function renderSesiList(){
+  const list = loadLib(LIB_SESI);
+  _sesiItems = list;
+  const el   = document.getElementById('sesiList');
+  if(!list.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">🔗</div>
+      <p>Belum ada sesi CBT.<br>Isi form di atas lalu klik Tambah Sesi.</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map((s,i)=>{
+    const tgl = (()=>{
+      try{
+        const d=new Date(s.dibuat);
+        return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+
+               ' '+d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+      }catch(e){return ''}
+    })();
+    // Tampilkan GAS URL dipotong agar tidak terlalu panjang
+    const gasShort = s.gasUrl.length>55 ? s.gasUrl.substring(0,52)+'...' : s.gasUrl;
+    return `
+    <div class="sesi-card">
+      <div class="sesi-top">
+        <div class="sesi-icon">🔗</div>
+        <div class="sesi-info">
+          <div class="sesi-judul">${s.judul}</div>
+          <div class="sesi-meta gas-text" title="${s.gasUrl}">GAS: ${gasShort}</div>
+          <div class="sesi-link-box">
+            <span class="sesi-link-text" title="${s.link}">${s.link}</span>
+          </div>
+        </div>
+        <div class="sesi-tgl">${tgl}</div>
+      </div>
+      <div class="sesi-actions">
+        <button class="sesi-act copy"  onclick="salinLinkSesi(${i})">📋 Salin Link</button>
+        <button class="sesi-act open"  onclick="bukaLinkSesi(${i})">🌐 Buka</button>
+        <button class="sesi-act del"   onclick="hapusSesi(${i})">🗑 Hapus</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ── Modal ────────────────────────────────────────────────
 let activeTab='py';
 function bukaLibrary(){
   updateLibCount();
-  renderPyList(); renderHtmlList();
+  renderPyList(); renderHtmlList(); renderSesiList();
+  // isi base URL tersimpan
+  const saved = localStorage.getItem('pyrunner_base_url')||'';
+  document.getElementById('globalBaseUrl').value = saved;
+  if(saved) document.getElementById('sesiBaseUrl').value = saved;
   document.getElementById('libModal').classList.add('show');
 }
 function tutupLibrary(){ document.getElementById('libModal').classList.remove('show') }
 function switchTab(t){
   activeTab=t;
-  document.getElementById('tabPy').classList.toggle('active',t==='py');
-  document.getElementById('tabHtml').classList.toggle('active',t==='html');
-  document.getElementById('panelPy').classList.toggle('active',t==='py');
-  document.getElementById('panelHtml').classList.toggle('active',t==='html');
+  const tabs   = {py:'Py', html:'Html', sesi:'Sesi'};
+  const panels = {py:'Py', html:'Html', sesi:'Sesi'};
+  Object.keys(tabs).forEach(k=>{
+    document.getElementById('tab'+tabs[k]).classList.toggle('active', t===k);
+    document.getElementById('panel'+panels[k]).classList.toggle('active', t===k);
+  });
 }
 
 // ── Upload ke library langsung ───────────────────────────
