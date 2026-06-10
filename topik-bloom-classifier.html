@@ -578,83 +578,26 @@ const DEFAULT_DB = {
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-let DB = {};
-let workbook=null, sheetData=[], abortFlag=false, resultData=[];
-let batchMode='gemini', singleMode='gemini', currentTipe='pg';
-let dbActiveMapel='', dbActiveKelas='';
-const REQUIRED_HEADERS=['no','tipe','poin','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci','pembahasan','vrl_pembahasan','Topik','Bloom','Kesulitan'];
-const ESAI_TYPES=['esai','essay','uraian','esai_gambar','essay_gambar','uraian_gambar','isian','isian_singkat'];
-const MAX_RETRY=3;
-const VALID_KD=['Sangat Mudah','Mudah','Sedang','Sulit','Sangat Sulit'];
-const VALID_BLOOM=['C1','C2','C3','C4','C5','C6'];
-const $id=id=>document.getElementById(id);
+var DB = {};
+var workbook=null, sheetData=[], abortFlag=false, resultData=[];
+var batchMode='gemini', singleMode='gemini', currentTipe='pg';
+var dbActiveMapel='', dbActiveKelas='';
+var REQUIRED_HEADERS=['no','tipe','poin','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci','pembahasan','vrl_pembahasan','Topik','Bloom','Kesulitan'];
+var ESAI_TYPES=['esai','essay','uraian','esai_gambar','essay_gambar','uraian_gambar','isian','isian_singkat'];
+var MAX_RETRY=3;
+var VALID_KD=['Sangat Mudah','Mudah','Sedang','Sulit','Sangat Sulit'];
+var VALID_BLOOM=['C1','C2','C3','C4','C5','C6'];
+function $id(id){return document.getElementById(id);}
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded',()=>{
-  // Load DB
-  try{ const saved=localStorage.getItem('mts_db'); DB=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEFAULT_DB)); }
-  catch(e){ DB=JSON.parse(JSON.stringify(DEFAULT_DB)); }
-  // API Key
-  const saved=localStorage.getItem('gemini_api_key')||'';
-  if(saved){$id('apiKey').value=saved;$id('sApiKey').value=saved;$id('keySaved').classList.add('show');$id('sKeySaved').classList.add('show');scheduleApiTest(saved);}
-  populateMapelSelects();
-  renderDbMapelList();
-});
-
-function saveDB(){ try{localStorage.setItem('mts_db',JSON.stringify(DB));}catch(e){} }
-
-// ═══════════════════════════════════════════════════════
-// MAPEL SELECTS
-// ═══════════════════════════════════════════════════════
-function populateMapelSelects(){
-  const mapels=Object.keys(DB);
-  ['bMapel','sMapel'].forEach(id=>{
-    const sel=$id(id);
-    sel.innerHTML='<option value="">-- Pilih Mapel --</option>';
-    mapels.forEach(m=>{ const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
-  });
-}
-function onBatchMapelChange(){
-  const m=$id('bMapel').value;
-  const sel=$id('bKelas');
-  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m&&DB[m]){ Object.keys(DB[m]).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);}); }
-  onBatchKelasChange();
-}
-function onBatchKelasChange(){
-  const m=$id('bMapel').value,k=$id('bKelas').value;
-  const info=$id('bMateriInfo');
-  if(m&&k&&DB[m]&&DB[m][k]){
-    const list=DB[m][k];
-    info.style.display='block';
-    info.textContent=`✓ ${list.length} materi tersedia untuk ${m} Kelas ${k}`;
-  }else{info.style.display='none';}
-  checkRunnable();
-}
-function onSingleMapelChange(){
-  const m=$id('sMapel').value;
-  const sel=$id('sKelas');
-  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m&&DB[m]){ Object.keys(DB[m]).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);}); }
-}
-function onSingleKelasChange(){}
-
-// ═══════════════════════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════════════════════
+// ── GLOBAL onclick handlers (must be defined before any HTML onclick fires) ──
 function switchTab(name,btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
   btn.classList.add('active');
   $id('tab-'+name).classList.add('active');
   if(name==='db') renderDbMapelList();
+  if(name==='kunci') initKunciTab();
 }
-
-// ═══════════════════════════════════════════════════════
-// MODE TOGGLES
-// ═══════════════════════════════════════════════════════
 function setBatchMode(mode){
   batchMode=mode;
   $id('bModeGemini').classList.toggle('active',mode==='gemini');
@@ -671,21 +614,151 @@ function setSingleMode(mode){
   $id('sApiSection').style.display=mode==='gemini'?'':'none';
   $id('sLocalSection').style.display=mode==='local'?'':'none';
 }
+function setKunciMode(mode){
+  kunciMode=mode;
+  $id('kModeGemini').classList.toggle('active',mode==='gemini');
+  $id('kModeLocal').classList.toggle('active',mode==='local');
+  $id('kApiSection').style.display=mode==='gemini'?'':'none';
+  $id('kLocalSection').style.display=mode==='local'?'':'none';
+  if(typeof checkKunciRunnable==='function') checkKunciRunnable();
+}
 function setTipe(t){
   currentTipe=t;
-  document.querySelectorAll('.tipe-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='pg')||(i===1&&t==='esai')));
+  document.querySelectorAll('.tipe-btn').forEach(function(b,i){b.classList.toggle('active',(i===0&&t==='pg')||(i===1&&t==='esai'));});
   $id('pgFields').style.display=t==='pg'?'':'none';
   $id('singleResult').classList.remove('show');
 }
-
-// API KEY SYNC
-function syncKey(v){
-  if(v){localStorage.setItem('gemini_api_key',v);$id('apiKey').value=v;$id('sApiKey').value=v;$id('keySaved').classList.add('show');$id('sKeySaved').classList.add('show');scheduleApiTest(v);}
-  else{localStorage.removeItem('gemini_api_key');$id('keySaved').classList.remove('show');$id('sKeySaved').classList.remove('show');hideApiStatus();activeModel=null;}
+function onBatchMapelChange(){
+  var m=$id('bMapel').value;
+  var sel=$id('bKelas');
+  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
+  if(m&&DB[m]){ Object.keys(DB[m]).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);}); }
+  onBatchKelasChange();
 }
-$id('apiKey').addEventListener('input',()=>{syncKey($id('apiKey').value.trim());checkRunnable();});
-$id('sApiKey').addEventListener('input',()=>syncKey($id('sApiKey').value.trim()));
-$id('modelSelect').addEventListener('change',()=>{activeModel=null;const k=$id('apiKey').value.trim();if(k) scheduleApiTest(k);});
+function onBatchKelasChange(){
+  var m=$id('bMapel').value,k=$id('bKelas').value;
+  var info=$id('bMateriInfo');
+  if(m&&k&&DB[m]&&DB[m][k]){
+    var list=DB[m][k];
+    info.style.display='block';
+    info.textContent='✓ '+list.length+' materi tersedia untuk '+m+' Kelas '+k;
+  }else{info.style.display='none';}
+  if(typeof checkRunnable==='function') checkRunnable();
+}
+function onSingleMapelChange(){
+  var m=$id('sMapel').value;
+  var sel=$id('sKelas');
+  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
+  if(m&&DB[m]){ Object.keys(DB[m]).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);}); }
+}
+function onSingleKelasChange(){}
+function onKunciMapelChange(){
+  var m=$id('kMapel').value, sel=$id('kKelas');
+  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
+  if(m&&DB[m]) Object.keys(DB[m]).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);});
+  if(typeof checkKunciRunnable==='function') checkKunciRunnable();
+}
+function resetKunciFile(){
+  if(typeof kWorkbook!=='undefined') kWorkbook=null;
+  if(typeof kSheetData!=='undefined') kSheetData=[];
+  var fi=$id('kFileInput'); if(fi) fi.value='';
+  $id('kFileInfo').classList.remove('show');
+  $id('kValidationBox').className='vbox'; $id('kValidationBox').innerHTML='';
+  if(typeof checkKunciRunnable==='function') checkKunciRunnable();
+}
+function addMateri(){
+  var inp=$id('newMateriInput');
+  var v=inp?inp.value.trim():'';
+  if(!v) return;
+  if(!DB[dbActiveMapel][dbActiveKelas]) DB[dbActiveMapel][dbActiveKelas]=[];
+  if(DB[dbActiveMapel][dbActiveKelas].includes(v)){alert('Materi sudah ada.');return;}
+  DB[dbActiveMapel][dbActiveKelas].push(v);
+  saveDB();renderDbDetail();
+}
+function deleteMateri(idx){
+  if(!confirm('Hapus materi ini?')) return;
+  DB[dbActiveMapel][dbActiveKelas].splice(idx,1);
+  saveDB();renderDbDetail();
+}
+function deleteKelas(kelas){
+  if(!confirm('Hapus kelas '+kelas+' beserta semua materinya?')) return;
+  delete DB[dbActiveMapel][kelas];
+  dbActiveKelas=Object.keys(DB[dbActiveMapel]||{})[0]||'';
+  saveDB();renderDbDetail();
+}
+function deleteMapel(mapel){
+  if(!confirm('Hapus mapel "'+mapel+'" beserta semua data?')) return;
+  delete DB[mapel];dbActiveMapel='';dbActiveKelas='';
+  saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+}
+function resetDBConfirm(){
+  if(!confirm('Reset database ke default Kemenag MTs? Semua perubahan akan hilang.')) return;
+  DB=JSON.parse(JSON.stringify(DEFAULT_DB));
+  saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+}
+function exportDB(){
+  var blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='database_materi_mts.json';a.click();
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',function(){
+  // Load DB
+  try{ var saved=localStorage.getItem('mts_db'); DB=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEFAULT_DB)); }
+  catch(e){ DB=JSON.parse(JSON.stringify(DEFAULT_DB)); }
+  // API Key
+  var savedKey=localStorage.getItem('gemini_api_key')||'';
+  if(savedKey){
+    $id('apiKey').value=savedKey;$id('sApiKey').value=savedKey;
+    if($id('kApiKey')) $id('kApiKey').value=savedKey;
+    $id('keySaved').classList.add('show');$id('sKeySaved').classList.add('show');
+    if($id('kKeySaved')) $id('kKeySaved').classList.add('show');
+    scheduleApiTest(savedKey);
+  }
+  populateMapelSelects();
+  renderDbMapelList();
+  // Kunci tab API key listener
+  var kak=$id('kApiKey');
+  if(kak) kak.addEventListener('input',function(){syncKey($id('kApiKey').value.trim());if(typeof checkKunciRunnable==='function')checkKunciRunnable();});
+});
+
+function saveDB(){ try{localStorage.setItem('mts_db',JSON.stringify(DB));}catch(e){} }
+
+// ═══════════════════════════════════════════════════════
+// MAPEL SELECTS
+// ═══════════════════════════════════════════════════════
+function populateMapelSelects(){
+  var mapels=Object.keys(DB);
+  ['bMapel','sMapel'].forEach(function(id){
+    var sel=$id(id);
+    sel.innerHTML='<option value="">-- Pilih Mapel --</option>';
+    mapels.forEach(function(m){ var o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
+  });
+}
+// ═══════════════════════════════════════════════════════
+// API KEY SYNC
+// ═══════════════════════════════════════════════════════
+function syncKey(v){
+  if(v){
+    localStorage.setItem('gemini_api_key',v);
+    $id('apiKey').value=v; $id('sApiKey').value=v;
+    if($id('kApiKey')) $id('kApiKey').value=v;
+    $id('keySaved').classList.add('show'); $id('sKeySaved').classList.add('show');
+    if($id('kKeySaved')) $id('kKeySaved').classList.add('show');
+    scheduleApiTest(v);
+  }else{
+    localStorage.removeItem('gemini_api_key');
+    $id('keySaved').classList.remove('show'); $id('sKeySaved').classList.remove('show');
+    if($id('kKeySaved')) $id('kKeySaved').classList.remove('show');
+    hideApiStatus(); activeModel=null;
+  }
+}
+$id('apiKey').addEventListener('input',function(){syncKey($id('apiKey').value.trim());checkRunnable();});
+$id('sApiKey').addEventListener('input',function(){syncKey($id('sApiKey').value.trim());});
+$id('modelSelect').addEventListener('change',function(){activeModel=null;var k=$id('apiKey').value.trim();if(k) scheduleApiTest(k);});
 
 // ═══════════════════════════════════════════════════════
 // UPLOAD
@@ -1445,35 +1518,18 @@ function importDBFromExcel(input){
 // ═══════════════════════════════════════════════════════
 const AK_COLS = ['tipe','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci'];
 let kWorkbook=null, kSheetData=[], kResultData=[], kAbort=false;
-let kunciMode='gemini';
+var kunciMode='gemini';
 
 // Init: populate mapel on tab load
 function initKunciTab(){
-  const sel=$id('kMapel');
+  // Re-populate mapel dropdown each time tab opens (DB may have changed)
+  var sel=$id('kMapel');
   sel.innerHTML='<option value="">-- Pilih Mapel --</option>';
-  Object.keys(DB).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
-  // Sync API key
-  const k=localStorage.getItem('gemini_api_key')||'';
-  if(k){$id('kApiKey').value=k;$id('kKeySaved').classList.add('show');}
-}
-function onKunciMapelChange(){
-  const m=$id('kMapel').value, sel=$id('kKelas');
-  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m&&DB[m]) Object.keys(DB[m]).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);});
+  Object.keys(DB).forEach(function(m){var o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  // Reset kelas
+  $id('kKelas').innerHTML='<option value="">-- Pilih Kelas --</option>';
   checkKunciRunnable();
 }
-function setKunciMode(mode){
-  kunciMode=mode;
-  $id('kModeGemini').classList.toggle('active',mode==='gemini');
-  $id('kModeLocal').classList.toggle('active',mode==='local');
-  $id('kApiSection').style.display=mode==='gemini'?'':'none';
-  $id('kLocalSection').style.display=mode==='local'?'':'none';
-  checkKunciRunnable();
-}
-$id('kApiKey').addEventListener('input',()=>{
-  const v=$id('kApiKey').value.trim();
-  syncKey(v); checkKunciRunnable();
-});
 
 // Upload
 const kUploadZone=$id('kUploadZone'), kFileInput=$id('kFileInput');
@@ -1921,24 +1977,6 @@ function addKLog(type,text){
 function clearKLog(){$id('kProgressLog').innerHTML='';$id('kProgressBar').style.width='0%';$id('kProgressCount').textContent='0 / 0';}
 function updateKProg(cur,tot){$id('kProgressBar').style.width=Math.round((cur/tot)*100)+'%';$id('kProgressCount').textContent=`${cur} / ${tot}`;}
 function updateKProgLabel(t){$id('kProgressLabel').textContent=t;}
-
-// Extend syncKey to also update kApiKey
-const _origSyncKey=syncKey;
-function syncKey(v){
-  _origSyncKey(v);
-  if($id('kApiKey')&&$id('kApiKey').value!==v){
-    $id('kApiKey').value=v||'';
-    if(v) $id('kKeySaved').classList.add('show');
-    else $id('kKeySaved').classList.remove('show');
-  }
-}
-
-// Extend initKunciTab call via switchTab
-const _origSwitchTab=switchTab;
-function switchTab(name,btn){
-  _origSwitchTab(name,btn);
-  if(name==='kunci') initKunciTab();
-}
 
 </body>
 </html>
