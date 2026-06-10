@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topik & Bloom Classifier – Kemenag MTs</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#181b24;--bg3:#1e2230;--bg4:#252a3a;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555c6e;
+  --accent:#6c72f5;--accent2:#4e54d4;
+  --success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --radius:10px;--radius2:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.6;min-height:100vh;}
+.app{display:flex;flex-direction:column;min-height:100vh;}
+/* HEADER */
+header{padding:14px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2);}
+.logo{width:34px;height:34px;background:linear-gradient(135deg,#6c72f5,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+header h1{font-size:15px;font-weight:600;}
+header p{font-size:11px;color:var(--text2);}
+/* TABS */
+.tabs-bar{display:flex;gap:2px;padding:0 28px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.tab-btn{padding:10px 16px;border:none;background:none;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+main{flex:1;padding:24px 28px;max-width:1000px;margin:0 auto;width:100%;}
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px;}
+.card-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.step-dot{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(108,114,245,0.15);color:var(--accent);font-size:9px;font-weight:700;flex-shrink:0;}
+/* FORM */
+label.field{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;margin-top:12px;}
+label.field:first-of-type{margin-top:0;}
+input[type="text"],input[type="password"],textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s;font-family:inherit;appearance:none;}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:72px;}
+.field-hint{font-size:11px;color:var(--text3);margin-top:4px;}
+.key-row{position:relative;}
+.key-saved{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--success);display:none;background:var(--bg3);padding:0 4px;}
+.key-saved.show{display:block;}
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+/* MODE TOGGLE */
+.mode-toggle,.tipe-toggle{display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;}
+.mode-btn,.tipe-btn{flex:1;padding:8px 10px;border:none;background:none;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center;}
+.mode-btn.active,.tipe-btn.active{background:var(--accent);color:#fff;}
+.mode-btn:not(.active):hover,.tipe-btn:not(.active):hover{background:rgba(255,255,255,0.04);color:var(--text);}
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--radius2);padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(108,114,245,0.04);}
+.upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{width:40px;height:40px;background:var(--bg3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:18px;}
+.upload-zone h3{font-size:14px;font-weight:500;}.upload-zone p{font-size:11px;color:var(--text2);margin-top:3px;}
+.file-info{display:none;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-top:10px;}
+.file-info.show{display:flex;}
+.file-icon{width:32px;height:32px;background:rgba(108,114,245,0.15);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:15px;flex-shrink:0;}
+.file-meta{flex:1;min-width:0;}.file-meta span{display:block;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.file-meta small{font-size:11px;color:var(--text2);}
+.btn-remove{background:none;border:none;cursor:pointer;color:var(--text3);padding:3px;border-radius:5px;transition:color .15s;}.btn-remove:hover{color:var(--danger);}
+/* VALIDATION */
+.vbox{display:none;border-radius:var(--radius);padding:10px 12px;font-size:12px;margin-top:10px;}
+.vbox.ok{display:block;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#4ade80;}
+.vbox.error{display:block;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;}
+.vbox ul{margin:5px 0 0 14px;}.vbox li{margin-top:2px;}
+/* SELECT WRAP */
+.sw{position:relative;}.sw::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;font-size:11px;}
+.sw select{padding-right:28px;}
+/* BUTTONS */
+.btn-run{width:100%;background:var(--accent);border:none;border-radius:var(--radius);padding:12px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-run:hover:not(:disabled){background:var(--accent2);}
+.btn-run:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-dl{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);border-radius:var(--radius);padding:9px 16px;color:#4ade80;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:6px;}
+.btn-dl:hover{background:rgba(34,197,94,0.2);}
+.btn-sec{background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:9px 16px;color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.btn-sec:hover{border-color:var(--text3);color:var(--text);}
+.btn-sm{background:none;border:1px solid var(--border2);border-radius:7px;padding:5px 10px;color:var(--text2);font-size:11px;cursor:pointer;transition:all .15s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm.danger:hover{border-color:var(--danger);color:var(--danger);}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;}
+/* LOCAL INFO */
+.local-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:var(--radius);padding:9px 12px;color:#4ade80;font-size:12px;margin-bottom:4px;}
+/* CHECKBOX */
+.chk{display:flex;align-items:center;gap:7px;margin-top:12px;cursor:pointer;user-select:none;}
+.chk input[type="checkbox"]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+.chk span{font-size:12px;color:var(--text2);}
+/* PROGRESS */
+.progress-section{display:none;}.progress-section.show{display:block;}
+.prog-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.prog-label{font-size:12px;font-weight:500;}.prog-count{font-size:12px;color:var(--text2);}
+.prog-bar-wrap{background:var(--bg3);border-radius:99px;height:5px;overflow:hidden;}
+.prog-bar{height:100%;background:linear-gradient(90deg,#6c72f5,#a78bfa);border-radius:99px;transition:width .3s;width:0%;}
+.prog-log{background:var(--bg3);border-radius:var(--radius);padding:12px;font-size:11px;font-family:'SF Mono','Consolas',monospace;color:var(--text2);height:180px;overflow-y:auto;margin-top:12px;line-height:1.9;}
+.log-ok{color:#4ade80;}.log-err{color:#f87171;}.log-info{color:#60a5fa;}.log-warn{color:#fbbf24;}.log-retry{color:#fb923c;}
+/* RESULTS */
+.results-section{display:none;}.results-section.show{display:block;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--bg3);border-radius:var(--radius);padding:14px;text-align:center;}
+.stat-card .val{font-size:24px;font-weight:700;}.stat-card .lbl{font-size:10px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;}
+.val-s{color:var(--success);}.val-w{color:var(--warn);}.val-d{color:var(--danger);}
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);margin-top:14px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--bg3);padding:9px 10px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text2);white-space:nowrap;border-bottom:1px solid var(--border);}
+td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+td.col-q{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* TOPIK DROPDOWN IN TABLE */
+.td-topik select{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 24px 4px 8px;color:#a78bfa;font-size:11px;font-weight:500;outline:none;appearance:none;cursor:pointer;width:100%;min-width:160px;}
+.td-topik select:focus{border-color:var(--accent);}
+.td-topik{position:relative;min-width:170px;}
+.td-topik::after{content:'▾';position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;font-size:10px;}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap;}
+.b-c1{background:rgba(96,165,250,0.12);color:#60a5fa;}
+.b-c2{background:rgba(52,211,153,0.12);color:#34d399;}
+.b-c3{background:rgba(167,139,250,0.12);color:#a78bfa;}
+.b-c4{background:rgba(251,191,36,0.12);color:#fbbf24;}
+.b-c5{background:rgba(251,146,60,0.12);color:#fb923c;}
+.b-c6{background:rgba(248,113,113,0.12);color:#f87171;}
+.b-sangat-mudah{background:rgba(34,197,94,0.15);color:#4ade80;}
+.b-mudah{background:rgba(34,197,94,0.10);color:#86efac;}
+.b-sedang{background:rgba(251,191,36,0.12);color:#fbbf24;}
+.b-sulit{background:rgba(251,146,60,0.12);color:#fb923c;}
+.b-sangat-sulit{background:rgba(239,68,68,0.12);color:#f87171;}
+.b-err{background:rgba(239,68,68,0.08);color:#f87171;}
+/* SINGLE RESULT */
+.single-result{display:none;margin-top:14px;}.single-result.show{display:block;}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.result-card{background:var(--bg3);border-radius:var(--radius);padding:14px;}
+.r-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.r-value{font-size:15px;font-weight:600;color:var(--text);}
+.r-value.topik-v{color:#a78bfa;font-size:13px;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* DATABASE TAB */
+.db-mapel-grid{display:grid;grid-template-columns:220px 1fr;gap:16px;}
+.db-mapel-list{background:var(--bg3);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);}
+.db-mapel-item{padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);transition:background .12s;}
+.db-mapel-item:last-child{border-bottom:none;}
+.db-mapel-item:hover{background:rgba(108,114,245,0.07);}
+.db-mapel-item.active{background:rgba(108,114,245,0.13);color:var(--accent);font-weight:500;}
+.db-kelas-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;}
+.db-kelas-tab{padding:5px 12px;border:1px solid var(--border2);border-radius:99px;font-size:12px;cursor:pointer;background:none;color:var(--text2);transition:all .15s;}
+.db-kelas-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.materi-list{display:flex;flex-direction:column;gap:4px;}
+.materi-item{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:7px;padding:8px 12px;font-size:13px;border:1px solid var(--border);}
+.materi-item:hover{border-color:var(--border2);}
+.materi-add-row{display:flex;gap:8px;margin-top:8px;}
+.materi-add-row input{flex:1;}
+.info-box{background:rgba(108,114,245,0.07);border:1px solid rgba(108,114,245,0.15);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.7;}
+.info-box strong{color:var(--accent);}
+/* Mapel selector pills */
+.mapel-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+.pill{padding:5px 12px;border:1px solid var(--border2);border-radius:99px;font-size:12px;cursor:pointer;background:none;color:var(--text2);transition:all .12s;}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.pill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">🧠</div>
+  <div>
+    <h1>Topik & Bloom Classifier — Kemenag MTs</h1>
+    <p>Klasifikasi otomatis berbasis Kurikulum Kemenag MTs</p>
+  </div>
+</header>
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('batch',this)">📊 Proses Excel</button>
+  <button class="tab-btn" onclick="switchTab('single',this)">🔍 Analisis 1 Soal</button>
+  <button class="tab-btn" onclick="switchTab('db',this)">📚 Database Materi</button>
+</div>
+<main>
+
+<!-- ══════ TAB BATCH ══════ -->
+<div class="tab-panel active" id="tab-batch">
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">1</span> Mode & Konfigurasi</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="bModeGemini" onclick="setBatchMode('gemini')">✨ Gemini AI</button>
+      <button class="mode-btn" id="bModeLocal" onclick="setBatchMode('local')">⚙️ AI Lokal (Offline)</button>
+    </div>
+    <div id="bApiSection">
+      <label class="field">Gemini API Key</label>
+      <div class="key-row">
+        <input type="password" id="apiKey" placeholder="Gemini API key..." autocomplete="off">
+        <span class="key-saved" id="keySaved">✓ Tersimpan</span>
+      </div>
+      <div class="field-hint">Disimpan otomatis di browser · <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">Dapatkan API key</a></div>
+      <div id="apiTestStatus" style="display:none;margin-top:8px;border-radius:var(--radius);padding:8px 12px;font-size:12px;"></div>
+    </div>
+    <div id="bLocalSection" style="display:none">
+      <div class="local-badge">⚙️ Mode Offline — tidak perlu API key</div>
+    </div>
+    <div class="g2" style="margin-top:14px">
+      <div>
+        <label class="field" style="margin-top:0">Mapel</label>
+        <div class="sw"><select id="bMapel" onchange="onBatchMapelChange()"><option value="">-- Pilih Mapel --</option></select></div>
+      </div>
+      <div>
+        <label class="field" style="margin-top:0">Kelas</label>
+        <div class="sw"><select id="bKelas" onchange="onBatchKelasChange()"><option value="">-- Pilih Kelas --</option></select></div>
+      </div>
+    </div>
+    <div id="bMateriInfo" style="display:none;margin-top:8px" class="field-hint"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">2</span> Upload File Excel</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <div class="upload-icon">📊</div>
+      <h3>Klik atau seret file Excel ke sini</h3>
+      <p>.xlsx / .xls — 15 kolom wajib ada</p>
+    </div>
+    <div class="file-info" id="fileInfo">
+      <div class="file-icon">📗</div>
+      <div class="file-meta"><span id="fileName">-</span><small id="fileStats">-</small></div>
+      <button class="btn-remove" id="btnRemove">✕</button>
+    </div>
+    <div class="vbox" id="validationBox"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">3</span> Opsi Proses</div>
+    <div class="g3" id="geminiOptsGrid">
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Model Gemini</div>
+        <div class="sw"><select id="modelSelect"><option value="gemini-2.5-flash" selected>gemini-2.5-flash ★</option><option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-1.5-flash">gemini-1.5-flash</option></select></div>
+      </div>
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Mode Kirim</div>
+        <div class="sw"><select id="modeSelect"><option value="1">Per soal</option><option value="5" selected>Batch 5 soal</option><option value="10">Batch 10 soal</option></select></div>
+      </div>
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Jeda antar batch</div>
+        <div class="sw"><select id="delaySelect"><option value="0">Tanpa jeda</option><option value="500">500ms</option><option value="1000" selected>1 detik</option><option value="2000">2 detik</option></select></div>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="skipFilled"><span>Lewati baris yang sudah terisi lengkap</span></label>
+  </div>
+
+  <button class="btn-run" id="btnRun" disabled>🚀 Mulai Klasifikasi</button>
+
+  <div class="card progress-section" id="progressSection">
+    <div class="card-title"><span class="step-dot">⟳</span> Sedang Memproses</div>
+    <div class="prog-hdr"><span class="prog-label" id="progressLabel">Menginisialisasi...</span><span class="prog-count" id="progressCount">0 / 0</span></div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="progressBar"></div></div>
+    <div class="prog-log" id="progressLog"></div>
+    <button class="btn-sec" id="btnStop" style="margin-top:12px;width:100%;justify-content:center">⏹ Hentikan Proses</button>
+  </div>
+
+  <div class="card results-section" id="resultsSection">
+    <div class="card-title"><span class="step-dot">✓</span> Hasil Klasifikasi</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="val val-s" id="statOk">0</div><div class="lbl">Berhasil</div></div>
+      <div class="stat-card"><div class="val val-d" id="statErr">0</div><div class="lbl">Gagal</div></div>
+      <div class="stat-card"><div class="val val-w" id="statSkip">0</div><div class="lbl">Dilewati</div></div>
+    </div>
+    <div class="row-btns">
+      <button class="btn-dl" id="btnDownload">⬇ Download Excel</button>
+      <button class="btn-sec" id="btnReset">↺ Proses File Baru</button>
+    </div>
+    <div class="tbl-wrap" id="previewWrap" style="display:none">
+      <table>
+        <thead><tr><th>No</th><th>Pertanyaan</th><th>Topik <span style="color:var(--accent);font-weight:400">(koreksi manual)</span></th><th>Bloom</th><th>Kesulitan</th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB SINGLE ══════ -->
+<div class="tab-panel" id="tab-single">
+  <div class="card">
+    <div class="card-title"><span class="step-dot">1</span> Mode & Konfigurasi</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="sModeGemini" onclick="setSingleMode('gemini')">✨ Gemini AI</button>
+      <button class="mode-btn" id="sModeLocal" onclick="setSingleMode('local')">⚙️ AI Lokal (Offline)</button>
+    </div>
+    <div id="sApiSection">
+      <div class="key-row"><input type="password" id="sApiKey" placeholder="Gemini API key..." autocomplete="off"><span class="key-saved" id="sKeySaved">✓ Tersimpan</span></div>
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+        <div style="font-size:11px;color:var(--text3);white-space:nowrap">Model:</div>
+        <div class="sw" style="flex:1"><select id="sModelSelect"><option value="gemini-2.5-flash" selected>gemini-2.5-flash ★</option><option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-1.5-flash">gemini-1.5-flash</option></select></div>
+      </div>
+    </div>
+    <div id="sLocalSection" style="display:none"><div class="local-badge">⚙️ Mode Offline Aktif</div></div>
+    <div class="g2" style="margin-top:12px">
+      <div><label class="field" style="margin-top:0">Mapel</label><div class="sw"><select id="sMapel" onchange="onSingleMapelChange()"><option value="">-- Pilih --</option></select></div></div>
+      <div><label class="field" style="margin-top:0">Kelas</label><div class="sw"><select id="sKelas" onchange="onSingleKelasChange()"><option value="">-- Pilih --</option></select></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="step-dot">2</span> Data Soal</div>
+    <div class="tipe-toggle">
+      <button class="tipe-btn active" onclick="setTipe('pg')">📋 Pilihan Ganda</button>
+      <button class="tipe-btn" onclick="setTipe('esai')">✏️ Esai</button>
+    </div>
+    <label class="field" style="margin-top:0">Pertanyaan / Stem Soal</label>
+    <textarea id="sPertanyaan" placeholder="Tulis pertanyaan di sini..." rows="4"></textarea>
+    <div id="pgFields">
+      <div class="g2" style="margin-top:10px">
+        <div><label class="field" style="margin-top:0">Opsi A</label><input type="text" id="sA" placeholder="Opsi A..."></div>
+        <div><label class="field" style="margin-top:0">Opsi B</label><input type="text" id="sB" placeholder="Opsi B..."></div>
+        <div><label class="field" style="margin-top:0">Opsi C</label><input type="text" id="sC" placeholder="Opsi C..."></div>
+        <div><label class="field" style="margin-top:0">Opsi D</label><input type="text" id="sD" placeholder="Opsi D..."></div>
+      </div>
+      <label class="field">Kunci</label>
+      <div class="sw" style="max-width:180px"><select id="sKunci"><option value="">-- Pilih --</option><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+    </div>
+    <button class="btn-run" id="btnAnalyze" style="margin-top:16px">🔍 Analisis Soal</button>
+    <div class="single-result" id="singleResult">
+      <div id="singleLoading" style="display:none;text-align:center;padding:20px;font-size:12px;color:var(--text2)"><span class="spinner"></span>Menganalisis...</div>
+      <div id="singleContent" style="display:none">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;margin-top:2px">Hasil Analisis</div>
+        <div class="result-grid">
+          <div class="result-card"><div class="r-label">Topik</div><div class="r-value topik-v" id="rTopik">—</div></div>
+          <div class="result-card"><div class="r-label">Bloom</div><div class="r-value" id="rBloom">—</div></div>
+          <div class="result-card"><div class="r-label">Kesulitan</div><div class="r-value" id="rKesulitan">—</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3);background:var(--bg3);border-radius:var(--radius);padding:8px 10px" id="rNote"></div>
+      </div>
+      <div class="vbox error" id="singleError" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB DATABASE ══════ -->
+<div class="tab-panel" id="tab-db">
+  <div class="card">
+    <div class="card-title">📚 Database Materi Kemenag MTs</div>
+    <div class="info-box">
+      Database ini berisi daftar materi per mapel dan kelas. <strong>Gemini wajib memilih dari daftar ini</strong> — tidak boleh membuat topik baru di luar daftar.<br>
+      Anda dapat menambah, menghapus materi, dan mengimpor dari file Excel.
+    </div>
+    <div style="margin-top:12px" class="row-btns">
+      <button class="btn-sm" onclick="exportDB()">⬇ Export Database (JSON)</button>
+      <button class="btn-sm" onclick="$id('dbImportFile').click()">⬆ Import Database (JSON)</button>
+      <button class="btn-sm" onclick="$id('dbExcelFile').click()">📗 Tambah dari Excel</button>
+      <button class="btn-sm danger" onclick="resetDBConfirm()">🗑 Reset ke Default</button>
+      <input type="file" id="dbImportFile" accept=".json" style="display:none" onchange="importDB(this)">
+      <input type="file" id="dbExcelFile" accept=".xlsx,.xls" style="display:none" onchange="importDBFromExcel(this)">
+    </div>
+  </div>
+
+  <div class="db-mapel-grid">
+    <div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;border-bottom:1px solid var(--border)">Mapel</div>
+        <div class="db-mapel-list" id="dbMapelList" style="border:none;border-radius:0"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div id="dbDetail">
+          <div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">← Pilih mapel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+<footer>Topik & Bloom Classifier · Kemenag MTs · Gemini AI + AI Lokal</footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATABASE MATERI KEMENAG MTs (DEFAULT)
+// ═══════════════════════════════════════════════════════
+const DEFAULT_DB = {
+  "Al-Qur'an Hadis": {
+    "VII": ["Keutamaan Membaca Al-Qur'an","Tajwid: Hukum Nun Mati dan Tanwin","Tajwid: Hukum Mim Mati","Tajwid: Mad dan Qashr","Surah Al-Fatihah dan Maknanya","Surah-Surah Pendek Pilihan","Hadis tentang Niat","Hadis tentang Silaturahmi","Adab Membaca Al-Qur'an"],
+    "VIII": ["Tajwid: Hukum Ra'","Tajwid: Hukum Lam","Tajwid: Waqaf dan Ibtida'","Surah Al-Baqarah ayat pilihan","Surah Ali Imran ayat pilihan","Hadis tentang Menuntut Ilmu","Hadis tentang Kejujuran","Kemukjizatan Al-Qur'an","Ulumul Qur'an Dasar"],
+    "IX": ["Tajwid: Hukum Idgham","Tajwid: Makharijul Huruf","Qiraat dan Asbabun Nuzul","Surah Al-Kahfi ayat pilihan","Surah Yasin ayat pilihan","Hadis tentang Akhlak","Hadis tentang Ibadah","Tafsir Tematik","Sejarah Kodifikasi Al-Qur'an"]
+  },
+  "Akidah Akhlak": {
+    "VII": ["Pengertian Akidah Islam","Rukun Iman","Iman kepada Allah (Asmaul Husna)","Iman kepada Malaikat","Iman kepada Kitab-Kitab Allah","Akhlak Terpuji: Jujur dan Amanah","Akhlak Terpuji: Rendah Hati dan Santun","Akhlak Tercela: Takabur dan Hasad","Adab kepada Orang Tua dan Guru"],
+    "VIII": ["Iman kepada Rasul-Rasul Allah","Sifat-Sifat Nabi dan Rasul","Iman kepada Hari Akhir","Tanda-Tanda Hari Kiamat","Iman kepada Qada dan Qadar","Akhlak Terpuji: Sabar dan Syukur","Akhlak Terpuji: Husnuzan","Akhlak Tercela: Riya dan Sum'ah","Adab Pergaulan Remaja"],
+    "IX": ["Tauhid Rububiyah, Uluhiyah, dan Asma wa Sifat","Syirik dan Bahayanya","Khurafat dan Takhayul","Mukjizat dan Karamah","Akhlak Terpuji: Kerja Keras dan Tanggung Jawab","Akhlak Terpuji: Toleransi dan Persaudaraan","Akhlak Tercela: Nifak dan Fasik","Adab Bertetangga dan Bermasyarakat","Keteladanan Ulama dalam Akhlak"]
+  },
+  "Fikih": {
+    "VII": ["Pengertian dan Sumber Hukum Islam","Thaharah: Najis dan Cara Mensucikan","Thaharah: Wudu dan Tayamum","Thaharah: Mandi Wajib","Salat Fardu: Syarat, Rukun, dan Sunnah","Salat Berjamaah dan Munfarid","Salat Jumat","Azan dan Iqamah","Zikir dan Doa setelah Salat"],
+    "VIII": ["Salat Sunnah Rawatib","Salat Sunnah Muakkad dan Ghairu Muakkad","Sujud Sahwi, Tilawah, dan Syukur","Puasa Ramadan: Syarat dan Rukun","Puasa Sunnah","Zakat Fitrah dan Zakat Mal","Infak, Sedekah, dan Wakaf","Haji dan Umrah: Pengertian dan Syarat","Larangan dalam Ihram"],
+    "IX": ["Jual Beli dalam Islam","Riba dan Transaksi Terlarang","Pinjam Meminjam dan Utang Piutang","Gadai (Rahn) dan Upah (Ijarah)","Makanan dan Minuman Halal-Haram","Sembelihan dan Kurban","Pernikahan dalam Islam","Waris dalam Islam","Jinayat dan Hudud"]
+  },
+  "SKI (Sejarah Kebudayaan Islam)": {
+    "VII": ["Sejarah Pra-Islam di Jazirah Arab","Kelahiran dan Masa Kecil Nabi Muhammad SAW","Kenabian dan Wahyu Pertama","Dakwah Periode Mekah","Hijrah ke Habasyah","Hijrah ke Madinah","Piagam Madinah","Perang Badar","Perang Uhud"],
+    "VIII": ["Fathul Mekah","Haji Wada' dan Wafat Nabi","Khulafaur Rasyidin: Abu Bakar As-Siddiq","Khulafaur Rasyidin: Umar bin Khattab","Khulafaur Rasyidin: Utsman bin Affan","Khulafaur Rasyidin: Ali bin Abi Thalib","Dinasti Umayyah: Berdiri dan Perkembangannya","Ekspansi Islam pada Masa Umayyah","Kemajuan Peradaban Umayyah"],
+    "IX": ["Dinasti Abbasiyah: Berdiri dan Perkembangannya","Keemasan Islam pada Masa Abbasiyah","Ilmuwan Muslim dan Karya-Karyanya","Masuknya Islam ke Nusantara","Kerajaan Islam di Nusantara: Samudera Pasai dan Demak","Kerajaan Islam di Nusantara: Mataram dan Banten","Wali Songo dan Penyebaran Islam","Peran Ulama dalam Kemerdekaan Indonesia","Perkembangan Islam di Era Modern"]
+  },
+  "Bahasa Arab": {
+    "VII": ["Pengenalan Huruf Hijaiyah","Harakat dan Cara Membaca","Kosakata: Perkenalan Diri (التعارف)","Kosakata: Fasilitas Madrasah (المرافق في المدرسة)","Kosakata: Kehidupan Keluarga (الحياة الأسرية)","Pola Kalimat Dasar: Mubtada dan Khabar","Isim Nakirah dan Ma'rifah","Dhamir (Kata Ganti Orang)","Membaca Teks Sederhana"],
+    "VIII": ["Kosakata: Hobi dan Kegiatan (الهواية والنشاط)","Kosakata: Kesehatan (الصحة)","Kosakata: Profesi (المهنة)","Fi'il Madhi dan Mudhori'","Fi'il Amar dan Nahi","Jumlah Fi'liyah","Maf'ul Bih","Na'at dan Man'ut","Membaca dan Memahami Teks"],
+    "IX": ["Kosakata: Alam dan Lingkungan (البيئة)","Kosakata: Pariwisata (السياحة)","Kosakata: Teknologi (التكنولوجيا)","Isim Tafdhil","Huruf Jar dan Majrur","Jumlah Syarthiyah","Membaca Teks Autentik","Menulis Karangan Sederhana","Tata Bahasa Arab Terintegrasi"]
+  },
+  "PPKn": {
+    "VII": ["Norma dan Keadilan","Perumusan dan Penetapan UUD 1945","Perumusan Dasar Negara","Keberagaman Suku, Agama, Ras, dan Antargolongan","Kerjasama dalam Berbagai Bidang Kehidupan","Karakteristik Daerah dalam Kerangka NKRI"],
+    "VIII": ["Kedudukan dan Fungsi Pancasila","Konstitusi dan Norma dalam Kehidupan","Tata Urutan Peraturan Perundang-undangan","Kebangkitan Nasional 1908","Sumpah Pemuda 1928","Semangat dan Komitmen Kebangsaan"],
+    "IX": ["Dinamika Perwujudan Pancasila","Pengaruh Kemajuan IPTEK","Harmoni Keberagaman Masyarakat Indonesia","Bela Negara","Sistem Pemerintahan Indonesia","Globalisasi dan Modernisasi"]
+  },
+  "Bahasa Indonesia": {
+    "VII": ["Teks Deskripsi","Teks Narasi (Cerita Imajinasi)","Teks Prosedur","Teks Laporan Hasil Observasi","Teks Fabel dan Legenda","Puisi Rakyat","Surat Pribadi dan Surat Dinas","Unsur Kebahasaan: Kata Baku dan Tidak Baku","Ejaan dan Tanda Baca"],
+    "VIII": ["Teks Berita","Teks Iklan, Slogan, dan Poster","Teks Eksposisi","Teks Puisi","Teks Eksplanasi","Teks Ulasan","Teks Persuasif","Teks Drama","Unsur Kebahasaan: Konjungsi dan Modalitas"],
+    "IX": ["Teks Laporan Percobaan","Teks Pidato Persuasif","Teks Cerpen","Teks Tanggapan","Teks Diskusi","Novel dan Unsur-Unsurnya","Teks Fiksi Ilmiah","Unsur Kebahasaan: Kalimat Efektif","Literasi Membaca"]
+  },
+  "Matematika": {
+    "VII": ["Bilangan Bulat dan Pecahan","Himpunan","Bentuk Aljabar","Persamaan dan Pertidaksamaan Linear Satu Variabel","Perbandingan","Aritmetika Sosial","Garis dan Sudut","Segiempat dan Segitiga","Penyajian Data (Statistika Dasar)"],
+    "VIII": ["Pola Bilangan","Koordinat Kartesius","Relasi dan Fungsi","Persamaan Garis Lurus","Sistem Persamaan Linear Dua Variabel","Teorema Pythagoras","Lingkaran","Bangun Ruang Sisi Datar","Statistika: Ukuran Pemusatan Data"],
+    "IX": ["Bilangan Berpangkat dan Bentuk Akar","Persamaan Kuadrat","Fungsi Kuadrat","Transformasi Geometri","Kekongruenan dan Kesebangunan","Bangun Ruang Sisi Lengkung","Statistika: Ukuran Penyebaran Data","Peluang","Barisan dan Deret Aritmetika"]
+  },
+  "IPA": {
+    "VII": ["Objek IPA dan Pengamatannya","Klasifikasi Makhluk Hidup","Klasifikasi Materi dan Perubahannya","Suhu dan Kalor","Energi dalam Sistem Kehidupan","Sistem Organisasi Kehidupan","Interaksi Makhluk Hidup dengan Lingkungan","Pencemaran Lingkungan","Pemanasan Global"],
+    "VIII": ["Gerak Benda dan Makhluk Hidup","Pesawat Sederhana","Struktur dan Fungsi Jaringan Tumbuhan","Struktur dan Fungsi Sistem Pencernaan","Zat Aditif dan Adiktif","Sistem Peredaran Darah","Tekanan Zat","Sistem Pernapasan","Sistem Ekskresi"],
+    "IX": ["Sistem Reproduksi Manusia","Sistem Reproduksi Tumbuhan dan Hewan","Pewarisan Sifat (Genetika)","Listrik Statis","Listrik Dinamis","Kemagnetan","Bioteknologi","Partikel Penyusun Benda","Tata Surya"]
+  },
+  "IPS": {
+    "VII": ["Manusia, Tempat, dan Lingkungan","Interaksi Sosial dan Lembaga Sosial","Aktivitas Manusia dalam Memenuhi Kebutuhan","Kehidupan Masyarakat Indonesia pada Masa Praaksara","Kehidupan Masyarakat pada Masa Hindu-Buddha","Kehidupan Masyarakat pada Masa Islam"],
+    "VIII": ["Keunggulan dan Keterbatasan Antarruang","Pengaruh Interaksi Antarruang","Perdagangan Antardaerah dan Antarpulau","Penguatan Ekonomi Maritim dan Agrikultur","Pendistribusian Kembali Pendapatan Nasional","Perubahan Masyarakat Indonesia pada Masa Penjajahan","Pergerakan Kebangsaan Indonesia","Terbentuknya Kesadaran Nasional"],
+    "IX": ["Letak dan Luas Benua-Benua","Kondisi Alam Negara-Negara di Dunia","Perubahan Sosial Budaya","Globalisasi","Ekonomi Kreatif","Kerjasama Antarnegara","Perdagangan Internasional","Indonesia dari Masa Kemerdekaan hingga Reformasi","Peran Indonesia dalam Perdamaian Dunia"]
+  },
+  "Bahasa Inggris": {
+    "VII": ["Greeting and Introduction","Compliment and Congratulation","Classroom Language","Describing People and Things","Days, Months, and Time","Present Tense: To Be","Present Tense: Simple Present","Noun and Pronoun","Short Functional Text"],
+    "VIII": ["Asking and Giving Opinion","Expressing Ability and Willingness","Invitation and Request","Descriptive Text","Recount Text","Simple Past Tense","Adjective and Adverb","Degrees of Comparison","Notice and Warning Text"],
+    "IX": ["Expressing Hope and Wish","Agreeing and Disagreeing","Narrative Text","Procedure Text","Report Text","Present Perfect Tense","Passive Voice","Conditional Sentence","Label and Advertisement Text"]
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let DB = {};
+let workbook=null, sheetData=[], abortFlag=false, resultData=[];
+let batchMode='gemini', singleMode='gemini', currentTipe='pg';
+let dbActiveMapel='', dbActiveKelas='';
+const REQUIRED_HEADERS=['no','tipe','poin','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci','pembahasan','vrl_pembahasan','Topik','Bloom','Kesulitan'];
+const ESAI_TYPES=['esai','essay','uraian','esai_gambar','essay_gambar','uraian_gambar','isian','isian_singkat'];
+const MAX_RETRY=3;
+const VALID_KD=['Sangat Mudah','Mudah','Sedang','Sulit','Sangat Sulit'];
+const VALID_BLOOM=['C1','C2','C3','C4','C5','C6'];
+const $id=id=>document.getElementById(id);
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  // Load DB
+  try{ const saved=localStorage.getItem('mts_db'); DB=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEFAULT_DB)); }
+  catch(e){ DB=JSON.parse(JSON.stringify(DEFAULT_DB)); }
+  // API Key
+  const saved=localStorage.getItem('gemini_api_key')||'';
+  if(saved){$id('apiKey').value=saved;$id('sApiKey').value=saved;$id('keySaved').classList.add('show');$id('sKeySaved').classList.add('show');scheduleApiTest(saved);}
+  populateMapelSelects();
+  renderDbMapelList();
+});
+
+function saveDB(){ try{localStorage.setItem('mts_db',JSON.stringify(DB));}catch(e){} }
+
+// ═══════════════════════════════════════════════════════
+// MAPEL SELECTS
+// ═══════════════════════════════════════════════════════
+function populateMapelSelects(){
+  const mapels=Object.keys(DB);
+  ['bMapel','sMapel'].forEach(id=>{
+    const sel=$id(id);
+    sel.innerHTML='<option value="">-- Pilih Mapel --</option>';
+    mapels.forEach(m=>{ const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
+  });
+}
+function onBatchMapelChange(){
+  const m=$id('bMapel').value;
+  const sel=$id('bKelas');
+  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
+  if(m&&DB[m]){ Object.keys(DB[m]).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);}); }
+  onBatchKelasChange();
+}
+function onBatchKelasChange(){
+  const m=$id('bMapel').value,k=$id('bKelas').value;
+  const info=$id('bMateriInfo');
+  if(m&&k&&DB[m]&&DB[m][k]){
+    const list=DB[m][k];
+    info.style.display='block';
+    info.textContent=`✓ ${list.length} materi tersedia untuk ${m} Kelas ${k}`;
+  }else{info.style.display='none';}
+  checkRunnable();
+}
+function onSingleMapelChange(){
+  const m=$id('sMapel').value;
+  const sel=$id('sKelas');
+  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
+  if(m&&DB[m]){ Object.keys(DB[m]).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='Kelas '+k;sel.appendChild(o);}); }
+}
+function onSingleKelasChange(){}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  $id('tab-'+name).classList.add('active');
+  if(name==='db') renderDbMapelList();
+}
+
+// ═══════════════════════════════════════════════════════
+// MODE TOGGLES
+// ═══════════════════════════════════════════════════════
+function setBatchMode(mode){
+  batchMode=mode;
+  $id('bModeGemini').classList.toggle('active',mode==='gemini');
+  $id('bModeLocal').classList.toggle('active',mode==='local');
+  $id('bApiSection').style.display=mode==='gemini'?'':'none';
+  $id('bLocalSection').style.display=mode==='local'?'':'none';
+  $id('geminiOptsGrid').style.display=mode==='gemini'?'':'none';
+  checkRunnable();
+}
+function setSingleMode(mode){
+  singleMode=mode;
+  $id('sModeGemini').classList.toggle('active',mode==='gemini');
+  $id('sModeLocal').classList.toggle('active',mode==='local');
+  $id('sApiSection').style.display=mode==='gemini'?'':'none';
+  $id('sLocalSection').style.display=mode==='local'?'':'none';
+}
+function setTipe(t){
+  currentTipe=t;
+  document.querySelectorAll('.tipe-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='pg')||(i===1&&t==='esai')));
+  $id('pgFields').style.display=t==='pg'?'':'none';
+  $id('singleResult').classList.remove('show');
+}
+
+// API KEY SYNC
+function syncKey(v){
+  if(v){localStorage.setItem('gemini_api_key',v);$id('apiKey').value=v;$id('sApiKey').value=v;$id('keySaved').classList.add('show');$id('sKeySaved').classList.add('show');scheduleApiTest(v);}
+  else{localStorage.removeItem('gemini_api_key');$id('keySaved').classList.remove('show');$id('sKeySaved').classList.remove('show');hideApiStatus();activeModel=null;}
+}
+$id('apiKey').addEventListener('input',()=>{syncKey($id('apiKey').value.trim());checkRunnable();});
+$id('sApiKey').addEventListener('input',()=>syncKey($id('sApiKey').value.trim()));
+$id('modelSelect').addEventListener('change',()=>{activeModel=null;const k=$id('apiKey').value.trim();if(k) scheduleApiTest(k);});
+
+// ═══════════════════════════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════════════════════════
+const uploadZone=$id('uploadZone'),fileInput=$id('fileInput');
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('drag');});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])handleFile(fileInput.files[0]);});
+$id('btnRemove').addEventListener('click',resetFile);
+
+function handleFile(file){
+  if(!file.name.match(/\.(xlsx|xls)$/i)){showV('error','File harus .xlsx atau .xls');return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      workbook=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const sheet=workbook.Sheets[workbook.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+      validateAndLoad(json,file);
+    }catch(err){showV('error','Gagal membaca: '+err.message);}
+  };
+  r.readAsArrayBuffer(file);
+}
+function validateAndLoad(json,file){
+  if(!json||json.length<2){showV('error','File kosong');return;}
+  const headers=json[0].map(h=>String(h).trim());
+  const missing=REQUIRED_HEADERS.filter(h=>!headers.includes(h));
+  if(missing.length>0){
+    let msg=`<strong>Header tidak valid.</strong> Kolom tidak ditemukan:<ul>`;
+    missing.forEach(h=>msg+=`<li><code>${h}</code></li>`);
+    msg+='</ul>'; showV('error',msg); return;
+  }
+  sheetData=json.slice(1).map(row=>{
+    const obj={};
+    REQUIRED_HEADERS.forEach(h=>{const idx=headers.indexOf(h);obj[h]=idx>=0?row[idx]:'';});
+    return obj;
+  }).filter(row=>String(row['pertanyaan']).trim()!=='');
+  showV('ok',`✓ ${REQUIRED_HEADERS.length} header valid. <strong>${sheetData.length} soal</strong> ditemukan.`);
+  $id('fileInfo').classList.add('show');
+  $id('fileName').textContent=file.name;
+  $id('fileStats').textContent=`${sheetData.length} soal · ${(file.size/1024).toFixed(1)} KB`;
+  checkRunnable();
+}
+function showV(type,html){const b=$id('validationBox');b.className='vbox '+type;b.innerHTML=html;}
+function resetFile(){workbook=null;sheetData=[];fileInput.value='';$id('fileInfo').classList.remove('show');$id('validationBox').className='vbox';$id('validationBox').innerHTML='';checkRunnable();}
+function checkRunnable(){
+  const apiOk=batchMode==='local'||$id('apiKey').value.trim();
+  const mapelOk=$id('bMapel').value&&$id('bKelas').value;
+  $id('btnRun').disabled=!(apiOk&&sheetData.length>0&&mapelOk);
+}
+
+// ═══════════════════════════════════════════════════════
+// BATCH PROCESS
+// ═══════════════════════════════════════════════════════
+$id('btnStop').addEventListener('click',()=>{abortFlag=true;});
+$id('btnRun').addEventListener('click',startClassification);
+
+async function startClassification(){
+  const apiKey=$id('apiKey').value.trim();
+  const mapel=$id('bMapel').value;
+  const kelas=$id('bKelas').value;
+  const model=$id('modelSelect').value;
+  const batchSize=batchMode==='local'?50:parseInt($id('modeSelect').value);
+  const delay=batchMode==='local'?0:parseInt($id('delaySelect').value);
+  const skipFilled=$id('skipFilled').checked;
+  const materiList=DB[mapel]&&DB[mapel][kelas]?DB[mapel][kelas]:[];
+
+  if(!materiList.length){alert('Tidak ada daftar materi untuk mapel/kelas ini. Tambahkan dulu di tab Database.');return;}
+
+  abortFlag=false;
+  resultData=JSON.parse(JSON.stringify(sheetData));
+  $id('btnRun').disabled=true;
+  $id('progressSection').classList.add('show');
+  $id('resultsSection').classList.remove('show');
+  clearLog();
+
+  let ok=0,err=0,skip=0;
+  const total=resultData.length;
+  let i=0;
+
+  while(i<total){
+    if(abortFlag){addLog('warn','⏹ Dihentikan.');break;}
+    const batch=[];
+    let j=i;
+    while(j<total&&batch.length<batchSize){
+      const row=resultData[j];
+      if(skipFilled&&row['Topik']&&row['Bloom']&&row['Kesulitan']){
+        skip++;addLog('info',`⟶ Soal #${row['no']||j+1}: dilewati`);updateProg(j+1,total,ok,err,skip);j++;continue;
+      }
+      batch.push({idx:j,row});j++;
+    }
+    i=j;
+    if(!batch.length) continue;
+    const labels=batch.map(b=>b.row['no']||(b.idx+1));
+    updateProgLabel(`Memproses soal #${labels[0]}${labels.length>1?'–#'+labels[labels.length-1]:''}...`);
+    try{
+      let results;
+      if(batchMode==='local'){
+        results=batch.map(b=>localClassify(b.row,mapel,kelas,materiList));
+      }else if(batchSize===1){
+        results=[await callGeminiSingle(apiKey,activeModel||model,batch[0].row,mapel,kelas,materiList)];
+      }else{
+        results=await callGeminiBatch(apiKey,activeModel||model,batch.map(b=>b.row),mapel,kelas,materiList);
+      }
+      results.forEach((res,ri)=>{
+        const{idx,row}=batch[ri];
+        const noL=row['no']||(idx+1);
+        if(res.error){err++;addLog('err',`✗ Soal #${noL}: ${res.error}`);}
+        else{row['Topik']=res.topik;row['Bloom']=res.bloom;row['Kesulitan']=res.kesulitan;ok++;addLog('ok',`✓ Soal #${noL}: ${res.topik} · ${res.bloom} · ${res.kesulitan}`);}
+        updateProg(idx+1,total,ok,err,skip);
+      });
+    }catch(e){
+      batch.forEach(({row,idx})=>{err++;addLog('err',`✗ Soal #${row['no']||idx+1}: ${e.message}`);updateProg(idx+1,total,ok,err,skip);});
+    }
+    if(delay>0&&i<total&&!abortFlag) await sleep(delay);
+  }
+  finalize(ok,err,skip,materiList);
+}
+
+// ═══════════════════════════════════════════════════════
+// SINGLE ANALYSIS
+// ═══════════════════════════════════════════════════════
+$id('btnAnalyze').addEventListener('click',async()=>{
+  const mapel=$id('sMapel').value,kelas=$id('sKelas').value;
+  const pertanyaan=$id('sPertanyaan').value.trim();
+  if(!pertanyaan){showSingleErr('Pertanyaan tidak boleh kosong.');return;}
+  if(!mapel||!kelas){showSingleErr('Pilih Mapel dan Kelas terlebih dahulu.');return;}
+  const materiList=DB[mapel]&&DB[mapel][kelas]?DB[mapel][kelas]:[];
+  if(!materiList.length){showSingleErr('Tidak ada daftar materi. Tambahkan di tab Database.');return;}
+
+  const row={tipe:currentTipe==='esai'?'esai':'pg',pertanyaan,
+    opsi_a:$id('sA').value.trim(),opsi_b:$id('sB').value.trim(),
+    opsi_c:$id('sC').value.trim(),opsi_d:$id('sD').value.trim(),
+    kunci:$id('sKunci').value.trim(),vrl_gambar:''};
+
+  $id('singleResult').classList.add('show');
+  $id('singleLoading').style.display='block';
+  $id('singleContent').style.display='none';
+  $id('singleError').style.display='none';
+  try{
+    let res;
+    if(singleMode==='local') res=localClassify(row,mapel,kelas,materiList);
+    else{
+      const apiKey=$id('sApiKey').value.trim();
+      if(!apiKey){showSingleErr('API key diperlukan.');return;}
+      res=await callGeminiSingle(apiKey,$id('sModelSelect').value,row,mapel,kelas,materiList);
+    }
+    if(res.error){showSingleErr(res.error);return;}
+    $id('rTopik').textContent=res.topik;
+    $id('rBloom').innerHTML=`<span class="badge b-${res.bloom.toLowerCase()}">${res.bloom}</span>`;
+    const kdClass='b-'+res.kesulitan.toLowerCase().replace(/\s+/g,'-');
+    $id('rKesulitan').innerHTML=`<span class="badge ${kdClass}">${res.kesulitan}</span>`;
+    $id('rNote').textContent=`Mode: ${singleMode==='local'?'AI Lokal':'Gemini AI'} · ${mapel} · Kelas ${kelas} · ${materiList.length} materi`;
+    $id('singleLoading').style.display='none';
+    $id('singleContent').style.display='block';
+  }catch(e){showSingleErr(e.message);}
+});
+function showSingleErr(msg){
+  $id('singleResult').classList.add('show');
+  $id('singleLoading').style.display='none';
+  $id('singleContent').style.display='none';
+  const el=$id('singleError');el.style.display='block';el.textContent='✗ '+msg;
+}
+
+// ═══════════════════════════════════════════════════════
+// LOCAL CLASSIFIER
+// ═══════════════════════════════════════════════════════
+function localClassify(row,mapel,kelas,materiList){
+  const text=[row['pertanyaan'],row['opsi_a'],row['opsi_b'],row['opsi_c'],row['opsi_d']].join(' ').toLowerCase();
+  const stem=String(row['pertanyaan']||'').toLowerCase();
+  const isEsai=ESAI_TYPES.includes(String(row['tipe']||'').toLowerCase().trim());
+
+  // Topik: score kata dari setiap materi
+  let bestTopik=materiList[0],bestScore=0;
+  materiList.forEach(mat=>{
+    const words=mat.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3);
+    const score=words.filter(w=>text.includes(w)).length;
+    if(score>bestScore){bestScore=score;bestTopik=mat;}
+  });
+
+  const bloom=detectBloom(stem,text,isEsai);
+  const kesulitan=detectKesulitan(row,text,stem,bloom,isEsai);
+  return{topik:bestTopik,bloom,kesulitan};
+}
+
+function detectBloom(stem,full,isEsai){
+  const map=[
+    ['C6',['buat','ciptakan','rancang','desain','susun','kembangkan','merumuskan','merancang','membuat','menyusun','membentuk','mengembangkan','mencipta']],
+    ['C5',['nilai','evaluasi','kritik','pertimbangkan','bandingkan','putuskan','terbaik','simpulkan','menilai','mengevaluasi','mengkritisi','mempertimbangkan','menyimpulkan']],
+    ['C4',['analisis','analisa','bedakan','kategorikan','klasifikasikan','pecahkan','hubungkan','menganalisis','membedakan','mengkategorikan','mengklasifikasikan','menghubungkan','membandingkan','menguraikan']],
+    ['C3',['terapkan','gunakan','hitung','selesaikan','tunjukkan','lakukan','praktikkan','menerapkan','menggunakan','menghitung','menyelesaikan','mendemonstrasikan','mengaplikasikan','mengoperasikan']],
+    ['C2',['jelaskan','uraikan','deskripsikan','ceritakan','rangkum','identifikasi','tentukan','menjelaskan','menguraikan','mendeskripsikan','merangkum','mengidentifikasi','menentukan','menggambarkan','menafsirkan']],
+    ['C1',['sebutkan','tuliskan','hafal','definisikan','apa yang dimaksud','apa arti','apa kepanjangan','kapan','siapa','berapa','menyebutkan','mendefinisikan','mengingat','menghafal']],
+  ];
+  for(const[level,kws]of map){ if(kws.some(k=>stem.includes(k)||full.includes(k))) return level; }
+  if(isEsai){ const wc=stem.split(/\s+/).length; return wc>30?'C4':wc>15?'C3':'C2'; }
+  return 'C2';
+}
+
+function detectKesulitan(row,text,stem,bloom,isEsai){
+  let score=0;
+  const wc=stem.split(/\s+/).length;
+  if(wc>40) score+=2; else if(wc>20) score+=1;
+  score+={C1:0,C2:0,C3:1,C4:2,C5:3,C6:3}[bloom]||0;
+  if(!isEsai){
+    const opsi=['opsi_a','opsi_b','opsi_c','opsi_d'].map(k=>String(row[k]||'').trim()).filter(o=>o);
+    if(opsi.length===4){
+      const avg=opsi.reduce((a,b)=>a+b.length,0)/4;
+      const varL=opsi.reduce((a,b)=>a+Math.abs(b.length-avg),0)/4;
+      if(varL<5) score+=2; else if(varL<15) score+=1;
+      if(opsi.every(o=>/\d/.test(o))) score+=1;
+    }
+  }
+  if(['mengapa','faktor','dampak','pengaruh','akibat','hubungan','prinsip','implementasi'].some(k=>stem.includes(k))) score+=1;
+  if(score>=7) return 'Sangat Sulit';
+  if(score>=5) return 'Sulit';
+  if(score>=2) return 'Sedang';
+  if(score>=1) return 'Mudah';
+  return 'Sangat Mudah';
+}
+
+// ═══════════════════════════════════════════════════════
+// GEMINI CALLS
+// ═══════════════════════════════════════════════════════
+function buildPayload(row,mapel,kelas,isEsai){
+  const base={mapel,kelas,tipe:row['tipe']||'',pertanyaan:row['pertanyaan']||''};
+  if(!isEsai){base.opsi_a=row['opsi_a']||'';base.opsi_b=row['opsi_b']||'';base.opsi_c=row['opsi_c']||'';base.opsi_d=row['opsi_d']||'';base.kunci=row['kunci']||'';}
+  const img=String(row['vrl_gambar']||'').trim();
+  if(img) base.url_gambar=img;
+  return base;
+}
+
+async function callGeminiSingle(apiKey,model,row,mapel,kelas,materiList){
+  const isEsai=ESAI_TYPES.includes(String(row['tipe']||'').toLowerCase().trim());
+  const payload=buildPayload(row,mapel,kelas,isEsai);
+  const imgNote=payload.url_gambar?`\nURL Gambar: ${payload.url_gambar}\nJika ada gambar, gunakan untuk menentukan Topik, Bloom, dan Kesulitan.`:'';
+  const prompt=`Kamu adalah guru berpengalaman ahli taksonomi Bloom dan kurikulum Kemenag MTs.
+
+Analisis soal berikut:
+${JSON.stringify(payload,null,2)}${imgNote}
+
+DAFTAR MATERI YANG TERSEDIA (WAJIB pilih salah satu, tidak boleh membuat topik baru):
+${materiList.map((m,i)=>`${i+1}. ${m}`).join('\n')}
+
+INSTRUKSI:
+1. TOPIK — Pilih SATU dari daftar materi di atas yang paling sesuai. Tidak boleh menulis topik di luar daftar.
+2. BLOOM — C1 (Mengingat) C2 (Memahami) C3 (Menerapkan) C4 (Menganalisis) C5 (Mengevaluasi) C6 (Mencipta). Pertimbangkan kata kerja operasional, konteks mapel & kelas.
+3. KESULITAN — Pilih: Sangat Mudah / Mudah / Sedang / Sulit / Sangat Sulit. Pertimbangkan kompleksitas, ${isEsai?'kedalaman jawaban':'kualitas distraktor, kemiripan opsi'}, tuntutan berpikir.
+
+Jawab HANYA dengan JSON valid:
+{"topik":"(pilih dari daftar)","bloom":"C1","kesulitan":"Mudah"}`;
+  return await callWithRetry(apiKey,model,prompt,1,materiList);
+}
+
+async function callGeminiBatch(apiKey,model,rows,mapel,kelas,materiList){
+  const items=rows.map((row,idx)=>{
+    const isEsai=ESAI_TYPES.includes(String(row['tipe']||'').toLowerCase().trim());
+    return{no:idx+1,...buildPayload(row,mapel,kelas,isEsai)};
+  });
+  const prompt=`Kamu adalah guru berpengalaman ahli taksonomi Bloom dan kurikulum Kemenag MTs.
+
+Analisis ${items.length} soal berikut:
+${JSON.stringify(items,null,2)}
+
+DAFTAR MATERI YANG TERSEDIA (WAJIB pilih salah satu per soal, tidak boleh membuat topik baru):
+${materiList.map((m,i)=>`${i+1}. ${m}`).join('\n')}
+
+INSTRUKSI (untuk semua soal):
+1. TOPIK — Pilih SATU dari daftar materi. Dilarang menulis topik di luar daftar.
+2. BLOOM — C1–C6 sesuai kata kerja operasional dan konteks.
+3. KESULITAN — Sangat Mudah / Mudah / Sedang / Sulit / Sangat Sulit.
+4. Jika ada url_gambar, gunakan untuk analisis.
+
+Jawab HANYA dengan JSON array tanpa teks lain, urut sesuai nomor:
+[{"no":1,"topik":"...","bloom":"C1","kesulitan":"Mudah"},...]`;
+  return await callWithRetry(apiKey,model,prompt,rows.length,materiList);
+}
+
+// ═══════════════════════════════════════════════════════
+// MODEL FALLBACK LIST
+// ═══════════════════════════════════════════════════════
+const FALLBACK_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash','gemini-1.5-flash'];
+let activeModel=null; // confirmed working model
+
+function friendlyError(msg,status){
+  msg=String(msg||'');
+  if(status===429||msg.includes('429')||msg.toLowerCase().includes('quota')||msg.toLowerCase().includes('rate limit')||msg.includes('limit: 0'))
+    return 'Batas kuota API tercapai. Coba model lain atau tunggu beberapa menit.';
+  if(status===403||msg.includes('403')||msg.toLowerCase().includes('permission'))
+    return 'API key tidak memiliki akses ke model ini. Coba model lain.';
+  if(status===401||msg.includes('401')||msg.toLowerCase().includes('api key'))
+    return 'API key tidak valid. Periksa kembali API key Anda.';
+  if(status===404||msg.includes('404')||msg.toLowerCase().includes('not found'))
+    return 'Model tidak tersedia di akun Anda. Coba model lain.';
+  if(msg.toLowerCase().includes('network')||msg.toLowerCase().includes('fetch'))
+    return 'Koneksi internet bermasalah. Periksa koneksi Anda.';
+  // Truncate technical messages
+  return msg.length>80 ? msg.slice(0,80)+'…' : msg;
+}
+
+// API TEST on key change
+let apiTestTimer=null;
+function scheduleApiTest(apiKey){
+  clearTimeout(apiTestTimer);
+  if(!apiKey){hideApiStatus();return;}
+  apiTestTimer=setTimeout(()=>testApiKey(apiKey),800);
+}
+
+function showApiStatus(type,msg){
+  const el=$id('apiTestStatus');
+  if(!el) return;
+  el.style.display='block';
+  const styles={
+    testing:'background:rgba(108,114,245,0.08);border:1px solid rgba(108,114,245,0.2);color:#a5b4fc',
+    ok:'background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#4ade80',
+    error:'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171',
+  };
+  el.style.cssText=`display:block;margin-top:8px;border-radius:var(--radius);padding:8px 12px;font-size:12px;${styles[type]||styles.error}`;
+  el.textContent=msg;
+}
+function hideApiStatus(){
+  const el=$id('apiTestStatus');
+  if(el) el.style.display='none';
+}
+
+async function testApiKey(apiKey){
+  showApiStatus('testing','⏳ Memeriksa API key dan model...');
+  activeModel=null;
+  const url=m=>`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+  const body=JSON.stringify({contents:[{parts:[{text:'Hi'}]}],generationConfig:{maxOutputTokens:5}});
+
+  // Try preferred model from dropdown first, then fallbacks
+  const preferred=$id('modelSelect')?.value||FALLBACK_MODELS[0];
+  const tryOrder=[preferred,...FALLBACK_MODELS.filter(m=>m!==preferred)];
+
+  for(const model of tryOrder){
+    try{
+      const res=await fetch(url(model),{method:'POST',headers:{'Content-Type':'application/json'},body});
+      if(res.ok){
+        activeModel=model;
+        // Update dropdown to reflect working model
+        const sel=$id('modelSelect');
+        if(sel&&sel.value!==model){
+          // Check if option exists, if not add it
+          if(![...sel.options].find(o=>o.value===model)){
+            const opt=document.createElement('option');opt.value=model;opt.text=model;sel.appendChild(opt);
+          }
+          sel.value=model;
+        }
+        showApiStatus('ok',`✓ API key valid · Model aktif: ${model}`);
+        checkRunnable();
+        return;
+      }
+      const ed=await res.json().catch(()=>({}));
+      const msg=ed?.error?.message||`HTTP ${res.status}`;
+      // If quota/rate, show immediately — no point trying more
+      if(res.status===401){showApiStatus('error','✗ API key tidak valid. Periksa kembali.');return;}
+    }catch(e){/* network error, try next */}
+  }
+  showApiStatus('error','✗ Semua model tidak tersedia. Periksa API key atau coba lagi nanti.');
+  checkRunnable();
+}
+
+async function callWithRetry(apiKey,model,prompt,expectedCount,materiList){
+  // Use confirmed active model if available, fallback chain otherwise
+  const preferred=activeModel||model;
+  const tryModels=[preferred,...FALLBACK_MODELS.filter(m=>m!==preferred)];
+  let lastError, lastFriendly='Terjadi kesalahan. Coba lagi.';
+
+  for(const tryModel of tryModels){
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${tryModel}:generateContent?key=${apiKey}`;
+    let modelSuccess=false;
+
+    for(let attempt=1;attempt<=MAX_RETRY;attempt++){
+      try{
+        const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts:[{text:prompt}]}],
+            generationConfig:{temperature:0.1,maxOutputTokens:expectedCount>1?2048:350}})});
+
+        if(!res.ok){
+          const ed=await res.json().catch(()=>({}));
+          const rawMsg=ed?.error?.message||`HTTP ${res.status}`;
+          const friendly=friendlyError(rawMsg,res.status);
+          // Quota/not-found: skip to next model immediately
+          if(res.status===429||res.status===404||res.status===403||rawMsg.includes('limit: 0')){
+            if(expectedCount===1) addLog('retry',`⟳ ${tryModel}: ${friendly} — mencoba model lain...`);
+            lastError=new Error(rawMsg); lastFriendly=friendly;
+            break; // break attempt loop → try next model
+          }
+          if(res.status===401){throw new Error('API key tidak valid.');}
+          lastError=new Error(rawMsg); lastFriendly=friendly;
+          if(attempt<MAX_RETRY){addLog('retry',`⟳ Percobaan ${attempt}/${MAX_RETRY}: ${friendly}`);await sleep(1500*attempt);}
+          continue;
+        }
+
+        const data=await res.json();
+        const raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+        const clean=raw.replace(/```json|```/g,'').trim();
+        activeModel=tryModel; // update active model on success
+
+        if(expectedCount>1){
+          const parsed=JSON.parse(clean);
+          if(!Array.isArray(parsed)) throw new Error('Response bukan array JSON');
+          return parsed.map(item=>normalizeItem(item,materiList));
+        }else{
+          return normalizeItem(JSON.parse(clean),materiList);
+        }
+
+      }catch(e){
+        // JSON parse error or network error — retry same model
+        lastError=e;
+        lastFriendly=friendlyError(e.message,0);
+        if(!modelSuccess&&attempt<MAX_RETRY){
+          addLog('retry',`⟳ Percobaan ${attempt}/${MAX_RETRY}: ${lastFriendly}`);
+          await sleep(1500*attempt);
+        }
+      }
+    }
+  }
+
+  // All models exhausted
+  if(expectedCount>1) return Array.from({length:expectedCount},()=>({error:lastFriendly}));
+  throw new Error(lastFriendly);
+}
+
+function normalizeItem(parsed,materiList){
+  if(!parsed||typeof parsed!=='object') return{error:'Response tidak valid'};
+  const bloom=String(parsed.bloom||'').trim().toUpperCase();
+  if(!VALID_BLOOM.includes(bloom)) return{error:`Bloom tidak valid: ${bloom}`};
+  const rawKd=String(parsed.kesulitan||'').trim();
+  const matchedKd=VALID_KD.find(k=>k.toLowerCase()===rawKd.toLowerCase());
+  if(!matchedKd) return{error:`Kesulitan tidak valid: ${rawKd}`};
+  const topik=String(parsed.topik||'').trim();
+  if(!topik) return{error:'Topik kosong'};
+  // Validate topik against materiList
+  if(materiList&&materiList.length){
+    const found=materiList.find(m=>m.toLowerCase()===topik.toLowerCase());
+    if(!found) return{error:`Topik di luar daftar materi: "${topik}"`};
+    return{topik:found,bloom,kesulitan:matchedKd};
+  }
+  return{topik,bloom,kesulitan:matchedKd};
+}
+
+// ═══════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════
+function updateProg(cur,tot,ok,err,skip){
+  $id('progressBar').style.width=Math.round((cur/tot)*100)+'%';
+  $id('progressCount').textContent=`${cur} / ${tot}`;
+}
+function updateProgLabel(t){$id('progressLabel').textContent=t;}
+function addLog(type,text){
+  const log=$id('progressLog');
+  const line=document.createElement('div');
+  line.className='log-'+type;line.textContent=text;
+  log.appendChild(line);log.scrollTop=log.scrollHeight;
+}
+function clearLog(){$id('progressLog').innerHTML='';$id('progressBar').style.width='0%';$id('progressCount').textContent='0 / 0';}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function finalize(ok,err,skip,materiList){
+  $id('statOk').textContent=ok;$id('statErr').textContent=err;$id('statSkip').textContent=skip;
+  $id('resultsSection').classList.add('show');
+  updateProgLabel(`Selesai — ${ok} berhasil, ${err} gagal, ${skip} dilewati`);
+  renderPreview(materiList);
+}
+
+function kdBadgeClass(kd){
+  const m={'sangat mudah':'b-sangat-mudah','mudah':'b-mudah','sedang':'b-sedang','sulit':'b-sulit','sangat sulit':'b-sangat-sulit'};
+  return m[(kd||'').toLowerCase()]||'b-err';
+}
+
+function renderPreview(materiList){
+  const tbody=$id('previewBody');tbody.innerHTML='';
+  const mapel=$id('bMapel').value, kelas=$id('bKelas').value;
+  const allMat=materiList||(DB[mapel]&&DB[mapel][kelas]?DB[mapel][kelas]:[]);
+
+  resultData.slice(0,30).forEach((row,ri)=>{
+    const bloom=(row['Bloom']||'').toUpperCase();
+    const kd=row['Kesulitan']||'';
+    const pert=String(row['pertanyaan']||'');
+    const tr=document.createElement('tr');
+
+    // Topik dropdown
+    let topikCell=`<div class="td-topik"><select onchange="resultData[${ri}]['Topik']=this.value">`;
+    allMat.forEach(m=>{
+      const sel=m===(row['Topik']||'')?'selected':'';
+      topikCell+=`<option value="${esc(m)}" ${sel}>${esc(m)}</option>`;
+    });
+    if(!row['Topik']||!allMat.includes(row['Topik'])){
+      topikCell=`<div class="td-topik"><select onchange="resultData[${ri}]['Topik']=this.value"><option value="">— Pilih Topik —</option>`;
+      allMat.forEach(m=>{topikCell+=`<option value="${esc(m)}">${esc(m)}</option>`;});
+    }
+    topikCell+=`</select></div>`;
+
+    tr.innerHTML=`
+      <td>${row['no']||''}</td>
+      <td class="col-q" title="${esc(pert)}">${esc(pert.slice(0,70))}${pert.length>70?'…':''}</td>
+      <td>${topikCell}</td>
+      <td>${bloom?`<span class="badge b-${bloom.toLowerCase()}">${bloom}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${kd?`<span class="badge ${kdBadgeClass(kd)}">${kd}</span>`:'<span style="color:var(--text3)">—</span>'}</td>`;
+    tbody.appendChild(tr);
+  });
+  $id('previewWrap').style.display=resultData.length?'block':'none';
+  if(resultData.length>30){
+    const note=document.createElement('div');
+    note.style.cssText='font-size:11px;color:var(--text3);padding:8px 12px;text-align:center';
+    note.textContent=`Menampilkan 30 dari ${resultData.length} baris. Download untuk data lengkap.`;
+    $id('previewWrap').appendChild(note);
+  }
+}
+function esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// DOWNLOAD
+$id('btnDownload').addEventListener('click',()=>{
+  if(!workbook||!resultData.length){alert('Tidak ada data untuk didownload.');return;}
+  try{
+    const ws=workbook.Sheets[workbook.SheetNames[0]];
+    const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const headers=json[0].map(h=>String(h).trim());
+    const ti=headers.indexOf('Topik'),bi=headers.indexOf('Bloom'),ki=headers.indexOf('Kesulitan'),pi=headers.indexOf('pertanyaan');
+    if(ti<0||bi<0||ki<0){alert('Kolom Topik/Bloom/Kesulitan tidak ditemukan di file asli.');return;}
+    const rMap=new Map();
+    resultData.forEach(row=>{
+      const key=String(row['pertanyaan']||'').trim();
+      if(key&&!rMap.has(key)) rMap.set(key,row);
+    });
+    let updated=0;
+    json.forEach((r,ri)=>{
+      if(ri===0) return;
+      const key=String(r[pi]||'').trim();
+      if(!key) return;
+      const found=rMap.get(key);
+      if(!found) return;
+      r[ti]=found['Topik']||'';
+      r[bi]=found['Bloom']||'';
+      r[ki]=found['Kesulitan']||'';
+      updated++;
+    });
+    const newWs=XLSX.utils.aoa_to_sheet(json);
+    if(ws['!cols']) newWs['!cols']=ws['!cols'];
+    const newWb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(newWb,newWs,workbook.SheetNames[0]);
+
+    const fname=`hasil_klasifikasi_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+    // Android-compatible: write to ArrayBuffer → Blob → object URL → <a> click
+    const wbout=XLSX.write(newWb,{bookType:'xlsx',type:'array'});
+    const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=fname;
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    // Tunda revoke agar browser Android sempat membaca blob
+    setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},5000);
+
+    addLog('ok',`✓ File siap didownload: ${fname} (${updated} baris diperbarui)`);
+
+    // Tampilkan banner konfirmasi di UI
+    showDownloadBanner(fname);
+  }catch(e){
+    alert('Gagal membuat file: '+e.message);
+  }
+});
+
+function showDownloadBanner(fname){
+  let banner=$id('downloadBanner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='downloadBanner';
+    banner.style.cssText='margin-top:12px;border-radius:var(--radius);padding:12px 14px;font-size:12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:#4ade80;line-height:1.7;';
+    $id('resultsSection').querySelector('.row-btns').after(banner);
+  }
+  banner.style.display='block';
+  banner.innerHTML=`<strong>📥 File sedang didownload: ${fname}</strong><br>
+    <span style="color:var(--text2)">
+    Jika file tidak muncul otomatis:<br>
+    1. Buka browser → menu ⋮ → <strong>Downloads / Unduhan</strong><br>
+    2. Atau cek folder <strong>Download</strong> di aplikasi File Manager<br>
+    3. Jika masih tidak ada, coba buka aplikasi di <strong>Chrome</strong> lalu download ulang
+    </span>`;
+}
+
+// RESET
+$id('btnReset').addEventListener('click',()=>{
+  resetFile();
+  $id('progressSection').classList.remove('show');
+  $id('resultsSection').classList.remove('show');
+  resultData=[];abortFlag=false;
+});
+
+// ═══════════════════════════════════════════════════════
+// DATABASE TAB
+// ═══════════════════════════════════════════════════════
+function renderDbMapelList(){
+  const list=$id('dbMapelList');list.innerHTML='';
+  Object.keys(DB).forEach(mapel=>{
+    const div=document.createElement('div');
+    div.className='db-mapel-item'+(mapel===dbActiveMapel?' active':'');
+    div.textContent=mapel;
+    div.onclick=()=>{dbActiveMapel=mapel;dbActiveKelas=Object.keys(DB[mapel]||{})[0]||'';renderDbMapelList();renderDbDetail();};
+    list.appendChild(div);
+  });
+  // Add new mapel
+  const addDiv=document.createElement('div');
+  addDiv.className='db-mapel-item';
+  addDiv.style.color='var(--accent)';
+  addDiv.textContent='+ Tambah Mapel';
+  addDiv.onclick=addNewMapel;
+  list.appendChild(addDiv);
+}
+
+function renderDbDetail(){
+  const detail=$id('dbDetail');
+  if(!dbActiveMapel||!DB[dbActiveMapel]){detail.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">← Pilih mapel</div>';return;}
+  const kelasList=Object.keys(DB[dbActiveMapel]);
+  if(!dbActiveKelas||!DB[dbActiveMapel][dbActiveKelas]) dbActiveKelas=kelasList[0]||'';
+
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:600">${esc(dbActiveMapel)}</div>
+    <button class="btn-sm danger" onclick="deleteMapel('${esc(dbActiveMapel)}')">Hapus Mapel</button>
+  </div>
+  <div class="db-kelas-tabs">`;
+  kelasList.forEach(k=>{
+    html+=`<button class="db-kelas-tab${k===dbActiveKelas?' active':''}" onclick="dbActiveKelas='${k}';renderDbDetail()">${k}</button>`;
+  });
+  html+=`<button class="db-kelas-tab" onclick="addNewKelas()" style="color:var(--accent)">+ Kelas</button>`;
+  html+=`</div>`;
+
+  if(dbActiveKelas&&DB[dbActiveMapel][dbActiveKelas]){
+    const materi=DB[dbActiveMapel][dbActiveKelas];
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text2)">${materi.length} materi</div>
+      <button class="btn-sm danger" onclick="deleteKelas('${esc(dbActiveKelas)}')">Hapus Kelas ${esc(dbActiveKelas)}</button>
+    </div>
+    <div class="materi-list" id="materiList">`;
+    materi.forEach((m,i)=>{
+      html+=`<div class="materi-item">
+        <span>${i+1}. ${esc(m)}</span>
+        <button class="btn-sm danger" onclick="deleteMateri(${i})">✕</button>
+      </div>`;
+    });
+    html+=`</div>
+    <div class="materi-add-row" style="margin-top:10px">
+      <input type="text" id="newMateriInput" placeholder="Tambah materi baru..." onkeydown="if(event.key==='Enter')addMateri()">
+      <button class="btn-sm" onclick="addMateri()" style="white-space:nowrap">+ Tambah</button>
+    </div>`;
+  }
+  detail.innerHTML=html;
+}
+
+function addNewMapel(){
+  const name=prompt('Nama mapel baru:');
+  if(!name||!name.trim()) return;
+  const n=name.trim();
+  if(DB[n]){alert('Mapel sudah ada.');return;}
+  DB[n]={};dbActiveMapel=n;dbActiveKelas='';
+  saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+}
+function addNewKelas(){
+  const k=prompt('Nama kelas (contoh: VII, VIII, IX):');
+  if(!k||!k.trim()) return;
+  const kn=k.trim().toUpperCase();
+  if(DB[dbActiveMapel][kn]){alert('Kelas sudah ada.');return;}
+  DB[dbActiveMapel][kn]=[];dbActiveKelas=kn;
+  saveDB();renderDbDetail();
+}
+function addMateri(){
+  const inp=$id('newMateriInput');
+  const v=inp?inp.value.trim():'';
+  if(!v) return;
+  if(!DB[dbActiveMapel][dbActiveKelas]) DB[dbActiveMapel][dbActiveKelas]=[];
+  if(DB[dbActiveMapel][dbActiveKelas].includes(v)){alert('Materi sudah ada.');return;}
+  DB[dbActiveMapel][dbActiveKelas].push(v);
+  saveDB();renderDbDetail();
+}
+function deleteMateri(idx){
+  if(!confirm('Hapus materi ini?')) return;
+  DB[dbActiveMapel][dbActiveKelas].splice(idx,1);
+  saveDB();renderDbDetail();
+}
+function deleteKelas(kelas){
+  if(!confirm(`Hapus kelas ${kelas} beserta semua materinya?`)) return;
+  delete DB[dbActiveMapel][kelas];
+  dbActiveKelas=Object.keys(DB[dbActiveMapel]||{})[0]||'';
+  saveDB();renderDbDetail();
+}
+function deleteMapel(mapel){
+  if(!confirm(`Hapus mapel "${mapel}" beserta semua data?`)) return;
+  delete DB[mapel];dbActiveMapel='';dbActiveKelas='';
+  saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+}
+function resetDBConfirm(){
+  if(!confirm('Reset database ke default Kemenag MTs? Semua perubahan akan hilang.')) return;
+  DB=JSON.parse(JSON.stringify(DEFAULT_DB));
+  saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+}
+
+// Export
+function exportDB(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='database_materi_mts.json';a.click();
+}
+// Import JSON
+function importDB(input){
+  const file=input.files[0];if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const parsed=JSON.parse(e.target.result);
+      if(typeof parsed!=='object') throw new Error('Format tidak valid');
+      DB=parsed;saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+      alert('Database berhasil diimport.');
+    }catch(err){alert('Gagal import: '+err.message);}
+  };
+  r.readAsText(file);
+  input.value='';
+}
+// Import from Excel
+// Excel format: Sheet per mapel, Baris 1 = header kelas (VII, VIII, IX), kolom = materi
+function importDBFromExcel(input){
+  const file=input.files[0];if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      let imported=0;
+      wb.SheetNames.forEach(sheetName=>{
+        const ws=wb.Sheets[sheetName];
+        const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(!json||json.length<2) return;
+        const header=json[0].map(h=>String(h).trim());
+        if(!DB[sheetName]) DB[sheetName]={};
+        header.forEach((kelas,colIdx)=>{
+          if(!kelas) return;
+          const items=json.slice(1).map(row=>String(row[colIdx]||'').trim()).filter(v=>v);
+          if(items.length){
+            if(!DB[sheetName][kelas]) DB[sheetName][kelas]=[];
+            items.forEach(item=>{if(!DB[sheetName][kelas].includes(item)) DB[sheetName][kelas].push(item);});
+            imported+=items.length;
+          }
+        });
+      });
+      saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+      alert(`Berhasil mengimport ${imported} materi dari ${wb.SheetNames.length} sheet.`);
+    }catch(err){alert('Gagal import Excel: '+err.message);}
+  };
+  r.readAsArrayBuffer(file);
+  input.value='';
+}
+</script>
+</body>
+</html>
