@@ -270,42 +270,42 @@ function setTipe(t){
 function onAMapelChange(){
   var m=$id('aMapel').value,sel=$id('aKelas');
   sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m&&DB[m]){var ks=Object.keys(DB[m]);for(var i=0;i<ks.length;i++){var o=document.createElement('option');o.value=ks[i];o.textContent='Kelas '+ks[i];sel.appendChild(o);}}
+  if(m){var ks=getKelasList(m);for(var i=0;i<ks.length;i++){var o=document.createElement('option');o.value=ks[i];o.textContent='Kelas '+ks[i];sel.appendChild(o);}}
   onAKelasChange();
 }
 function onAKelasChange(){
   var m=$id('aMapel').value,k=$id('aKelas').value,info=$id('aMateriInfo');
-  if(m&&k&&DB[m]&&DB[m][k]){info.style.display='block';info.textContent='✓ '+DB[m][k].length+' materi untuk '+m+' Kelas '+k;}
+  if(m&&k){var _ml=getMateriList(m,k);if(_ml.length){info.style.display='block';info.textContent='✓ '+_ml.length+' materi untuk '+m+' Kelas '+k;}else{info.style.display='none';}}
   else{info.style.display='none';}
   if(typeof checkRunnable==='function')checkRunnable();
 }
 function onSMapelChange(){
   var m=$id('sMapel').value,sel=$id('sKelas');
   sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m&&DB[m]){var ks=Object.keys(DB[m]);for(var i=0;i<ks.length;i++){var o=document.createElement('option');o.value=ks[i];o.textContent='Kelas '+ks[i];sel.appendChild(o);}}
+  if(m){var ks=getKelasList(m);for(var i=0;i<ks.length;i++){var o=document.createElement('option');o.value=ks[i];o.textContent='Kelas '+ks[i];sel.appendChild(o);}}
 }
 function resetAFile(){if(typeof doResetAFile==='function')doResetAFile();}
 function addMateri(){
   var inp=$id('newMateriInput'),v=inp?inp.value.trim():'';if(!v)return;
-  if(!DB[dbActiveMapel][dbActiveKelas])DB[dbActiveMapel][dbActiveKelas]=[];
-  for(var i=0;i<DB[dbActiveMapel][dbActiveKelas].length;i++){if(DB[dbActiveMapel][dbActiveKelas][i]===v){alert('Sudah ada.');return;}}
-  DB[dbActiveMapel][dbActiveKelas].push(v);
+  var existing=getMateriList(dbActiveMapel,dbActiveKelas);
+  for(var i=0;i<existing.length;i++){if(existing[i]===v){alert('Materi sudah ada.');return;}}
+  dbAddMateri(dbActiveMapel,dbActiveKelas,v);
   if(typeof saveDB==='function')saveDB();if(typeof renderDbDetail==='function')renderDbDetail();
 }
 function deleteMateri(idx){
-  if(!confirm('Hapus?'))return;
-  DB[dbActiveMapel][dbActiveKelas].splice(idx,1);
+  if(!confirm('Hapus materi ini?'))return;
+  dbRemoveMateri(dbActiveMapel,dbActiveKelas,idx);
   if(typeof saveDB==='function')saveDB();if(typeof renderDbDetail==='function')renderDbDetail();
 }
 function deleteKelas(k){
   if(!confirm('Hapus kelas '+k+'?'))return;
-  delete DB[dbActiveMapel][k];
-  var ks=Object.keys(DB[dbActiveMapel]||{});dbActiveKelas=ks.length?ks[0]:'';
+  dbRemoveKelas(dbActiveMapel,k);
+  var ks=getKelasList(dbActiveMapel);dbActiveKelas=ks.length?ks[0]:'';
   if(typeof saveDB==='function')saveDB();if(typeof renderDbDetail==='function')renderDbDetail();
 }
 function deleteMapel(m){
   if(!confirm('Hapus mapel "'+m+'"?'))return;
-  delete DB[m];dbActiveMapel='';dbActiveKelas='';
+  dbRemoveMapel(m);dbActiveMapel='';dbActiveKelas='';
   if(typeof saveDB==='function')saveDB();
   if(typeof populateMapelSelects==='function')populateMapelSelects();
   if(typeof renderDbMapelList==='function')renderDbMapelList();
@@ -320,6 +320,7 @@ function resetDBConfirm(){
   if(typeof renderDbDetail==='function')renderDbDetail();
 }
 function exportDB(){
+  dbTouch();
   var blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='database_materi_mts.json';
   document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);},3000);
@@ -327,19 +328,224 @@ function exportDB(){
 </script>
 
 <script>
-const DEFAULT_DB={
-"Al-Qur'an Hadis":{"VII":["Keutamaan Membaca Al-Qur'an","Tajwid: Hukum Nun Mati dan Tanwin","Tajwid: Hukum Mim Mati","Tajwid: Mad dan Qashr","Surah Al-Fatihah dan Maknanya","Surah-Surah Pendek Pilihan","Hadis tentang Niat","Hadis tentang Silaturahmi","Adab Membaca Al-Qur'an"],"VIII":["Tajwid: Hukum Ra'","Tajwid: Hukum Lam","Tajwid: Waqaf dan Ibtida'","Surah Al-Baqarah ayat pilihan","Surah Ali Imran ayat pilihan","Hadis tentang Menuntut Ilmu","Hadis tentang Kejujuran","Kemukjizatan Al-Qur'an","Ulumul Qur'an Dasar"],"IX":["Tajwid: Hukum Idgham","Tajwid: Makharijul Huruf","Qiraat dan Asbabun Nuzul","Surah Al-Kahfi ayat pilihan","Surah Yasin ayat pilihan","Hadis tentang Akhlak","Hadis tentang Ibadah","Tafsir Tematik","Sejarah Kodifikasi Al-Qur'an"]},
-"Akidah Akhlak":{"VII":["Pengertian Akidah Islam","Rukun Iman","Iman kepada Allah (Asmaul Husna)","Iman kepada Malaikat","Iman kepada Kitab-Kitab Allah","Akhlak Terpuji: Jujur dan Amanah","Akhlak Terpuji: Rendah Hati dan Santun","Akhlak Tercela: Takabur dan Hasad","Adab kepada Orang Tua dan Guru"],"VIII":["Iman kepada Rasul-Rasul Allah","Sifat-Sifat Nabi dan Rasul","Iman kepada Hari Akhir","Tanda-Tanda Hari Kiamat","Iman kepada Qada dan Qadar","Akhlak Terpuji: Sabar dan Syukur","Akhlak Terpuji: Husnuzan","Akhlak Tercela: Riya dan Sum'ah","Adab Pergaulan Remaja"],"IX":["Tauhid Rububiyah, Uluhiyah, dan Asma wa Sifat","Syirik dan Bahayanya","Khurafat dan Takhayul","Mukjizat dan Karamah","Akhlak Terpuji: Kerja Keras dan Tanggung Jawab","Akhlak Terpuji: Toleransi dan Persaudaraan","Akhlak Tercela: Nifak dan Fasik","Adab Bertetangga dan Bermasyarakat","Keteladanan Ulama dalam Akhlak"]},
-"Fikih":{"VII":["Pengertian dan Sumber Hukum Islam","Thaharah: Najis dan Cara Mensucikan","Thaharah: Wudu dan Tayamum","Thaharah: Mandi Wajib","Salat Fardu: Syarat, Rukun, dan Sunnah","Salat Berjamaah dan Munfarid","Salat Jumat","Azan dan Iqamah","Zikir dan Doa setelah Salat"],"VIII":["Salat Sunnah Rawatib","Salat Sunnah Muakkad dan Ghairu Muakkad","Sujud Sahwi, Tilawah, dan Syukur","Puasa Ramadan: Syarat dan Rukun","Puasa Sunnah","Zakat Fitrah dan Zakat Mal","Infak, Sedekah, dan Wakaf","Haji dan Umrah: Pengertian dan Syarat","Larangan dalam Ihram"],"IX":["Jual Beli dalam Islam","Riba dan Transaksi Terlarang","Pinjam Meminjam dan Utang Piutang","Gadai (Rahn) dan Upah (Ijarah)","Makanan dan Minuman Halal-Haram","Sembelihan dan Kurban","Pernikahan dalam Islam","Waris dalam Islam","Jinayat dan Hudud"]},
-"SKI":{"VII":["Sejarah Pra-Islam di Jazirah Arab","Kelahiran dan Masa Kecil Nabi Muhammad SAW","Kenabian dan Wahyu Pertama","Dakwah Periode Mekah","Hijrah ke Habasyah","Hijrah ke Madinah","Piagam Madinah","Perang Badar","Perang Uhud"],"VIII":["Fathul Mekah","Haji Wada' dan Wafat Nabi","Khulafaur Rasyidin: Abu Bakar As-Siddiq","Khulafaur Rasyidin: Umar bin Khattab","Khulafaur Rasyidin: Utsman bin Affan","Khulafaur Rasyidin: Ali bin Abi Thalib","Dinasti Umayyah: Berdiri dan Perkembangannya","Ekspansi Islam pada Masa Umayyah","Kemajuan Peradaban Umayyah"],"IX":["Dinasti Abbasiyah: Berdiri dan Perkembangannya","Keemasan Islam pada Masa Abbasiyah","Ilmuwan Muslim dan Karya-Karyanya","Masuknya Islam ke Nusantara","Kerajaan Islam: Samudera Pasai dan Demak","Kerajaan Islam: Mataram dan Banten","Wali Songo dan Penyebaran Islam","Peran Ulama dalam Kemerdekaan Indonesia","Perkembangan Islam di Era Modern"]},
-"Bahasa Arab":{"VII":["Pengenalan Huruf Hijaiyah","Harakat dan Cara Membaca","Kosakata: Perkenalan Diri","Kosakata: Fasilitas Madrasah","Kosakata: Kehidupan Keluarga","Pola Kalimat Dasar: Mubtada dan Khabar","Isim Nakirah dan Ma'rifah","Dhamir (Kata Ganti Orang)","Membaca Teks Sederhana"],"VIII":["Kosakata: Hobi dan Kegiatan","Kosakata: Kesehatan","Kosakata: Profesi","Fi'il Madhi dan Mudhori'","Fi'il Amar dan Nahi","Jumlah Fi'liyah","Maf'ul Bih","Na'at dan Man'ut","Membaca dan Memahami Teks"],"IX":["Kosakata: Alam dan Lingkungan","Kosakata: Pariwisata","Kosakata: Teknologi","Isim Tafdhil","Huruf Jar dan Majrur","Jumlah Syarthiyah","Membaca Teks Autentik","Menulis Karangan Sederhana","Tata Bahasa Arab Terintegrasi"]},
-"PPKn":{"VII":["Norma dan Keadilan","Perumusan dan Penetapan UUD 1945","Perumusan Dasar Negara","Keberagaman Suku, Agama, Ras, dan Antargolongan","Kerjasama dalam Berbagai Bidang Kehidupan","Karakteristik Daerah dalam Kerangka NKRI"],"VIII":["Kedudukan dan Fungsi Pancasila","Konstitusi dan Norma dalam Kehidupan","Tata Urutan Peraturan Perundang-undangan","Kebangkitan Nasional 1908","Sumpah Pemuda 1928","Semangat dan Komitmen Kebangsaan"],"IX":["Dinamika Perwujudan Pancasila","Pengaruh Kemajuan IPTEK","Harmoni Keberagaman Masyarakat Indonesia","Bela Negara","Sistem Pemerintahan Indonesia","Globalisasi dan Modernisasi"]},
-"Bahasa Indonesia":{"VII":["Teks Deskripsi","Teks Narasi","Teks Prosedur","Teks Laporan Hasil Observasi","Teks Fabel dan Legenda","Puisi Rakyat","Surat Pribadi dan Surat Dinas","Ejaan dan Tanda Baca","Unsur Kebahasaan"],"VIII":["Teks Berita","Teks Iklan dan Poster","Teks Eksposisi","Teks Puisi","Teks Eksplanasi","Teks Ulasan","Teks Persuasif","Teks Drama","Konjungsi dan Modalitas"],"IX":["Teks Laporan Percobaan","Teks Pidato Persuasif","Teks Cerpen","Teks Tanggapan","Teks Diskusi","Novel dan Unsur-Unsurnya","Unsur Kebahasaan: Kalimat Efektif","Literasi Membaca","Teks Fiksi dan Non-Fiksi"]},
-"Matematika":{"VII":["Bilangan Bulat dan Pecahan","Himpunan","Bentuk Aljabar","Persamaan dan Pertidaksamaan Linear Satu Variabel","Perbandingan","Aritmetika Sosial","Garis dan Sudut","Segiempat dan Segitiga","Penyajian Data"],"VIII":["Pola Bilangan","Koordinat Kartesius","Relasi dan Fungsi","Persamaan Garis Lurus","Sistem Persamaan Linear Dua Variabel","Teorema Pythagoras","Lingkaran","Bangun Ruang Sisi Datar","Statistika: Ukuran Pemusatan Data"],"IX":["Bilangan Berpangkat dan Bentuk Akar","Persamaan Kuadrat","Fungsi Kuadrat","Transformasi Geometri","Kekongruenan dan Kesebangunan","Bangun Ruang Sisi Lengkung","Statistika: Ukuran Penyebaran Data","Peluang","Barisan dan Deret"]},
-"IPA":{"VII":["Objek IPA dan Pengamatannya","Klasifikasi Makhluk Hidup","Klasifikasi Materi dan Perubahannya","Suhu dan Kalor","Energi dalam Sistem Kehidupan","Sistem Organisasi Kehidupan","Interaksi Makhluk Hidup dengan Lingkungan","Pencemaran Lingkungan","Pemanasan Global"],"VIII":["Gerak Benda dan Makhluk Hidup","Pesawat Sederhana","Struktur dan Fungsi Jaringan Tumbuhan","Sistem Pencernaan","Zat Aditif dan Adiktif","Sistem Peredaran Darah","Tekanan Zat","Sistem Pernapasan","Sistem Ekskresi"],"IX":["Sistem Reproduksi Manusia","Sistem Reproduksi Tumbuhan dan Hewan","Pewarisan Sifat (Genetika)","Listrik Statis","Listrik Dinamis","Kemagnetan","Bioteknologi","Partikel Penyusun Benda","Tata Surya"]},
-"IPS":{"VII":["Manusia, Tempat, dan Lingkungan","Interaksi Sosial dan Lembaga Sosial","Aktivitas Manusia dalam Memenuhi Kebutuhan","Kehidupan Masyarakat Praaksara","Kehidupan Masyarakat Hindu-Buddha","Kehidupan Masyarakat Islam"],"VIII":["Keunggulan dan Keterbatasan Antarruang","Pengaruh Interaksi Antarruang","Perdagangan Antardaerah","Penguatan Ekonomi Maritim dan Agrikultur","Perubahan Masyarakat pada Masa Penjajahan","Pergerakan Kebangsaan Indonesia","Terbentuknya Kesadaran Nasional","Pendistribusian Kembali Pendapatan Nasional"],"IX":["Letak dan Luas Benua-Benua","Kondisi Alam Negara-Negara di Dunia","Perubahan Sosial Budaya","Globalisasi","Ekonomi Kreatif","Kerjasama Antarnegara","Perdagangan Internasional","Indonesia dari Kemerdekaan hingga Reformasi","Peran Indonesia dalam Perdamaian Dunia"]},
-"Bahasa Inggris":{"VII":["Greeting and Introduction","Compliment and Congratulation","Classroom Language","Describing People and Things","Days, Months, and Time","Simple Present Tense","Noun and Pronoun","Short Functional Text","Present Tense: To Be"],"VIII":["Asking and Giving Opinion","Expressing Ability and Willingness","Invitation and Request","Descriptive Text","Recount Text","Simple Past Tense","Adjective and Adverb","Degrees of Comparison","Notice and Warning Text"],"IX":["Expressing Hope and Wish","Agreeing and Disagreeing","Narrative Text","Procedure Text","Report Text","Present Perfect Tense","Passive Voice","Conditional Sentence","Label and Advertisement Text"]}
+const DEFAULT_DB = {
+  "database_version": "1.0",
+  "created_by": "Rapian Hasanuddin",
+  "updated_at": "auto",
+  "mapel": {
+  "Al-Qur'an Hadis": {
+    "VII": [{"id": "AQH7-001", "materi": "Keutamaan Membaca Al-Qur'an"}, {"id": "AQH7-002", "materi": "Tajwid: Hukum Nun Mati dan Tanwin"}, {"id": "AQH7-003", "materi": "Tajwid: Hukum Mim Mati"}, {"id": "AQH7-004", "materi": "Tajwid: Mad dan Qashr"}, {"id": "AQH7-005", "materi": "Surah Al-Fatihah dan Maknanya"}, {"id": "AQH7-006", "materi": "Surah-Surah Pendek Pilihan"}, {"id": "AQH7-007", "materi": "Hadis tentang Niat"}, {"id": "AQH7-008", "materi": "Hadis tentang Silaturahmi"}, {"id": "AQH7-009", "materi": "Adab Membaca Al-Qur'an"}],
+    "VIII": [{"id": "AQH8-001", "materi": "Tajwid: Hukum Ra'"}, {"id": "AQH8-002", "materi": "Tajwid: Hukum Lam"}, {"id": "AQH8-003", "materi": "Tajwid: Waqaf dan Ibtida'"}, {"id": "AQH8-004", "materi": "Surah Al-Baqarah ayat pilihan"}, {"id": "AQH8-005", "materi": "Surah Ali Imran ayat pilihan"}, {"id": "AQH8-006", "materi": "Hadis tentang Menuntut Ilmu"}, {"id": "AQH8-007", "materi": "Hadis tentang Kejujuran"}, {"id": "AQH8-008", "materi": "Kemukjizatan Al-Qur'an"}, {"id": "AQH8-009", "materi": "Ulumul Qur'an Dasar"}],
+    "IX": [{"id": "AQH9-001", "materi": "Tajwid: Hukum Idgham"}, {"id": "AQH9-002", "materi": "Tajwid: Makharijul Huruf"}, {"id": "AQH9-003", "materi": "Qiraat dan Asbabun Nuzul"}, {"id": "AQH9-004", "materi": "Surah Al-Kahfi ayat pilihan"}, {"id": "AQH9-005", "materi": "Surah Yasin ayat pilihan"}, {"id": "AQH9-006", "materi": "Hadis tentang Akhlak"}, {"id": "AQH9-007", "materi": "Hadis tentang Ibadah"}, {"id": "AQH9-008", "materi": "Tafsir Tematik"}, {"id": "AQH9-009", "materi": "Sejarah Kodifikasi Al-Qur'an"}]
+  },
+  "Akidah Akhlak": {
+    "VII": [{"id": "AKA7-001", "materi": "Pengertian Akidah Islam"}, {"id": "AKA7-002", "materi": "Rukun Iman"}, {"id": "AKA7-003", "materi": "Iman kepada Allah (Asmaul Husna)"}, {"id": "AKA7-004", "materi": "Iman kepada Malaikat"}, {"id": "AKA7-005", "materi": "Iman kepada Kitab-Kitab Allah"}, {"id": "AKA7-006", "materi": "Akhlak Terpuji: Jujur dan Amanah"}, {"id": "AKA7-007", "materi": "Akhlak Terpuji: Rendah Hati dan Santun"}, {"id": "AKA7-008", "materi": "Akhlak Tercela: Takabur dan Hasad"}, {"id": "AKA7-009", "materi": "Adab kepada Orang Tua dan Guru"}],
+    "VIII": [{"id": "AKA8-001", "materi": "Iman kepada Rasul-Rasul Allah"}, {"id": "AKA8-002", "materi": "Sifat-Sifat Nabi dan Rasul"}, {"id": "AKA8-003", "materi": "Iman kepada Hari Akhir"}, {"id": "AKA8-004", "materi": "Tanda-Tanda Hari Kiamat"}, {"id": "AKA8-005", "materi": "Iman kepada Qada dan Qadar"}, {"id": "AKA8-006", "materi": "Akhlak Terpuji: Sabar dan Syukur"}, {"id": "AKA8-007", "materi": "Akhlak Terpuji: Husnuzan"}, {"id": "AKA8-008", "materi": "Akhlak Tercela: Riya dan Sum'ah"}, {"id": "AKA8-009", "materi": "Adab Pergaulan Remaja"}],
+    "IX": [{"id": "AKA9-001", "materi": "Tauhid Rububiyah, Uluhiyah, dan Asma wa Sifat"}, {"id": "AKA9-002", "materi": "Syirik dan Bahayanya"}, {"id": "AKA9-003", "materi": "Khurafat dan Takhayul"}, {"id": "AKA9-004", "materi": "Mukjizat dan Karamah"}, {"id": "AKA9-005", "materi": "Akhlak Terpuji: Kerja Keras dan Tanggung Jawab"}, {"id": "AKA9-006", "materi": "Akhlak Terpuji: Toleransi dan Persaudaraan"}, {"id": "AKA9-007", "materi": "Akhlak Tercela: Nifak dan Fasik"}, {"id": "AKA9-008", "materi": "Adab Bertetangga dan Bermasyarakat"}, {"id": "AKA9-009", "materi": "Keteladanan Ulama dalam Akhlak"}]
+  },
+  "Fikih": {
+    "VII": [{"id": "FKH7-001", "materi": "Pengertian dan Sumber Hukum Islam"}, {"id": "FKH7-002", "materi": "Thaharah: Najis dan Cara Mensucikan"}, {"id": "FKH7-003", "materi": "Thaharah: Wudu dan Tayamum"}, {"id": "FKH7-004", "materi": "Thaharah: Mandi Wajib"}, {"id": "FKH7-005", "materi": "Salat Fardu: Syarat, Rukun, dan Sunnah"}, {"id": "FKH7-006", "materi": "Salat Berjamaah dan Munfarid"}, {"id": "FKH7-007", "materi": "Salat Jumat"}, {"id": "FKH7-008", "materi": "Azan dan Iqamah"}, {"id": "FKH7-009", "materi": "Zikir dan Doa setelah Salat"}],
+    "VIII": [{"id": "FKH8-001", "materi": "Salat Sunnah Rawatib"}, {"id": "FKH8-002", "materi": "Salat Sunnah Muakkad dan Ghairu Muakkad"}, {"id": "FKH8-003", "materi": "Sujud Sahwi, Tilawah, dan Syukur"}, {"id": "FKH8-004", "materi": "Puasa Ramadan: Syarat dan Rukun"}, {"id": "FKH8-005", "materi": "Puasa Sunnah"}, {"id": "FKH8-006", "materi": "Zakat Fitrah dan Zakat Mal"}, {"id": "FKH8-007", "materi": "Infak, Sedekah, dan Wakaf"}, {"id": "FKH8-008", "materi": "Haji dan Umrah: Pengertian dan Syarat"}, {"id": "FKH8-009", "materi": "Larangan dalam Ihram"}],
+    "IX": [{"id": "FKH9-001", "materi": "Jual Beli dalam Islam"}, {"id": "FKH9-002", "materi": "Riba dan Transaksi Terlarang"}, {"id": "FKH9-003", "materi": "Pinjam Meminjam dan Utang Piutang"}, {"id": "FKH9-004", "materi": "Gadai (Rahn) dan Upah (Ijarah)"}, {"id": "FKH9-005", "materi": "Makanan dan Minuman Halal-Haram"}, {"id": "FKH9-006", "materi": "Sembelihan dan Kurban"}, {"id": "FKH9-007", "materi": "Pernikahan dalam Islam"}, {"id": "FKH9-008", "materi": "Waris dalam Islam"}, {"id": "FKH9-009", "materi": "Jinayat dan Hudud"}]
+  },
+  "SKI": {
+    "VII": [{"id": "SKI7-001", "materi": "Sejarah Pra-Islam di Jazirah Arab"}, {"id": "SKI7-002", "materi": "Kelahiran dan Masa Kecil Nabi Muhammad SAW"}, {"id": "SKI7-003", "materi": "Kenabian dan Wahyu Pertama"}, {"id": "SKI7-004", "materi": "Dakwah Periode Mekah"}, {"id": "SKI7-005", "materi": "Hijrah ke Habasyah"}, {"id": "SKI7-006", "materi": "Hijrah ke Madinah"}, {"id": "SKI7-007", "materi": "Piagam Madinah"}, {"id": "SKI7-008", "materi": "Perang Badar"}, {"id": "SKI7-009", "materi": "Perang Uhud"}],
+    "VIII": [{"id": "SKI8-001", "materi": "Fathul Mekah"}, {"id": "SKI8-002", "materi": "Haji Wada' dan Wafat Nabi"}, {"id": "SKI8-003", "materi": "Khulafaur Rasyidin: Abu Bakar As-Siddiq"}, {"id": "SKI8-004", "materi": "Khulafaur Rasyidin: Umar bin Khattab"}, {"id": "SKI8-005", "materi": "Khulafaur Rasyidin: Utsman bin Affan"}, {"id": "SKI8-006", "materi": "Khulafaur Rasyidin: Ali bin Abi Thalib"}, {"id": "SKI8-007", "materi": "Dinasti Umayyah: Berdiri dan Perkembangannya"}, {"id": "SKI8-008", "materi": "Ekspansi Islam pada Masa Umayyah"}, {"id": "SKI8-009", "materi": "Kemajuan Peradaban Umayyah"}],
+    "IX": [{"id": "SKI9-001", "materi": "Dinasti Abbasiyah: Berdiri dan Perkembangannya"}, {"id": "SKI9-002", "materi": "Keemasan Islam pada Masa Abbasiyah"}, {"id": "SKI9-003", "materi": "Ilmuwan Muslim dan Karya-Karyanya"}, {"id": "SKI9-004", "materi": "Masuknya Islam ke Nusantara"}, {"id": "SKI9-005", "materi": "Kerajaan Islam: Samudera Pasai dan Demak"}, {"id": "SKI9-006", "materi": "Kerajaan Islam: Mataram dan Banten"}, {"id": "SKI9-007", "materi": "Wali Songo dan Penyebaran Islam"}, {"id": "SKI9-008", "materi": "Peran Ulama dalam Kemerdekaan Indonesia"}, {"id": "SKI9-009", "materi": "Perkembangan Islam di Era Modern"}]
+  },
+  "Bahasa Arab": {
+    "VII": [{"id": "BAR7-001", "materi": "Pengenalan Huruf Hijaiyah"}, {"id": "BAR7-002", "materi": "Harakat dan Cara Membaca"}, {"id": "BAR7-003", "materi": "Kosakata: Perkenalan Diri"}, {"id": "BAR7-004", "materi": "Kosakata: Fasilitas Madrasah"}, {"id": "BAR7-005", "materi": "Kosakata: Kehidupan Keluarga"}, {"id": "BAR7-006", "materi": "Pola Kalimat Dasar: Mubtada dan Khabar"}, {"id": "BAR7-007", "materi": "Isim Nakirah dan Ma'rifah"}, {"id": "BAR7-008", "materi": "Dhamir (Kata Ganti Orang)"}, {"id": "BAR7-009", "materi": "Membaca Teks Sederhana"}],
+    "VIII": [{"id": "BAR8-001", "materi": "Kosakata: Hobi dan Kegiatan"}, {"id": "BAR8-002", "materi": "Kosakata: Kesehatan"}, {"id": "BAR8-003", "materi": "Kosakata: Profesi"}, {"id": "BAR8-004", "materi": "Fi'il Madhi dan Mudhori'"}, {"id": "BAR8-005", "materi": "Fi'il Amar dan Nahi"}, {"id": "BAR8-006", "materi": "Jumlah Fi'liyah"}, {"id": "BAR8-007", "materi": "Maf'ul Bih"}, {"id": "BAR8-008", "materi": "Na'at dan Man'ut"}, {"id": "BAR8-009", "materi": "Membaca dan Memahami Teks"}],
+    "IX": [{"id": "BAR9-001", "materi": "Kosakata: Alam dan Lingkungan"}, {"id": "BAR9-002", "materi": "Kosakata: Pariwisata"}, {"id": "BAR9-003", "materi": "Kosakata: Teknologi"}, {"id": "BAR9-004", "materi": "Isim Tafdhil"}, {"id": "BAR9-005", "materi": "Huruf Jar dan Majrur"}, {"id": "BAR9-006", "materi": "Jumlah Syarthiyah"}, {"id": "BAR9-007", "materi": "Membaca Teks Autentik"}, {"id": "BAR9-008", "materi": "Menulis Karangan Sederhana"}, {"id": "BAR9-009", "materi": "Tata Bahasa Arab Terintegrasi"}]
+  },
+  "PPKn": {
+    "VII": [{"id": "PKN7-001", "materi": "Norma dan Keadilan"}, {"id": "PKN7-002", "materi": "Perumusan dan Penetapan UUD 1945"}, {"id": "PKN7-003", "materi": "Perumusan Dasar Negara"}, {"id": "PKN7-004", "materi": "Keberagaman Suku, Agama, Ras, dan Antargolongan"}, {"id": "PKN7-005", "materi": "Kerjasama dalam Berbagai Bidang Kehidupan"}, {"id": "PKN7-006", "materi": "Karakteristik Daerah dalam Kerangka NKRI"}],
+    "VIII": [{"id": "PKN8-001", "materi": "Kedudukan dan Fungsi Pancasila"}, {"id": "PKN8-002", "materi": "Konstitusi dan Norma dalam Kehidupan"}, {"id": "PKN8-003", "materi": "Tata Urutan Peraturan Perundang-undangan"}, {"id": "PKN8-004", "materi": "Kebangkitan Nasional 1908"}, {"id": "PKN8-005", "materi": "Sumpah Pemuda 1928"}, {"id": "PKN8-006", "materi": "Semangat dan Komitmen Kebangsaan"}],
+    "IX": [{"id": "PKN9-001", "materi": "Dinamika Perwujudan Pancasila"}, {"id": "PKN9-002", "materi": "Pengaruh Kemajuan IPTEK"}, {"id": "PKN9-003", "materi": "Harmoni Keberagaman Masyarakat Indonesia"}, {"id": "PKN9-004", "materi": "Bela Negara"}, {"id": "PKN9-005", "materi": "Sistem Pemerintahan Indonesia"}, {"id": "PKN9-006", "materi": "Globalisasi dan Modernisasi"}]
+  },
+  "Bahasa Indonesia": {
+    "VII": [{"id": "BIN7-001", "materi": "Teks Deskripsi"}, {"id": "BIN7-002", "materi": "Teks Narasi"}, {"id": "BIN7-003", "materi": "Teks Prosedur"}, {"id": "BIN7-004", "materi": "Teks Laporan Hasil Observasi"}, {"id": "BIN7-005", "materi": "Teks Fabel dan Legenda"}, {"id": "BIN7-006", "materi": "Puisi Rakyat"}, {"id": "BIN7-007", "materi": "Surat Pribadi dan Surat Dinas"}, {"id": "BIN7-008", "materi": "Ejaan dan Tanda Baca"}, {"id": "BIN7-009", "materi": "Unsur Kebahasaan"}],
+    "VIII": [{"id": "BIN8-001", "materi": "Teks Berita"}, {"id": "BIN8-002", "materi": "Teks Iklan dan Poster"}, {"id": "BIN8-003", "materi": "Teks Eksposisi"}, {"id": "BIN8-004", "materi": "Teks Puisi"}, {"id": "BIN8-005", "materi": "Teks Eksplanasi"}, {"id": "BIN8-006", "materi": "Teks Ulasan"}, {"id": "BIN8-007", "materi": "Teks Persuasif"}, {"id": "BIN8-008", "materi": "Teks Drama"}, {"id": "BIN8-009", "materi": "Konjungsi dan Modalitas"}],
+    "IX": [{"id": "BIN9-001", "materi": "Teks Laporan Percobaan"}, {"id": "BIN9-002", "materi": "Teks Pidato Persuasif"}, {"id": "BIN9-003", "materi": "Teks Cerpen"}, {"id": "BIN9-004", "materi": "Teks Tanggapan"}, {"id": "BIN9-005", "materi": "Teks Diskusi"}, {"id": "BIN9-006", "materi": "Novel dan Unsur-Unsurnya"}, {"id": "BIN9-007", "materi": "Unsur Kebahasaan: Kalimat Efektif"}, {"id": "BIN9-008", "materi": "Literasi Membaca"}, {"id": "BIN9-009", "materi": "Teks Fiksi dan Non-Fiksi"}]
+  },
+  "Matematika": {
+    "VII": [{"id": "MAT7-001", "materi": "Bilangan Bulat dan Pecahan"}, {"id": "MAT7-002", "materi": "Himpunan"}, {"id": "MAT7-003", "materi": "Bentuk Aljabar"}, {"id": "MAT7-004", "materi": "Persamaan dan Pertidaksamaan Linear Satu Variabel"}, {"id": "MAT7-005", "materi": "Perbandingan"}, {"id": "MAT7-006", "materi": "Aritmetika Sosial"}, {"id": "MAT7-007", "materi": "Garis dan Sudut"}, {"id": "MAT7-008", "materi": "Segiempat dan Segitiga"}, {"id": "MAT7-009", "materi": "Penyajian Data"}],
+    "VIII": [{"id": "MAT8-001", "materi": "Pola Bilangan"}, {"id": "MAT8-002", "materi": "Koordinat Kartesius"}, {"id": "MAT8-003", "materi": "Relasi dan Fungsi"}, {"id": "MAT8-004", "materi": "Persamaan Garis Lurus"}, {"id": "MAT8-005", "materi": "Sistem Persamaan Linear Dua Variabel"}, {"id": "MAT8-006", "materi": "Teorema Pythagoras"}, {"id": "MAT8-007", "materi": "Lingkaran"}, {"id": "MAT8-008", "materi": "Bangun Ruang Sisi Datar"}, {"id": "MAT8-009", "materi": "Statistika: Ukuran Pemusatan Data"}],
+    "IX": [{"id": "MAT9-001", "materi": "Bilangan Berpangkat dan Bentuk Akar"}, {"id": "MAT9-002", "materi": "Persamaan Kuadrat"}, {"id": "MAT9-003", "materi": "Fungsi Kuadrat"}, {"id": "MAT9-004", "materi": "Transformasi Geometri"}, {"id": "MAT9-005", "materi": "Kekongruenan dan Kesebangunan"}, {"id": "MAT9-006", "materi": "Bangun Ruang Sisi Lengkung"}, {"id": "MAT9-007", "materi": "Statistika: Ukuran Penyebaran Data"}, {"id": "MAT9-008", "materi": "Peluang"}, {"id": "MAT9-009", "materi": "Barisan dan Deret"}]
+  },
+  "IPA": {
+    "VII": [{"id": "IPA7-001", "materi": "Objek IPA dan Pengamatannya"}, {"id": "IPA7-002", "materi": "Klasifikasi Makhluk Hidup"}, {"id": "IPA7-003", "materi": "Klasifikasi Materi dan Perubahannya"}, {"id": "IPA7-004", "materi": "Suhu dan Kalor"}, {"id": "IPA7-005", "materi": "Energi dalam Sistem Kehidupan"}, {"id": "IPA7-006", "materi": "Sistem Organisasi Kehidupan"}, {"id": "IPA7-007", "materi": "Interaksi Makhluk Hidup dengan Lingkungan"}, {"id": "IPA7-008", "materi": "Pencemaran Lingkungan"}, {"id": "IPA7-009", "materi": "Pemanasan Global"}],
+    "VIII": [{"id": "IPA8-001", "materi": "Gerak Benda dan Makhluk Hidup"}, {"id": "IPA8-002", "materi": "Pesawat Sederhana"}, {"id": "IPA8-003", "materi": "Struktur dan Fungsi Jaringan Tumbuhan"}, {"id": "IPA8-004", "materi": "Sistem Pencernaan"}, {"id": "IPA8-005", "materi": "Zat Aditif dan Adiktif"}, {"id": "IPA8-006", "materi": "Sistem Peredaran Darah"}, {"id": "IPA8-007", "materi": "Tekanan Zat"}, {"id": "IPA8-008", "materi": "Sistem Pernapasan"}, {"id": "IPA8-009", "materi": "Sistem Ekskresi"}],
+    "IX": [{"id": "IPA9-001", "materi": "Sistem Reproduksi Manusia"}, {"id": "IPA9-002", "materi": "Sistem Reproduksi Tumbuhan dan Hewan"}, {"id": "IPA9-003", "materi": "Pewarisan Sifat (Genetika)"}, {"id": "IPA9-004", "materi": "Listrik Statis"}, {"id": "IPA9-005", "materi": "Listrik Dinamis"}, {"id": "IPA9-006", "materi": "Kemagnetan"}, {"id": "IPA9-007", "materi": "Bioteknologi"}, {"id": "IPA9-008", "materi": "Partikel Penyusun Benda"}, {"id": "IPA9-009", "materi": "Tata Surya"}]
+  },
+  "IPS": {
+    "VII": [{"id": "IPS7-001", "materi": "Manusia, Tempat, dan Lingkungan"}, {"id": "IPS7-002", "materi": "Interaksi Sosial dan Lembaga Sosial"}, {"id": "IPS7-003", "materi": "Aktivitas Manusia dalam Memenuhi Kebutuhan"}, {"id": "IPS7-004", "materi": "Kehidupan Masyarakat Praaksara"}, {"id": "IPS7-005", "materi": "Kehidupan Masyarakat Hindu-Buddha"}, {"id": "IPS7-006", "materi": "Kehidupan Masyarakat Islam"}],
+    "VIII": [{"id": "IPS8-001", "materi": "Keunggulan dan Keterbatasan Antarruang"}, {"id": "IPS8-002", "materi": "Pengaruh Interaksi Antarruang"}, {"id": "IPS8-003", "materi": "Perdagangan Antardaerah"}, {"id": "IPS8-004", "materi": "Penguatan Ekonomi Maritim dan Agrikultur"}, {"id": "IPS8-005", "materi": "Perubahan Masyarakat pada Masa Penjajahan"}, {"id": "IPS8-006", "materi": "Pergerakan Kebangsaan Indonesia"}, {"id": "IPS8-007", "materi": "Terbentuknya Kesadaran Nasional"}, {"id": "IPS8-008", "materi": "Pendistribusian Kembali Pendapatan Nasional"}],
+    "IX": [{"id": "IPS9-001", "materi": "Letak dan Luas Benua-Benua"}, {"id": "IPS9-002", "materi": "Kondisi Alam Negara-Negara di Dunia"}, {"id": "IPS9-003", "materi": "Perubahan Sosial Budaya"}, {"id": "IPS9-004", "materi": "Globalisasi"}, {"id": "IPS9-005", "materi": "Ekonomi Kreatif"}, {"id": "IPS9-006", "materi": "Kerjasama Antarnegara"}, {"id": "IPS9-007", "materi": "Perdagangan Internasional"}, {"id": "IPS9-008", "materi": "Indonesia dari Kemerdekaan hingga Reformasi"}, {"id": "IPS9-009", "materi": "Peran Indonesia dalam Perdamaian Dunia"}]
+  },
+  "Bahasa Inggris": {
+    "VII": [{"id": "BIG7-001", "materi": "Greeting and Introduction"}, {"id": "BIG7-002", "materi": "Compliment and Congratulation"}, {"id": "BIG7-003", "materi": "Classroom Language"}, {"id": "BIG7-004", "materi": "Describing People and Things"}, {"id": "BIG7-005", "materi": "Days, Months, and Time"}, {"id": "BIG7-006", "materi": "Simple Present Tense"}, {"id": "BIG7-007", "materi": "Noun and Pronoun"}, {"id": "BIG7-008", "materi": "Short Functional Text"}, {"id": "BIG7-009", "materi": "Present Tense: To Be"}],
+    "VIII": [{"id": "BIG8-001", "materi": "Asking and Giving Opinion"}, {"id": "BIG8-002", "materi": "Expressing Ability and Willingness"}, {"id": "BIG8-003", "materi": "Invitation and Request"}, {"id": "BIG8-004", "materi": "Descriptive Text"}, {"id": "BIG8-005", "materi": "Recount Text"}, {"id": "BIG8-006", "materi": "Simple Past Tense"}, {"id": "BIG8-007", "materi": "Adjective and Adverb"}, {"id": "BIG8-008", "materi": "Degrees of Comparison"}, {"id": "BIG8-009", "materi": "Notice and Warning Text"}],
+    "IX": [{"id": "BIG9-001", "materi": "Expressing Hope and Wish"}, {"id": "BIG9-002", "materi": "Agreeing and Disagreeing"}, {"id": "BIG9-003", "materi": "Narrative Text"}, {"id": "BIG9-004", "materi": "Procedure Text"}, {"id": "BIG9-005", "materi": "Report Text"}, {"id": "BIG9-006", "materi": "Present Perfect Tense"}, {"id": "BIG9-007", "materi": "Passive Voice"}, {"id": "BIG9-008", "materi": "Conditional Sentence"}, {"id": "BIG9-009", "materi": "Label and Advertisement Text"}]
+  }
+  }
 };
+
+// ─── DB ABSTRACTION LAYER ─────────────────────────────────────────────────
+// W1-W6: ID-based structure with migration support
+
+/** Return array of materi name strings for UI/prompt (ID-transparent) */
+function getMateriList(mapel, kelas) {
+  var src = (DB.mapel && DB.mapel[mapel]) ? DB.mapel[mapel] : (DB[mapel] || {});
+  var list = src[kelas] || [];
+  return list.map(function(item) {
+    return typeof item === 'string' ? item : item.materi;
+  });
+}
+
+/** Return full materi objects [{id, materi}] for a kelas */
+function getMateriObjects(mapel, kelas) {
+  var src = (DB.mapel && DB.mapel[mapel]) ? DB.mapel[mapel] : (DB[mapel] || {});
+  var list = src[kelas] || [];
+  return list.map(function(item, i) {
+    if (typeof item === 'string') return { id: _genId(mapel, kelas, i), materi: item };
+    return item;
+  });
+}
+
+/** Find materi object by ID across entire DB */
+function getMateriById(id) {
+  var src = DB.mapel || DB;
+  for (var mapel in src) {
+    for (var kelas in src[mapel]) {
+      var list = src[mapel][kelas];
+      for (var i = 0; i < list.length; i++) {
+        if (typeof list[i] === 'object' && list[i].id === id) {
+          return { mapel: mapel, kelas: kelas, id: list[i].id, materi: list[i].materi };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Get kelas list for a mapel */
+function getKelasList(mapel) {
+  var src = (DB.mapel && DB.mapel[mapel]) ? DB.mapel[mapel] : (DB[mapel] || {});
+  return Object.keys(src);
+}
+
+/** Get all mapel names */
+function getMapelList() {
+  return Object.keys(DB.mapel || DB);
+}
+
+/** Generate a stable ID for a materi given its position (fallback for old format) */
+function _genId(mapel, kelas, idx) {
+  var ABBREV = {'Al-Qur\'an Hadis':'AQH','Akidah Akhlak':'AKA','Fikih':'FKH','SKI':'SKI','Bahasa Arab':'BAR','PPKn':'PKN','Bahasa Indonesia':'BIN','Matematika':'MAT','IPA':'IPA','IPS':'IPS','Bahasa Inggris':'BIG'};
+  var KN = {'VII':'7','VIII':'8','IX':'9'};
+  var code = ABBREV[mapel] || mapel.substring(0,3).toUpperCase();
+  var k = KN[kelas] || kelas;
+  return code + k + '-' + String(idx + 1).padStart(3,'0');
+}
+
+/** Add a materi to DB (generates ID) */
+function dbAddMateri(mapel, kelas, materiName) {
+  var src = DB.mapel ? DB.mapel : DB;
+  if (!src[mapel]) src[mapel] = {};
+  if (!src[mapel][kelas]) src[mapel][kelas] = [];
+  var list = src[mapel][kelas];
+  var nextIdx = list.length;
+  var newItem = { id: _genId(mapel, kelas, nextIdx), materi: materiName };
+  list.push(newItem);
+  dbTouch();
+  return newItem;
+}
+
+/** Remove a materi by index */
+function dbRemoveMateri(mapel, kelas, idx) {
+  var src = DB.mapel ? DB.mapel : DB;
+  if (src[mapel] && src[mapel][kelas]) {
+    src[mapel][kelas].splice(idx, 1);
+    dbTouch();
+  }
+}
+
+/** Add kelas */
+function dbAddKelas(mapel, kelas) {
+  var src = DB.mapel ? DB.mapel : DB;
+  if (!src[mapel]) src[mapel] = {};
+  if (!src[mapel][kelas]) src[mapel][kelas] = [];
+  dbTouch();
+}
+
+/** Add mapel */
+function dbAddMapel(mapel) {
+  var src = DB.mapel ? DB.mapel : DB;
+  if (!src[mapel]) src[mapel] = {};
+  dbTouch();
+}
+
+/** Remove kelas */
+function dbRemoveKelas(mapel, kelas) {
+  var src = DB.mapel ? DB.mapel : DB;
+  if (src[mapel]) { delete src[mapel][kelas]; dbTouch(); }
+}
+
+/** Remove mapel */
+function dbRemoveMapel(mapel) {
+  var src = DB.mapel ? DB.mapel : DB;
+  delete src[mapel];
+  dbTouch();
+}
+
+/** Update updated_at timestamp */
+function dbTouch() {
+  if (DB.updated_at !== undefined) DB.updated_at = new Date().toISOString().slice(0,10);
+}
+
+// ─── MIGRATION: v0 (string array) → v1.0 (object with ID) ──────────────────
+function migrateDB(raw) {
+  // Already v1.0
+  if (raw && raw.database_version === '1.0' && raw.mapel) {
+    return raw;
+  }
+  // v0: flat { mapel: { kelas: [string, ...] } }
+  var isV0 = raw && typeof raw === 'object' && !raw.database_version && !raw.mapel;
+  if (isV0) {
+    var newMapel = {};
+    for (var mapel in raw) {
+      newMapel[mapel] = {};
+      for (var kelas in raw[mapel]) {
+        var list = raw[mapel][kelas];
+        newMapel[mapel][kelas] = list.map(function(item, i) {
+          if (typeof item === 'string') return { id: _genId(mapel, kelas, i), materi: item };
+          return item; // already object
+        });
+      }
+    }
+    return {
+      database_version: '1.0',
+      created_by: 'Rapian Hasanuddin',
+      updated_at: new Date().toISOString().slice(0,10),
+      mapel: newMapel
+    };
+  }
+  // Unknown format - return default
+  return null;
+}
+
+// Placeholder stub for future Knowledge Engine (BKB, TKB, DKB, PKB, RKB)
+var KnowledgeEngine = {
+  // Will be replaced by server/Library Pemilik in future
+  // Currently returns null (not implemented)
+  getBKB: function(materiId) { return null; },
+  getTKB: function(materiId) { return null; },
+  getDKB: function(materiId) { return null; },
+  getPKB: function(materiId) { return null; },
+  getRKB: function(materiId) { return null; },
+};
+
 const AI_COLS=['tipe','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci'];
 const OUT_COLS=['Topik','Bloom','Kesulitan','Confidence','Kunci_AI','Status_Kunci','Rekomendasi_Poin'];
 const ESAI=['esai','essay','uraian','esai_gambar','essay_gambar','isian'];
@@ -350,7 +556,20 @@ const MAX_RETRY=3;
 let workbook=null,sheetData=[],resultData=[],abortFlag=false,origHeaders=[];
 
 window.addEventListener('DOMContentLoaded',function(){
-  try{const s=localStorage.getItem('mts_db');DB=s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_DB));}catch(e){DB=JSON.parse(JSON.stringify(DEFAULT_DB));}
+  try{
+    var _raw=localStorage.getItem('mts_db');
+    if(_raw){
+      var _parsed=JSON.parse(_raw);
+      var _migrated=migrateDB(_parsed);
+      DB=_migrated||JSON.parse(JSON.stringify(DEFAULT_DB));
+      // Save back if migrated from v0
+      if(_migrated&&_migrated.database_version&&!_parsed.database_version){
+        localStorage.setItem('mts_db',JSON.stringify(DB));
+      }
+    }else{
+      DB=JSON.parse(JSON.stringify(DEFAULT_DB));
+    }
+  }catch(e){DB=JSON.parse(JSON.stringify(DEFAULT_DB));}
   const k=localStorage.getItem('gemini_api_key')||'';
   if(k){syncKey(k);scheduleTest(k);}
   populateMapelSelects();renderDbMapelList();
@@ -422,7 +641,7 @@ async function startAnalysis(){
   const batchSize=aMode==='local'?50:parseInt($id('aBatch').value);
   const delay=aMode==='local'?0:parseInt($id('aDelay').value);
   const skipFilled=$id('aSkip').checked;
-  const materiList=DB[mapel]&&DB[mapel][kelas]?DB[mapel][kelas]:[];
+  const materiList=getMateriList(mapel,kelas);
   if(!materiList.length){alert('Tidak ada daftar materi. Tambahkan di tab Database Materi.');return;}
   abortFlag=false;resultData=JSON.parse(JSON.stringify(sheetData));
   $id('btnRun').disabled=true;$id('aProgress').classList.add('show');$id('aResults').classList.remove('show');clearLog();
@@ -606,7 +825,7 @@ function doDownload(){
 async function doSingleAnalyze(){
   const mapel=$id('sMapel').value,kelas=$id('sKelas').value;
   if(!mapel||!kelas){showSErr('Pilih Mapel dan Kelas.');return;}
-  const materiList=DB[mapel]&&DB[mapel][kelas]?DB[mapel][kelas]:[];
+  const materiList=getMateriList(mapel,kelas);
   if(!materiList.length){showSErr('Tidak ada materi.');return;}
   const row={tipe:currentTipe,pertanyaan:currentTipe==='pg_gambar'?'':$id('sPert').value.trim(),vrl_gambar:currentTipe==='pg_gambar'?$id('sPgGambar').value.trim():$id('sGambar').value.trim(),opsi_a:$id('sA')?$id('sA').value.trim():'',opsi_b:$id('sB')?$id('sB').value.trim():'',opsi_c:$id('sC')?$id('sC').value.trim():'',opsi_d:$id('sD')?$id('sD').value.trim():'',kunci:currentTipe==='pg_gambar'?$id('sPgKunci').value.trim():$id('sKunci').value.trim()};
   if(!row.pertanyaan&&!row.vrl_gambar){showSErr('Pertanyaan atau URL gambar wajib diisi.');return;}
@@ -634,38 +853,79 @@ async function doSingleAnalyze(){
 }
 function showSErr(msg){$id('sResult').classList.add('show');$id('sLoading').style.display='none';$id('sContent').style.display='none';const el=$id('sError');el.style.display='block';el.textContent='✗ '+msg;}
 
-function saveDB(){try{localStorage.setItem('mts_db',JSON.stringify(DB));}catch(e){}}
+function saveDB(){
+  try{
+    dbTouch();
+    localStorage.setItem('mts_db',JSON.stringify(DB));
+  }catch(e){}
+}
 function populateMapelSelects(){
-  const mapels=Object.keys(DB);
+  const mapels=getMapelList();
   ['aMapel','sMapel'].forEach(function(id){const sel=$id(id);if(!sel)return;sel.innerHTML='<option value="">-- Pilih Mapel --</option>';mapels.forEach(function(m){const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});});
 }
 function renderDbMapelList(){
   const list=$id('dbMapelList');list.innerHTML='';
-  Object.keys(DB).forEach(function(mapel){const div=document.createElement('div');div.className='db-item'+(mapel===dbActiveMapel?' active':'');div.textContent=mapel;div.onclick=function(){dbActiveMapel=mapel;dbActiveKelas=Object.keys(DB[mapel]||{})[0]||'';renderDbMapelList();renderDbDetail();};list.appendChild(div);});
+  getMapelList().forEach(function(mapel){const div=document.createElement('div');div.className='db-item'+(mapel===dbActiveMapel?' active':'');div.textContent=mapel;div.onclick=function(){dbActiveMapel=mapel;dbActiveKelas=getKelasList(mapel)[0]||'';renderDbMapelList();renderDbDetail();};list.appendChild(div);});
   const add=document.createElement('div');add.className='db-item';add.style.color='var(--accent)';add.textContent='+ Tambah Mapel';
-  add.onclick=function(){const n=prompt('Nama mapel:');if(!n||!n.trim())return;if(DB[n.trim()]){alert('Sudah ada.');return;}DB[n.trim()]={};dbActiveMapel=n.trim();dbActiveKelas='';saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();};
+  add.onclick=function(){const n=prompt('Nama mapel:');if(!n||!n.trim())return;if(getMapelList().includes(n.trim())){alert('Sudah ada.');return;}dbAddMapel(n.trim());dbActiveMapel=n.trim();dbActiveKelas='';saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();};
   list.appendChild(add);
 }
 function renderDbDetail(){
   const detail=$id('dbDetail');
-  if(!dbActiveMapel||!DB[dbActiveMapel]){detail.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">← Pilih mapel</div>';return;}
-  const kelasList=Object.keys(DB[dbActiveMapel]);
-  if(!dbActiveKelas||!DB[dbActiveMapel][dbActiveKelas])dbActiveKelas=kelasList[0]||'';
+  if(!dbActiveMapel||!getMapelList().includes(dbActiveMapel)){detail.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">← Pilih mapel</div>';return;}
+  const kelasList=getKelasList(dbActiveMapel);
+  if(!dbActiveKelas||!getKelasList(dbActiveMapel).includes(dbActiveKelas))dbActiveKelas=kelasList[0]||'';
   let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:600">'+esc(dbActiveMapel)+'</div><button class="btn-sm danger" onclick="deleteMapel(\''+esc(dbActiveMapel)+'\')">Hapus</button></div>';
   html+='<div class="kelas-tabs">';
   kelasList.forEach(function(k){html+='<button class="kelas-tab'+(k===dbActiveKelas?' active':'')+'" onclick="dbActiveKelas=\''+k+'\';renderDbDetail()">'+k+'</button>';});
   html+='<button class="kelas-tab" style="color:var(--accent)" onclick="addNewKelas()">+ Kelas</button></div>';
-  if(dbActiveKelas&&DB[dbActiveMapel][dbActiveKelas]){
-    const materi=DB[dbActiveMapel][dbActiveKelas];
+  if(dbActiveKelas&&getMateriList(dbActiveMapel,dbActiveKelas).length>0){
+    const materi=getMateriList(dbActiveMapel,dbActiveKelas);
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:11px;color:var(--text2)">'+materi.length+' materi</div><button class="btn-sm danger" onclick="deleteKelas(\''+dbActiveKelas+'\')">Hapus Kelas</button></div><div class="materi-list">';
     materi.forEach(function(m,i){html+='<div class="materi-item"><span>'+(i+1)+'. '+esc(m)+'</span><button class="btn-sm danger" onclick="deleteMateri('+i+')">✕</button></div>';});
     html+='</div><div class="add-row" style="margin-top:10px"><input type="text" id="newMateriInput" placeholder="Tambah materi..." onkeydown="if(event.key===\'Enter\')addMateri()"><button class="btn-sm" onclick="addMateri()">+ Tambah</button></div>';
   }
   detail.innerHTML=html;
 }
-function addNewKelas(){const k=prompt('Kelas (VII/VIII/IX):');if(!k||!k.trim())return;const kn=k.trim().toUpperCase();if(DB[dbActiveMapel][kn]){alert('Sudah ada.');return;}DB[dbActiveMapel][kn]=[];dbActiveKelas=kn;saveDB();renderDbDetail();}
-function importDB(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{const p=JSON.parse(e.target.result);if(typeof p!=='object')throw new Error();DB=p;saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();alert('Import berhasil.');}catch(e){alert('Gagal: '+e.message);};};r.readAsText(file);input.value='';}
-function importDBExcel(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});let imported=0;wb.SheetNames.forEach(function(sn){const ws=wb.Sheets[sn];const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});if(!json||json.length<2)return;const header=json[0].map(function(h){return String(h).trim();});if(!DB[sn])DB[sn]={};header.forEach(function(kelas,ci){if(!kelas)return;const items=json.slice(1).map(function(row){return String(row[ci]||'').trim();}).filter(function(v){return v;});if(items.length){if(!DB[sn][kelas])DB[sn][kelas]=[];items.forEach(function(item){if(!DB[sn][kelas].includes(item)){DB[sn][kelas].push(item);imported++;}});}});});saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();alert('Import '+imported+' materi.');}catch(err){alert('Gagal: '+err.message);}};r.readAsArrayBuffer(file);input.value='';}
+function addNewKelas(){const k=prompt('Kelas (VII/VIII/IX):');if(!k||!k.trim())return;const kn=k.trim().toUpperCase();if(getKelasList(dbActiveMapel).includes(kn)){alert('Sudah ada.');return;}dbAddKelas(dbActiveMapel,kn);dbActiveKelas=kn;saveDB();renderDbDetail();}
+function importDB(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{var parsed=JSON.parse(e.target.result);if(typeof parsed!=='object')throw new Error('Bukan format JSON valid');var migrated=migrateDB(parsed);DB=migrated||JSON.parse(JSON.stringify(DEFAULT_DB));saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();var ver=DB.database_version||'0 (lama)';alert('Import berhasil. Versi database: '+ver);}catch(err){alert('Gagal import: '+err.message);};};r.readAsText(file);input.value='';}
+function importDBExcel(input){
+  var file=input.files[0];if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      var imported=0;
+      // Ensure DB is v1.0
+      if(!DB.mapel) DB={ database_version:'1.0', created_by:'Rapian Hasanuddin', updated_at:'auto', mapel:{} };
+      wb.SheetNames.forEach(function(sn){
+        var ws=wb.Sheets[sn];
+        var json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(!json||json.length<2)return;
+        var header=json[0].map(function(h){return String(h).trim();});
+        // Each sheet = one mapel, header row = kelas names
+        if(!DB.mapel[sn])DB.mapel[sn]={};
+        header.forEach(function(kelas,ci){
+          if(!kelas)return;
+          var items=json.slice(1)
+            .map(function(row){return String(row[ci]||'').trim();})
+            .filter(function(v){return v;});
+          if(!items.length)return;
+          if(!DB.mapel[sn][kelas])DB.mapel[sn][kelas]=[];
+          var existing=getMateriList(sn,kelas);
+          items.forEach(function(materiName){
+            if(existing.includes(materiName))return; // skip duplicate
+            var newItem=dbAddMateri(sn,kelas,materiName);
+            imported++;
+          });
+        });
+      });
+      saveDB();populateMapelSelects();renderDbMapelList();renderDbDetail();
+      alert('Import berhasil: '+imported+' materi baru dari '+wb.SheetNames.length+' sheet (v1.0).');
+    }catch(err){alert('Gagal import Excel: '+err.message);}
+  };
+  r.readAsArrayBuffer(file);input.value='';
+}
 function friendlyErr(msg,status){msg=String(msg||'');if(status===429||msg.includes('quota')||msg.includes('limit: 0'))return 'Batas kuota API.';if(status===403)return 'API key tidak memiliki akses.';if(status===401)return 'API key tidak valid.';if(status===404)return 'Model tidak tersedia.';return msg.length>80?msg.slice(0,80)+'…':msg;}
 function addLog(type,text){const log=$id('aProgLog');const line=document.createElement('div');line.className='log-'+type;line.textContent=text;log.appendChild(line);log.scrollTop=log.scrollHeight;}
 function clearLog(){$id('aProgLog').innerHTML='';$id('aProgBar').style.width='0%';$id('aProgCount').textContent='0 / 0';}
