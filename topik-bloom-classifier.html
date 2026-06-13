@@ -1163,12 +1163,26 @@ function doDownload(){
     const hdrs=json[0].map(function(h){return String(h).trim();});
     const outHdrs=hdrs.slice();OUT_COLS.forEach(function(c){if(!outHdrs.includes(c))outHdrs.push(c);});
     const pertIdx=hdrs.indexOf('pertanyaan');
-    const rMap=new Map();resultData.forEach(function(row){const key=String(row['pertanyaan']||'').trim();if(key&&!rMap.has(key))rMap.set(key,row);});
+    // Use _ri (row index) as unique key — fixes pg_gambar rows with empty pertanyaan
+    const rMap=new Map();
+    resultData.forEach(function(row){
+      // Primary key: _ri (1-based row index from validateFile)
+      if(row['_ri']!==undefined) rMap.set('ri:'+row['_ri'], row);
+      // Secondary key: pertanyaan text (for rows without _ri)
+      var key=String(row['pertanyaan']||'').trim();
+      if(key&&!rMap.has('q:'+key)) rMap.set('q:'+key, row);
+    });
     const outRows=[outHdrs];
-    json.slice(1).forEach(function(r){
+    json.slice(1).forEach(function(r, rowIdx){
       const outRow=outHdrs.map(function(h,i){return i<hdrs.length?(r[i]!==undefined?r[i]:''):'';});
-      const found=rMap.get(String(r[pertIdx]||'').trim());
-      if(found)OUT_COLS.forEach(function(col){const idx=outHdrs.indexOf(col);if(idx>=0)outRow[idx]=found[col]||'';});
+      // Try _ri match first (1-based: rowIdx+1 maps to json row, but json[0]=header so rowIdx+1 = data row)
+      var found = rMap.get('ri:'+(rowIdx+1));
+      // Fallback: pertanyaan text match
+      if(!found){
+        var qkey=String(r[pertIdx]||'').trim();
+        if(qkey) found=rMap.get('q:'+qkey);
+      }
+      if(found)OUT_COLS.forEach(function(col){var idx=outHdrs.indexOf(col);if(idx>=0)outRow[idx]=found[col]||'';});
       outRows.push(outRow);
     });
     const newWs=XLSX.utils.aoa_to_sheet(outRows),newWb=XLSX.utils.book_new();
@@ -1239,7 +1253,7 @@ function renderDbDetail(){
   html+='<div class="kelas-tabs">';
   kelasList.forEach(function(k){html+='<button class="kelas-tab'+(k===dbActiveKelas?' active':'')+'" onclick="dbActiveKelas=\''+k+'\';renderDbDetail()">'+k+'</button>';});
   html+='<button class="kelas-tab" style="color:var(--accent)" onclick="addNewKelas()">+ Kelas</button></div>';
-  if(dbActiveKelas&&getMateriList(dbActiveMapel,dbActiveKelas).length>0){
+  if(dbActiveKelas){
     const materi=getMateriList(dbActiveMapel,dbActiveKelas);
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:11px;color:var(--text2)">'+materi.length+' materi</div><button class="btn-sm danger" onclick="deleteKelas(\''+dbActiveKelas+'\')">Hapus Kelas</button></div><div class="materi-list">';
     materi.forEach(function(m,i){html+='<div class="materi-item"><span>'+(i+1)+'. '+esc(m)+'</span><button class="btn-sm danger" onclick="deleteMateri('+i+')">✕</button></div>';});
