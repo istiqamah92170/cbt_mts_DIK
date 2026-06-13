@@ -70,9 +70,9 @@ textarea{resize:vertical;min-height:72px;}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
 .stat-card{background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center;}
 .stat-card .v{font-size:22px;font-weight:700;}.stat-card .l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
-.tbl-outer{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border);margin-top:14px;}
+.tbl-outer{overflow-x:auto;overflow-y:auto;max-height:70vh;border-radius:var(--r);border:1px solid var(--border);margin-top:14px;}
 table{width:100%;border-collapse:collapse;font-size:11px;}
-th{background:var(--bg3);padding:8px 10px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text2);white-space:nowrap;border-bottom:1px solid var(--border);}
+th{background:var(--bg3);padding:8px 10px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text2);white-space:nowrap;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2;}
 td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}tr:hover td{background:rgba(255,255,255,0.015);}
 td.q-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -546,6 +546,207 @@ var KnowledgeEngine = {
   getRKB: function(materiId) { return null; },
 };
 
+// ─── QUESTION BOUNDARY ENGINE (QBE) ────────────────────────────────────────
+// Memastikan AI menerima soal utuh, bukan fragmen.
+// Dipanggil di buildPayload sebelum teks dikirim ke Gemini.
+
+var QBE_CONTEXT_TRIGGERS = [
+  'perhatikan pernyataan berikut',
+  'perhatikan tabel berikut',
+  'perhatikan gambar berikut',
+  'perhatikan grafik berikut',
+  'perhatikan data berikut',
+  'perhatikan wacana berikut',
+  'perhatikan ilustrasi berikut',
+  'perhatikan diagram berikut',
+  'bacalah teks berikut',
+  'bacalah wacana berikut',
+  'cermati pernyataan berikut',
+  'cermati tabel berikut',
+  'cermati gambar berikut',
+  'cermati teks berikut',
+  'amati gambar berikut',
+  'amati tabel berikut',
+  'perhatikan',
+  'bacalah',
+  'cermati',
+  'amati',
+];
+
+// Pola yang BUKAN soal baru — merupakan bagian dari blok soal saat ini
+var QBE_INLINE_PATTERNS = [
+  /^\d+[\.\)]\s+/,          // 1. atau 1)
+  /^[a-e][\.\)]\s+/i,       // a. b. c. atau a) b) c)
+  /^[IVX]+[\.\)]\s+/,       // I. II. III. IV. V.
+  /^\(\d+\)\s+/,            // (1) (2) (3)
+  /^\([a-e]\)\s+/i,         // (a) (b) (c)
+  /^[-–•]\s+/,              // bullet: - atau •
+];
+
+/**
+ * Deteksi apakah teks pertanyaan mengandung konteks pemicu daftar.
+ * Jika ya, tandai agar AI tahu ini adalah soal dengan sub-pernyataan.
+ */
+function qbeAnalyze(pertanyaan) {
+  if (!pertanyaan) return { hasContext: false, contextType: null };
+  var lower = pertanyaan.toLowerCase();
+  var contextType = null;
+  for (var i = 0; i < QBE_CONTEXT_TRIGGERS.length; i++) {
+    if (lower.indexOf(QBE_CONTEXT_TRIGGERS[i]) >= 0) {
+      contextType = QBE_CONTEXT_TRIGGERS[i];
+      break;
+    }
+  }
+  // Count inline list items in the text
+  var lines = pertanyaan.split(/\n/);
+  var listCount = 0;
+  for (var j = 0; j < lines.length; j++) {
+    var line = lines[j].trim();
+    for (var k = 0; k < QBE_INLINE_PATTERNS.length; k++) {
+      if (QBE_INLINE_PATTERNS[k].test(line)) { listCount++; break; }
+    }
+  }
+  return {
+    hasContext: contextType !== null || listCount >= 2,
+    contextType: contextType,
+    listCount: listCount,
+  };
+}
+
+/**
+ * Bersihkan dan anotasi pertanyaan untuk dikirim ke AI.
+ * Tidak mengubah teks — hanya menambah hint struktural.
+ */
+function qbePrepare(pertanyaan) {
+  if (!pertanyaan) return pertanyaan;
+  var info = qbeAnalyze(pertanyaan);
+  if (!info.hasContext) return pertanyaan;
+  // Tambahkan penanda agar AI mengenali ini sebagai soal tunggal utuh
+  return '[SOAL UTUH — mengandung ' + info.listCount + ' sub-pernyataan]\n' + pertanyaan;
+}
+
+
+// ─── TOPIC ALIAS ENGINE (TAE) ───────────────────────────────────────────────
+// Digunakan di normalizeItem() sebelum validasi topik gagal.
+// Jika topik dari Gemini tidak persis ada di materiList,
+// cek apakah ada alias yang cocok, lalu gunakan nama resmi dari DB.
+
+var TOPIC_ALIASES = {
+  // Format: 'alias lowercase': 'nama resmi di DB'
+  // Diisi otomatis dari pola umum + dapat ditambah pengguna
+  'pelaku ekonomi':              'Aktivitas Manusia dalam Memenuhi Kebutuhan',
+  'kegiatan ekonomi':            'Aktivitas Manusia dalam Memenuhi Kebutuhan',
+  'kegiatan produksi':           'Aktivitas Manusia dalam Memenuhi Kebutuhan',
+  'perdagangan internasional':   'Perdagangan Internasional',
+  'perdagangan':                 'Perdagangan Internasional',
+  'ekspor impor':                'Perdagangan Internasional',
+  'globalisasi ekonomi':         'Globalisasi',
+  'iman kepada allah':           'Iman kepada Allah (Asmaul Husna)',
+  'asmaul husna':                'Iman kepada Allah (Asmaul Husna)',
+  'sifat allah':                 'Iman kepada Allah (Asmaul Husna)',
+  'hukum bacaan':                'Tajwid: Hukum Nun Mati dan Tanwin',
+  'tajwid':                      'Tajwid: Hukum Nun Mati dan Tanwin',
+  'nun mati':                    'Tajwid: Hukum Nun Mati dan Tanwin',
+  'tanwin':                      'Tajwid: Hukum Nun Mati dan Tanwin',
+  'hukum islam':                 'Pengertian dan Sumber Hukum Islam',
+  'sumber hukum':                'Pengertian dan Sumber Hukum Islam',
+  'salat':                       'Salat Fardu: Syarat, Rukun, dan Sunnah',
+  'sholat':                      'Salat Fardu: Syarat, Rukun, dan Sunnah',
+  'shalat fardhu':               'Salat Fardu: Syarat, Rukun, dan Sunnah',
+  'bersuci':                     'Thaharah: Wudu dan Tayamum',
+  'wudhu':                       'Thaharah: Wudu dan Tayamum',
+  'tayamum':                     'Thaharah: Wudu dan Tayamum',
+  'thaharah':                    'Thaharah: Najis dan Cara Mensucikan',
+  'najis':                       'Thaharah: Najis dan Cara Mensucikan',
+  'norma':                       'Norma dan Keadilan',
+  'keadilan':                    'Norma dan Keadilan',
+  'norma hukum':                 'Norma dan Keadilan',
+  'norma sosial':                'Norma dan Keadilan',
+  'pancasila':                   'Kedudukan dan Fungsi Pancasila',
+  'dasar negara':                'Perumusan Dasar Negara',
+  'uud 1945':                    'Perumusan dan Penetapan UUD 1945',
+  'konstitusi':                  'Perumusan dan Penetapan UUD 1945',
+  'keberagaman':                 'Keberagaman Suku, Agama, Ras, dan Antargolongan',
+  'bhinneka':                    'Keberagaman Suku, Agama, Ras, dan Antargolongan',
+  'pluralitas':                  'Keberagaman Suku, Agama, Ras, dan Antargolongan',
+  'persamaan linear':            'Persamaan dan Pertidaksamaan Linear Satu Variabel',
+  'persamaan':                   'Persamaan dan Pertidaksamaan Linear Satu Variabel',
+  'aljabar':                     'Bentuk Aljabar',
+  'bilangan':                    'Bilangan Bulat dan Pecahan',
+  'pecahan':                     'Bilangan Bulat dan Pecahan',
+  'pythagoras':                  'Teorema Pythagoras',
+  'segitiga':                    'Segiempat dan Segitiga',
+  'lingkaran':                   'Lingkaran',
+  'statistik':                   'Penyajian Data',
+  'ekosistem':                   'Interaksi Makhluk Hidup dengan Lingkungan',
+  'rantai makanan':              'Interaksi Makhluk Hidup dengan Lingkungan',
+  'pencemaran':                  'Pencemaran Lingkungan',
+  'sel':                         'Sistem Organisasi Kehidupan',
+  'gerak':                       'Gerak Benda dan Makhluk Hidup',
+  'gaya':                        'Gerak Benda dan Makhluk Hidup',
+  'cahaya':                      'Suhu dan Kalor',
+  'listrik':                     'Listrik Dinamis',
+  'magnet':                      'Kemagnetan',
+  'genetika':                    'Pewarisan Sifat (Genetika)',
+  'hereditas':                   'Pewarisan Sifat (Genetika)',
+  'pewarisan sifat':             'Pewarisan Sifat (Genetika)',
+  'teks laporan':                'Teks Laporan Hasil Observasi',
+  'teks deskripsi':              'Teks Deskripsi',
+  'teks narasi':                 'Teks Narasi',
+  'teks prosedur':               'Teks Prosedur',
+  'teks berita':                 'Teks Berita',
+  'teks eksposisi':              'Teks Eksposisi',
+  'teks persuasif':              'Teks Persuasif',
+  'cerpen':                      'Teks Cerpen',
+  'novel':                       'Novel dan Unsur-Unsurnya',
+  'puisi':                       'Teks Puisi',
+  'drama':                       'Teks Drama',
+};
+
+/**
+ * Cari nama resmi topik dari materiList.
+ * 1. Exact match (case-insensitive)
+ * 2. Alias match
+ * 3. Partial/contains match (fallback lunak)
+ * Returns: { found: nama_resmi|null, method: 'exact'|'alias'|'partial'|null }
+ */
+function taeResolve(topikRaw, materiList) {
+  if (!topikRaw || !materiList || !materiList.length) return { found: null, method: null };
+  var lower = topikRaw.toLowerCase().trim();
+
+  // 1. Exact match
+  var exact = materiList.find(function(m) { return m.toLowerCase() === lower; });
+  if (exact) return { found: exact, method: 'exact' };
+
+  // 2. Alias match
+  var aliasTarget = TOPIC_ALIASES[lower];
+  if (aliasTarget) {
+    var aliasMatch = materiList.find(function(m) { return m.toLowerCase() === aliasTarget.toLowerCase(); });
+    if (aliasMatch) return { found: aliasMatch, method: 'alias' };
+  }
+
+  // 3. Partial: topikRaw is contained in a materi name, or vice versa
+  var partial = materiList.find(function(m) {
+    return m.toLowerCase().indexOf(lower) >= 0 || lower.indexOf(m.toLowerCase()) >= 0;
+  });
+  if (partial) return { found: partial, method: 'partial' };
+
+  // 4. Word overlap (at least 2 significant words match)
+  var words = lower.split(/\s+/).filter(function(w) { return w.length > 3; });
+  if (words.length >= 1) {
+    var bestMatch = null, bestScore = 0;
+    materiList.forEach(function(m) {
+      var mLower = m.toLowerCase();
+      var score = words.filter(function(w) { return mLower.indexOf(w) >= 0; }).length;
+      if (score > bestScore) { bestScore = score; bestMatch = m; }
+    });
+    if (bestScore >= Math.min(2, words.length)) return { found: bestMatch, method: 'fuzzy' };
+  }
+
+  return { found: null, method: null };
+}
+
+
 const AI_COLS=['tipe','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci'];
 const OUT_COLS=['Topik','Bloom','Kesulitan','Confidence','Kunci_AI','Status_Kunci','Rekomendasi_Poin'];
 const ESAI=['esai','essay','uraian','esai_gambar','essay_gambar','isian'];
@@ -725,9 +926,9 @@ function buildPayload(row,mapel,kelas){
   const isEsai=ESAI.includes(tipe);
   const p={mapel:mapel,kelas:kelas,tipe:row['tipe']||''};
   if(isPgG){p.pertanyaan='[Soal dan opsi ada di gambar]';if(row['vrl_gambar'])p.url_gambar=String(row['vrl_gambar']).trim();}
-  else if(isEsai){p.pertanyaan=row['pertanyaan']||'';if(row['vrl_gambar']&&String(row['vrl_gambar']).trim())p.url_gambar=String(row['vrl_gambar']).trim();}
+  else if(isEsai){p.pertanyaan=qbePrepare(row['pertanyaan']||'');if(row['vrl_gambar']&&String(row['vrl_gambar']).trim())p.url_gambar=String(row['vrl_gambar']).trim();}
   else{
-    p.pertanyaan=row['pertanyaan']||'';
+    p.pertanyaan=qbePrepare(row['pertanyaan']||'');
     if(row['vrl_gambar']&&String(row['vrl_gambar']).trim())p.url_gambar=String(row['vrl_gambar']).trim();
     ['opsi_a','opsi_b','opsi_c','opsi_d'].forEach(function(k){if(row[k]&&String(row[k]).trim())p[k]=row[k];});
   }
@@ -749,8 +950,16 @@ function normalizeItem(p,materiList){
   if(!kd)return{error:'Kesulitan tidak valid: '+rawKd};
   const topikRaw=String(p.topik||'').trim();if(!topikRaw)return{error:'Topik kosong'};
   const topikName=topikRaw.split('|')[0].trim();
-  if(materiList&&materiList.length){const found=materiList.find(function(m){return m.toLowerCase()===topikName.toLowerCase();});if(!found)return{error:'Topik "'+topikName+'" tidak ada di daftar'};}
-  return{topik:topikRaw,bloom:bloom,kesulitan:kd,confidence:Math.min(100,Math.max(0,parseInt(p.confidence)||50)),kunci_ai:String(p.kunci_ai||'').trim().toUpperCase()||'?'};
+  const keywords=topikRaw.includes('|')?topikRaw.split('|')[1].trim():'';
+  var resolvedTopik=topikName;
+  if(materiList&&materiList.length){
+    var taeResult=taeResolve(topikName,materiList);
+    if(!taeResult.found)return{error:'Topik "'+topikName+'" tidak ada di daftar materi (TAE: tidak ada alias)'};
+    resolvedTopik=taeResult.found;
+    // Rebuild topik string with resolved name + original keywords
+  }
+  const finalTopik=resolvedTopik+(keywords?' | '+keywords:'');
+  return{topik:finalTopik,bloom:bloom,kesulitan:kd,confidence:Math.min(100,Math.max(0,parseInt(p.confidence)||50)),kunci_ai:String(p.kunci_ai||'').trim().toUpperCase()||'?'};
 }
 
 function localAnalyze(row,mapel,kelas,materiList){
@@ -773,26 +982,34 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 function renderPreview(materiList){
   const tbody=$id('aPreviewBody');tbody.innerHTML='';
-  resultData.slice(0,30).forEach(function(row,ri){
+  // Render ALL rows — no slice limit
+  // For large sets (>200): use DocumentFragment for performance
+  const frag=document.createDocumentFragment();
+  resultData.forEach(function(row,ri){
     const bloom=String(row['Bloom']||'').toUpperCase(),kd=String(row['Kesulitan']||''),status=row['Status_Kunci']||'';
     const conf=parseInt(row['Confidence'])||0,topikRaw=String(row['Topik']||'');
     const parts=topikRaw.split('|'),topikName=parts[0].trim(),topikKw=parts[1]?parts[1].trim():'';
-    const pert=String(row['pertanyaan']||'');
-    let topikCell='<div class="td-sel"><select onchange="updateTopik('+ri+',this.value,\''+topikKw.replace(/'/g,"\\'")+'\')">';
+    const pert=String(row['pertanyaan']||'').replace(/^\[SOAL UTUH[^\]]*\]\n?/,''); // strip QBE prefix for display
+    let topikCell='<div class="td-sel"><select onchange="updateTopik('+ri+',this.value,\''+topikKw.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">'; 
     if(!topikName||!materiList.includes(topikName))topikCell+='<option value="">— Pilih —</option>';
     materiList.forEach(function(m){topikCell+='<option value="'+esc(m)+'"'+(m===topikName?' selected':'')+'>'+esc(m)+'</option>';});
     topikCell+='</select></div>'+(topikKw?'<div class="topik-kw">'+esc(topikKw)+'</div>':'');
     const bloomB=bloom?'<span class="badge b-'+bloom.toLowerCase()+'">'+bloom+'</span>':'—';
     const kdB=kd?'<span class="badge b-'+kd.toLowerCase()+'">'+kd+'</span>':'—';
-    const stB=status==='Cocok'?'<span class="badge b-cocok">✓ Cocok</span>':status==='Berbeda'?'<span class="badge b-berbeda">⚠ Berbeda</span>':status==='Dibuat_AI'?'<span class="badge b-dibuat">✦ Dibuat AI</span>':'—';
-    const confH=conf>0?'<span class="'+(conf<70?'conf-warn':'conf-ok')+'">'+(conf<70?'⚠ ':'')+conf+'%</span>':'—';
+    const stB=status==='Cocok'?'<span class="badge b-cocok">&#x2713; Cocok</span>':status==='Berbeda'?'<span class="badge b-berbeda">&#x26A0; Berbeda</span>':status==='Dibuat_AI'?'<span class="badge b-dibuat">&#x2756; Dibuat AI</span>':'—';
+    const confH=conf>0?'<span class="'+(conf<70?'conf-warn':'conf-ok')+'">'+(conf<70?'&#x26A0; ':'')+conf+'%</span>':'—';
     const tr=document.createElement('tr');
-    tr.innerHTML='<td>'+esc(String(row['no']||''))+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['tipe']||'')+'</td><td class="q-cell" title="'+esc(pert)+'">'+esc(pert.slice(0,55))+(pert.length>55?'…':'')+'</td><td style="min-width:160px">'+topikCell+'</td><td>'+bloomB+'</td><td>'+kdB+'</td><td>'+confH+'</td><td style="font-weight:700;color:var(--text2)">'+esc(String(row['kunci']||'—').toUpperCase())+'</td><td style="font-weight:700;color:#4ade80">'+esc(row['Kunci_AI']||'—')+'</td><td>'+stB+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['Rekomendasi_Poin']||'—')+'</td>';
-    tbody.appendChild(tr);
+    tr.innerHTML='<td>'+esc(String(row['no']||ri+1))+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['tipe']||'')+'</td><td class="q-cell" title="'+esc(pert)+'">'+esc(pert.slice(0,55))+(pert.length>55?'&#x2026;':'')+'</td><td style="min-width:160px">'+topikCell+'</td><td>'+bloomB+'</td><td>'+kdB+'</td><td>'+confH+'</td><td style="font-weight:700;color:var(--text2)">'+esc(String(row['kunci']||'—').toUpperCase())+'</td><td style="font-weight:700;color:#4ade80">'+esc(row['Kunci_AI']||'—')+'</td><td>'+stB+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['Rekomendasi_Poin']||'—')+'</td>';
+    frag.appendChild(tr);
   });
+  tbody.appendChild(frag);
   $id('aPreviewWrap').style.display=resultData.length?'block':'none';
-  if(resultData.length>30){const n=document.createElement('div');n.style.cssText='font-size:11px;color:var(--text3);padding:8px 12px;text-align:center';n.textContent='Menampilkan 30 dari '+resultData.length+' baris.';$id('aPreviewWrap').appendChild(n);}
+  // Row count info
+  var existing=$id('aPreviewNote');
+  if(!existing){existing=document.createElement('div');existing.id='aPreviewNote';existing.style.cssText='font-size:11px;color:var(--text3);padding:6px 12px;text-align:right;border-top:1px solid var(--border)';$id('aPreviewWrap').appendChild(existing);}
+  existing.textContent='Menampilkan '+resultData.length+' soal · Semua dapat diedit';
 }
+
 function updateTopik(ri,name,kw){resultData[ri]['Topik']=name+(kw?' | '+kw:'');}
 
 function doDownload(){
