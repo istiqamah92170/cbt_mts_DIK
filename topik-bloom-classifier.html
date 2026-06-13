@@ -86,7 +86,7 @@ td.q-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:now
 .tipe-toggle{display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:14px;}
 .tipe-btn{flex:1;padding:8px;border:none;background:none;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center;}.tipe-btn.active{background:var(--accent);color:#fff;}
 .single-result{display:none;margin-top:14px;}.single-result.show{display:block;}
-.res-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;}
+.res-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;}.res-grid .span2{grid-column:span 2;}
 .res-card{background:var(--bg3);border-radius:var(--r);padding:12px;}.res-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}.res-val{font-size:14px;font-weight:600;color:var(--text);}.res-val.tv{color:#a78bfa;font-size:12px;}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -100,6 +100,28 @@ td.q-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:now
 .local-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:var(--r);padding:9px 12px;color:#4ade80;font-size:12px;}
 .chk{display:flex;align-items:center;gap:7px;margin-top:12px;cursor:pointer;user-select:none;}.chk input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}.chk span{font-size:12px;color:var(--text2);}
 footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;position:relative;}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.modal-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.modal-close:hover{color:var(--text);background:var(--bg3);}
+.guide-section{margin-bottom:18px;}
+.guide-section h3{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;}
+.guide-section p,.guide-section li{font-size:12px;color:var(--text2);line-height:1.7;}
+.guide-section ul{margin-left:16px;}
+.guide-section code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:11px;color:#a78bfa;}
+/* Storage info */
+.storage-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);border-radius:var(--r);padding:8px 12px;color:#fbbf24;font-size:12px;margin-bottom:10px;}
+/* Help button fixed */
+.help-btn{position:fixed;bottom:20px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:999;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.help-btn:hover{background:var(--accent2);}
+/* Single topik override */
+.topik-override-row{display:flex;gap:8px;align-items:flex-start;margin-top:10px;}
+.topik-override-row .sw{flex:1;}
+.badge-override{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;background:rgba(251,191,36,0.15);color:#fbbf24;white-space:nowrap;}
+
 </style>
 </head>
 <body>
@@ -191,12 +213,26 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
     <div id="sGambarField" style="margin-top:10px"><label class="lbl" style="margin-top:0">URL Gambar (opsional)</label><input type="text" id="sGambar" placeholder="https://..."></div>
     <div id="sPgFields" style="margin-top:10px"><div class="g2"><div><label class="lbl" style="margin-top:0">Opsi A</label><input type="text" id="sA"></div><div><label class="lbl" style="margin-top:0">Opsi B</label><input type="text" id="sB"></div><div><label class="lbl" style="margin-top:0">Opsi C</label><input type="text" id="sC"></div><div><label class="lbl" style="margin-top:0">Opsi D</label><input type="text" id="sD"></div></div><label class="lbl">Kunci</label><div class="sw" style="max-width:180px"><select id="sKunci"><option value="">-- Opsional --</option><option>A</option><option>B</option><option>C</option><option>D</option></select></div></div>
     <div id="sPgGambarField" style="display:none;margin-top:10px"><label class="lbl" style="margin-top:0">URL Gambar Soal (wajib)</label><input type="text" id="sPgGambar" placeholder="https://..."><label class="lbl">Kunci</label><div class="sw" style="max-width:180px"><select id="sPgKunci"><option value="">-- Opsional --</option><option>A</option><option>B</option><option>C</option><option>D</option></select></div></div>
-    <button class="btn-run" id="btnAnalyze" style="margin-top:16px">&#x1F50D; Analisis Soal</button>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn-run" id="btnAnalyze" style="margin-top:0;flex:1">&#x1F50D; Analisis Soal</button>
+      <button class="btn-sec" id="btnSingleReset" style="flex-shrink:0;padding:12px 16px">&#x21BA; Reset</button>
+    </div>
     <div class="single-result" id="sResult">
       <div id="sLoading" style="display:none;text-align:center;padding:20px;font-size:12px;color:var(--text2)"><span class="spinner"></span>Menganalisis...</div>
       <div id="sContent" style="display:none">
         <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Hasil Analisis</div>
-        <div class="res-grid"><div class="res-card"><div class="res-lbl">Topik</div><div class="res-val tv" id="rTopik">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Bloom</div><div class="res-val" id="rBloom">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Kesulitan</div><div class="res-val" id="rKesulitan">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Confidence</div><div class="res-val" id="rConf">&#x2014;</div></div></div>
+        <div class="res-grid"><div class="res-card" style="grid-column:span 2">
+          <div class="res-lbl" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Topik</span>
+            <span id="rTopikOverrideBadge" style="display:none" class="badge-override">&#x270F; Dikoreksi</span>
+          </div>
+          <div class="res-val tv" id="rTopik" style="margin-bottom:6px">&#x2014;</div>
+          <div class="topik-override-row" id="rTopikOverrideRow" style="display:none">
+            <div class="sw"><select id="rTopikSelect" onchange="applySingleTopikOverride(this.value)">
+              <option value="">— Pilih topik koreksi —</option>
+            </select></div>
+          </div>
+        </div><div class="res-card"><div class="res-lbl">Bloom</div><div class="res-val" id="rBloom">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Kesulitan</div><div class="res-val" id="rKesulitan">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Confidence</div><div class="res-val" id="rConf">&#x2014;</div></div></div>
         <div class="res-grid" style="margin-top:10px"><div class="res-card"><div class="res-lbl">Kunci AI</div><div class="res-val" id="rKunciAI">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Status Kunci</div><div class="res-val" id="rStatus">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Rek. Poin</div><div class="res-val" id="rPoin">&#x2014;</div></div><div class="res-card"><div class="res-lbl">Kompleksitas</div><div class="res-val" id="rKompleks">&#x2014;</div></div></div>
         <div style="margin-top:8px;font-size:11px;color:var(--text3);background:var(--bg3);border-radius:var(--r);padding:8px 10px" id="rNote"></div>
       </div>
@@ -213,6 +249,10 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
       <button class="btn-sm" onclick="document.getElementById('dbImport').click()">&#x2B06; Import JSON</button>
       <button class="btn-sm" onclick="document.getElementById('dbExcel').click()">&#x1F4D7; Import Excel</button>
       <button class="btn-sm danger" onclick="resetDBConfirm()">&#x1F5D1; Reset Default</button>
+      <button class="btn-sm" onclick="backupDB()">&#x1F4BE; Backup Database</button>
+      <button class="btn-sm" onclick="document.getElementById('dbRestore').click()">&#x1F504; Restore Database</button>
+      <button class="btn-sm" onclick="showStorageInfo()">&#x2139;&#xFE0F; Info Penyimpanan</button>
+      <input type="file" id="dbRestore" accept=".json" style="display:none" onchange="restoreDB(this)">
       <input type="file" id="dbImport" accept=".json" style="display:none" onchange="importDB(this)">
       <input type="file" id="dbExcel" accept=".xlsx,.xls" style="display:none" onchange="importDBExcel(this)">
     </div>
@@ -223,6 +263,109 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
   </div>
 </div>
 </main>
+<!-- Help button -->
+<button class="help-btn" onclick="showModal('modalGuide')" title="Panduan">&#x2753;</button>
+
+<!-- Guide Modal -->
+<div class="modal-overlay" id="modalGuide">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modalGuide')">&#x2715;</button>
+    <div class="modal-title">&#x1F4D6; Panduan Penggunaan</div>
+
+    <div class="guide-section">
+      <h3>Format Excel</h3>
+      <ul>
+        <li>Kolom wajib: <code>tipe</code>, <code>pertanyaan</code></li>
+        <li>Kolom opsional AI: <code>vrl_gambar</code>, <code>opsi_a</code>, <code>opsi_b</code>, <code>opsi_c</code>, <code>opsi_d</code>, <code>kunci</code></li>
+        <li>Tipe soal: <code>pg_teks</code>, <code>pg_gambar</code>, <code>esai</code></li>
+        <li>Urutan kolom boleh berubah — sistem membaca berdasarkan nama header</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h3>Format Gambar / Link Soal</h3>
+      <ul>
+        <li>Kolom <code>vrl_gambar</code> diisi URL gambar soal (https://...)</li>
+        <li>Untuk <code>pg_gambar</code>: seluruh soal + opsi ada di gambar, kolom pertanyaan boleh kosong</li>
+        <li>Gunakan Google Drive (share link publik) atau hosting gambar lainnya</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h3>Analisis 1 Soal</h3>
+      <ul>
+        <li>Pilih Mata Pelajaran dan Kelas terlebih dahulu</li>
+        <li>Pilih tipe: PG Teks, PG Gambar, atau Esai</li>
+        <li>Topik hasil AI dapat dikoreksi manual via dropdown</li>
+        <li>Klik <strong>Reset Analisis</strong> sebelum menganalisis soal baru</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h3>Analisis Massal (Excel)</h3>
+      <ul>
+        <li>Upload file Excel → Pilih Mapel &amp; Kelas → Klik Mulai Analisis</li>
+        <li>Hasil muncul di tabel — semua baris dapat diedit langsung</li>
+        <li>Download Excel untuk menyimpan hasil</li>
+        <li>Batch default 10 soal per request — hemat kuota API</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h3>Export / Import Database JSON</h3>
+      <ul>
+        <li><strong>Export:</strong> tab Database Materi → tombol Export JSON → simpan file</li>
+        <li><strong>Import:</strong> tab Database Materi → tombol Import JSON → pilih file</li>
+        <li>Format lama (v0) otomatis dimigrasi ke v1.0 saat diimport</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h3>Backup &amp; Restore Database</h3>
+      <ul>
+        <li><strong>Backup:</strong> tab Database Materi → tombol Backup Database</li>
+        <li><strong>Restore:</strong> tab Database Materi → tombol Restore Database</li>
+        <li>⚠️ Data tersimpan di LocalStorage browser — akan hilang jika browser dibersihkan</li>
+        <li>Lakukan backup rutin ke file JSON</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Storage Warning Modal -->
+<div class="modal-overlay" id="modalStorage">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modalStorage')">&#x2715;</button>
+    <div class="modal-title">&#x1F4BE; Informasi Penyimpanan Database</div>
+    <div class="storage-badge">&#x26A0;&#xFE0F; LocalStorage — Data dapat hilang jika browser dibersihkan</div>
+    <div class="guide-section">
+      <h3>Jenis Penyimpanan</h3>
+      <p><strong>LocalStorage</strong> — disimpan di browser pada perangkat ini saja.</p>
+      <ul>
+        <li>Kapasitas: ~5MB per domain</li>
+        <li>Risiko: <strong>hilang</strong> jika browser di-clear, data tidak tersinkron antar perangkat</li>
+        <li>Aman dari: reload halaman, tutup tab</li>
+      </ul>
+    </div>
+    <div class="guide-section">
+      <h3>Ukuran Database Saat Ini</h3>
+      <p id="storageSize">Menghitung...</p>
+    </div>
+    <div class="guide-section">
+      <h3>Rekomendasi</h3>
+      <ul>
+        <li>Lakukan <strong>Export JSON</strong> setelah setiap perubahan besar</li>
+        <li>Simpan file backup di Google Drive atau folder aman</li>
+        <li>Gunakan Backup/Restore untuk berpindah perangkat</li>
+      </ul>
+    </div>
+    <div class="row-btns" style="margin-top:16px">
+      <button class="btn-dl" onclick="exportDB();closeModal('modalStorage')">&#x2B07; Backup Sekarang</button>
+      <button class="btn-sec" onclick="closeModal('modalStorage')">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <footer>Smart Bloom &amp; Topic Analyzer &middot; Kemenag MTs &middot; Powered by Gemini AI</footer>
 </div>
 
@@ -1149,6 +1292,263 @@ function clearLog(){$id('aProgLog').innerHTML='';$id('aProgBar').style.width='0%
 function updateProg(cur,tot){$id('aProgBar').style.width=Math.round(cur/tot*100)+'%';$id('aProgCount').textContent=cur+' / '+tot;}
 function setProgLabel(t){$id('aProgLabel').textContent=t;}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+// ─── MODAL SYSTEM ─────────────────────────────────────────────────────────────
+function showModal(id) {
+  var el = $id(id);
+  if (el) el.classList.add('show');
+  if (id === 'modalStorage') updateStorageSize();
+}
+function closeModal(id) {
+  var el = $id(id);
+  if (el) el.classList.remove('show');
+}
+// Close on overlay click
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) {
+    e.target.classList.remove('show');
+  }
+});
+
+// ─── STORAGE INFO ─────────────────────────────────────────────────────────────
+function showStorageInfo() { showModal('modalStorage'); }
+function updateStorageSize() {
+  try {
+    var dbStr = localStorage.getItem('mts_db') || '';
+    var apiKey = localStorage.getItem('gemini_api_key') || '';
+    var totalBytes = (dbStr.length + apiKey.length) * 2; // approx UTF-16
+    var kb = (totalBytes / 1024).toFixed(1);
+    var mapelCount = Object.keys(DB.mapel || DB).length;
+    var materiCount = 0;
+    var src = DB.mapel || DB;
+    for (var m in src) for (var k in src[m]) materiCount += src[m][k].length;
+    $id('storageSize').innerHTML =
+      'Database: <strong>' + kb + ' KB</strong> | ' +
+      mapelCount + ' mapel | ' + materiCount + ' materi<br>' +
+      '<small style="color:var(--text3)">API key: ' + (apiKey ? '✓ tersimpan' : '—') + '</small>';
+  } catch(e) {
+    $id('storageSize').textContent = 'Tidak dapat menghitung ukuran.';
+  }
+}
+
+// ─── BACKUP / RESTORE ─────────────────────────────────────────────────────────
+function backupDB() {
+  dbTouch();
+  var ts = new Date().toISOString().slice(0,10);
+  var blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'backup_database_materi_' + ts + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 3000);
+}
+function restoreDB(input) {
+  var file = input.files[0]; if (!file) return;
+  if (!confirm('Restore akan MENGGANTI seluruh database saat ini dengan file backup. Lanjutkan?')) { input.value=''; return; }
+  var r = new FileReader();
+  r.onload = function(e) {
+    try {
+      var parsed = JSON.parse(e.target.result);
+      if (typeof parsed !== 'object') throw new Error('Format tidak valid');
+      var migrated = migrateDB(parsed);
+      DB = migrated || JSON.parse(JSON.stringify(DEFAULT_DB));
+      saveDB(); populateMapelSelects(); renderDbMapelList(); renderDbDetail();
+      alert('Restore berhasil. Database versi: ' + (DB.database_version || '0'));
+    } catch(err) { alert('Gagal restore: ' + err.message); }
+  };
+  r.readAsText(file); input.value = '';
+}
+
+// ─── KELAS DROPDOWN HELPER — with "Semua" option ──────────────────────────────
+function populateKelasDropdown(selId, mapelId, withSemua, onChange) {
+  var sel = $id(selId); if (!sel) return;
+  var mapel = $id(mapelId) ? $id(mapelId).value : '';
+  var kelasList = mapel ? getKelasList(mapel) : [];
+  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+  if (withSemua && kelasList.length > 1) {
+    var o = document.createElement('option'); o.value = '__SEMUA__'; o.textContent = 'Semua Kelas';
+    sel.appendChild(o);
+  }
+  kelasList.forEach(function(k) {
+    var o = document.createElement('option'); o.value = k; o.textContent = 'Kelas ' + k;
+    sel.appendChild(o);
+  });
+  if (onChange) sel.onchange = onChange;
+}
+
+/** Get merged materiList for "Semua" kelas */
+function getMateriListForKelas(mapel, kelas) {
+  if (kelas === '__SEMUA__') {
+    var all = [];
+    var ks = getKelasList(mapel);
+    ks.forEach(function(k) {
+      getMateriList(mapel, k).forEach(function(m) {
+        if (!all.includes(m)) all.push(m);
+      });
+    });
+    return all;
+  }
+  return getMateriList(mapel, kelas);
+}
+
+// ─── PATCH onAMapelChange + onAKelasChange to use Semua ──────────────────────
+// Override onAMapelChange in block 1 is already defined — patch here at runtime
+var _origOnAMapelChange = onAMapelChange;
+onAMapelChange = function() {
+  var m = $id('aMapel').value;
+  var sel = $id('aKelas');
+  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+  var ks = m ? getKelasList(m) : [];
+  if (ks.length > 1) {
+    var o = document.createElement('option'); o.value = '__SEMUA__'; o.textContent = 'Semua Kelas';
+    sel.appendChild(o);
+  }
+  ks.forEach(function(k) {
+    var o = document.createElement('option'); o.value = k; o.textContent = 'Kelas ' + k;
+    sel.appendChild(o);
+  });
+  onAKelasChange();
+};
+var _origOnAKelasChange = onAKelasChange;
+onAKelasChange = function() {
+  var m = $id('aMapel').value, k = $id('aKelas').value;
+  var info = $id('aMateriInfo');
+  if (m && k) {
+    var ml = getMateriListForKelas(m, k);
+    if (ml.length) {
+      info.style.display = 'block';
+      info.textContent = '✓ ' + ml.length + ' materi' + (k === '__SEMUA__' ? ' (semua kelas)' : ' untuk ' + m + ' Kelas ' + k);
+    } else { info.style.display = 'none'; }
+  } else { info.style.display = 'none'; }
+  if (typeof checkRunnable === 'function') checkRunnable();
+};
+var _origOnSMapelChange = onSMapelChange;
+onSMapelChange = function() {
+  var m = $id('sMapel').value;
+  var sel = $id('sKelas');
+  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+  var ks = m ? getKelasList(m) : [];
+  if (ks.length > 1) {
+    var o = document.createElement('option'); o.value = '__SEMUA__'; o.textContent = 'Semua Kelas';
+    sel.appendChild(o);
+  }
+  ks.forEach(function(k) {
+    var o = document.createElement('option'); o.value = k; o.textContent = 'Kelas ' + k;
+    sel.appendChild(o);
+  });
+};
+
+// Patch checkRunnable to accept __SEMUA__
+var _origCheckRunnable = checkRunnable;
+checkRunnable = function() {
+  var apiOk = aMode === 'local' || ($id('apiKey') && $id('apiKey').value.trim());
+  var k = $id('aKelas') ? $id('aKelas').value : '';
+  var mapelOk = ($id('aMapel') && $id('aMapel').value) && (k === '__SEMUA__' || k);
+  $id('btnRun').disabled = !(apiOk && sheetData.length > 0 && mapelOk);
+};
+
+// Patch startAnalysis to use getMateriListForKelas
+var _origStartAnalysis = startAnalysis;
+startAnalysis = async function() {
+  var mapel = $id('aMapel').value, kelas = $id('aKelas').value;
+  var materiList = getMateriListForKelas(mapel, kelas);
+  if (!materiList.length) { alert('Tidak ada daftar materi. Tambahkan di tab Database Materi.'); return; }
+  // Proceed with original but we need to inject materiList — call original and let it re-fetch
+  // Since original also calls getMateriListForKelas via getMateriList, we patch getMateriList temporarily
+  await _origStartAnalysis();
+};
+
+// Patch getMateriList to handle __SEMUA__ transparently
+var _origGetMateriList = getMateriList;
+getMateriList = function(mapel, kelas) {
+  if (kelas === '__SEMUA__') return getMateriListForKelas(mapel, kelas);
+  return _origGetMateriList(mapel, kelas);
+};
+
+// ─── SINGLE ANALYSIS RESET ────────────────────────────────────────────────────
+var singleState = { topik_ai: null, topik_final: null, override_by_user: false };
+
+function resetSingleAnalysis() {
+  // Clear all inputs
+  var fields = ['sPert','sGambar','sA','sB','sC','sD','sPgGambar'];
+  fields.forEach(function(id) { if ($id(id)) $id(id).value = ''; });
+  if ($id('sKunci')) $id('sKunci').value = '';
+  if ($id('sPgKunci')) $id('sPgKunci').value = '';
+  // Clear results
+  $id('sResult').classList.remove('show');
+  $id('sLoading').style.display = 'none';
+  $id('sContent').style.display = 'none';
+  $id('sError').style.display = 'none';
+  // Reset topik override
+  $id('rTopik').textContent = '—';
+  $id('rTopikOverrideBadge').style.display = 'none';
+  $id('rTopikOverrideRow').style.display = 'none';
+  if ($id('rTopikSelect')) $id('rTopikSelect').value = '';
+  // Clear state
+  singleState = { topik_ai: null, topik_final: null, override_by_user: false };
+  // Reset result displays
+  ['rBloom','rKesulitan','rConf','rKunciAI','rStatus','rPoin','rKompleks'].forEach(function(id) {
+    if ($id(id)) $id(id).textContent = '—';
+  });
+  if ($id('rNote')) $id('rNote').textContent = '';
+}
+
+// ─── SINGLE TOPIK OVERRIDE ────────────────────────────────────────────────────
+function applySingleTopikOverride(selectedName) {
+  if (!selectedName) return;
+  singleState.topik_final = selectedName;
+  singleState.override_by_user = true;
+  $id('rTopik').textContent = selectedName;
+  $id('rTopikOverrideBadge').style.display = 'inline-flex';
+}
+
+function populateSingleTopikDropdown(mapel, kelas, currentTopik) {
+  var sel = $id('rTopikSelect'); if (!sel) return;
+  var ml = getMateriListForKelas(mapel, kelas);
+  sel.innerHTML = '<option value="">— Pilih topik koreksi —</option>';
+  ml.forEach(function(m) {
+    var o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    if (m === currentTopik) o.selected = true;
+    sel.appendChild(o);
+  });
+  $id('rTopikOverrideRow').style.display = 'flex';
+}
+
+// ─── PATCH doSingleAnalyze to use singleState + topik override UI ─────────────
+var _origDoSingleAnalyze = doSingleAnalyze;
+doSingleAnalyze = async function() {
+  // Reset override state for new analysis
+  singleState.override_by_user = false;
+  $id('rTopikOverrideBadge').style.display = 'none';
+
+  await _origDoSingleAnalyze();
+
+  // After analysis completes, populate topik dropdown if result visible
+  if ($id('sContent').style.display !== 'none') {
+    var mapel = $id('sMapel').value, kelas = $id('sKelas').value;
+    var topikText = $id('rTopik').textContent || '';
+    var topikName = topikText.split('|')[0].trim();
+    singleState.topik_ai = topikName;
+    singleState.topik_final = topikName;
+    populateSingleTopikDropdown(mapel, kelas, topikName);
+  }
+};
+
+// ─── WIRE UP BUTTONS (after DOM ready — patch DOMContentLoaded listener) ──────
+document.addEventListener('DOMContentLoaded', function() {
+  // Single reset button
+  var btnSR = $id('btnSingleReset');
+  if (btnSR) btnSR.addEventListener('click', resetSingleAnalysis);
+});
+
+// ─── BUG FIX: Manual mapel — renderDbDetail already works via abstraction ────
+// Verify: getKelasList() handles empty mapel correctly
+// getKelasList returns [] for empty → shows no kelas tabs → shows "+ Kelas" button ✓
+// dbAddKelas / dbAddMateri work for any mapel including custom ✓
+
+// ─── PATCH aKelas change event binding ────────────────────────────────────────
+// The original aKelas listener in DOMContentLoaded binds to onAKelasChange
+// which is now overridden above — no additional binding needed.
+
 </script>
-</body>
-</html>
