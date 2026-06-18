@@ -289,6 +289,28 @@ input[type="text"]::placeholder { color:var(--gray-soft); }
     <div class="card-title"><div class="dot"></div>Link folder Google Drive</div>
     <input type="text" id="folder-inp" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
     <p class="folder-hint">⚠ Pastikan sudah login Google di atas. Folder bisa privat maupun publik selama akun kamu punya akses.</p>
+
+    <div style="margin-top:12px;">
+      <div class="card-title" style="margin-bottom:8px"><div class="dot"></div>Urutkan berdasarkan</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="radio" name="sort-by" value="name" checked style="accent-color:var(--green-main)"> Nama (A→Z)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="radio" name="sort-by" value="name desc" style="accent-color:var(--green-main)"> Nama (Z→A)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="radio" name="sort-by" value="modifiedTime desc" style="accent-color:var(--green-main)"> Terbaru diubah
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="radio" name="sort-by" value="modifiedTime" style="accent-color:var(--green-main)"> Terlama diubah
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+          <input type="radio" name="sort-by" value="createdTime desc" style="accent-color:var(--green-main)"> Terbaru dibuat
+        </label>
+      </div>
+    </div>
+
     <div class="scan-status" id="scan-status">🔍 Sedang memindai file...</div>
     <button class="btn-convert" id="btn-scan" onclick="scanFolder()">🔍 Scan &amp; Konversi Folder</button>
   </div>
@@ -482,22 +504,26 @@ function scanFolder() {
   var folderId = extractFolderId(raw);
   if (!folderId) { showErr('Link folder tidak valid. Pastikan menggunakan link drive.google.com/drive/folders/...'); return; }
 
+  var sortEl = document.querySelector('input[name="sort-by"]:checked');
+  var orderBy = sortEl ? sortEl.value : 'name';
+
   hideAll();
   var btn = document.getElementById('btn-scan');
   btn.disabled = true;
-  btn.textContent = '⏳ Memindai...';
+  btn.textContent = '\u23F3 Memindai...';
   var status = document.getElementById('scan-status');
   status.style.display = 'block';
-  status.textContent = '🔍 Memindai file di folder...';
+  status.textContent = '\uD83D\uDD0D Memindai file di folder...';
 
-  fetchFolderFiles(folderId, null, [], status, btn);
+  fetchFolderFiles(folderId, orderBy, null, [], status, btn);
 }
 
-function fetchFolderFiles(folderId, pageToken, accumulated, status, btn) {
+function fetchFolderFiles(folderId, orderBy, pageToken, accumulated, status, btn) {
   var url = 'https://www.googleapis.com/drive/v3/files?' +
     'q=' + encodeURIComponent("'" + folderId + "' in parents and mimeType contains 'image/' and trashed=false") +
-    '&fields=nextPageToken,files(id,name,mimeType)' +
-    '&pageSize=100' +
+    '&fields=nextPageToken,files(id,name,mimeType,modifiedTime,createdTime)' +
+    '&orderBy=' + encodeURIComponent(orderBy) +
+    '&pageSize=1000' +
     (pageToken ? '&pageToken=' + pageToken : '');
 
   fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } })
@@ -508,13 +534,13 @@ function fetchFolderFiles(folderId, pageToken, accumulated, status, btn) {
   .then(function(data) {
     var files = data.files || [];
     accumulated = accumulated.concat(files);
-    status.textContent = '🔍 Ditemukan ' + accumulated.length + ' file gambar...';
+    status.textContent = '\uD83D\uDD0D Ditemukan ' + accumulated.length + ' file gambar...';
 
     if (data.nextPageToken) {
-      fetchFolderFiles(folderId, data.nextPageToken, accumulated, status, btn);
+      fetchFolderFiles(folderId, orderBy, data.nextPageToken, accumulated, status, btn);
     } else {
       btn.disabled = false;
-      btn.textContent = '🔍 Scan & Konversi Folder';
+      btn.textContent = '\uD83D\uDD0D Scan & Konversi Folder';
       status.style.display = 'none';
 
       if (!accumulated.length) {
@@ -531,7 +557,7 @@ function fetchFolderFiles(folderId, pageToken, accumulated, status, btn) {
   })
   .catch(function(err) {
     btn.disabled = false;
-    btn.textContent = '🔍 Scan & Konversi Folder';
+    btn.textContent = '\uD83D\uDD0D Scan & Konversi Folder';
     status.style.display = 'none';
     showErr('Gagal memindai folder: ' + err.message + '. Pastikan folder bisa diakses oleh akun yang login.');
   });
