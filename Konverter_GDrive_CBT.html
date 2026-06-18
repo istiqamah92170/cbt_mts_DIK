@@ -7,251 +7,95 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --green-deep: #064E3B;
-  --green-main: #059669;
-  --green-mid:  #10B981;
-  --green-light:#D1FAE5;
-  --green-pale: #ECFDF5;
-  --gray-dark:  #1E2B3A;
-  --gray-mid:   #4A5568;
-  --gray-soft:  #8896A5;
-  --gray-line:  #DDE3EC;
-  --gray-bg:    #F3F6FA;
-  --white:      #FFFFFF;
-  --red:        #C0392B;
-  --red-light:  #FDECEA;
-  --blue-light: #EEF2FF;
-  --blue-main:  #4F46E5;
-  --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+  --green-deep: #064E3B; --green-main: #059669; --green-mid: #10B981;
+  --green-light:#D1FAE5; --green-pale: #ECFDF5;
+  --gray-dark: #1E2B3A; --gray-mid: #4A5568; --gray-soft: #8896A5;
+  --gray-line: #DDE3EC; --gray-bg: #F3F6FA; --white: #FFFFFF;
+  --red: #C0392B; --red-light: #FDECEA;
+  --blue-light: #EEF2FF; --blue-main: #4F46E5;
+  --r-sm:6px; --r-md:10px; --r-lg:16px;
   --sh: 0 4px 20px rgba(10,53,102,.10);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background: var(--gray-bg);
-  color: var(--gray-dark);
-  min-height: 100vh;
-  padding: 24px 16px 48px;
-}
-
-/* HEADER */
+body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--gray-bg); color:var(--gray-dark); min-height:100vh; padding:24px 16px 48px; }
 .header { text-align:center; margin-bottom:28px; }
-.header .badge {
-  display:inline-flex; align-items:center; gap:6px;
-  background:var(--green-pale); border:1px solid var(--green-light);
-  color:var(--green-main); font-size:11px; font-weight:700;
-  padding:4px 12px; border-radius:20px; letter-spacing:.5px; margin-bottom:12px;
-}
+.header .badge { display:inline-flex; align-items:center; gap:6px; background:var(--green-pale); border:1px solid var(--green-light); color:var(--green-main); font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; letter-spacing:.5px; margin-bottom:12px; }
 .header h1 { font-size:22px; font-weight:800; color:var(--green-deep); margin-bottom:6px; }
-.header p  { font-size:13px; color:var(--gray-soft); }
-
-/* TABS */
-.tab-bar {
-  display:flex; gap:8px; max-width:620px; margin:0 auto 16px;
-}
-.tab-btn {
-  flex:1; padding:10px; border:1.5px solid var(--gray-line);
-  border-radius:var(--r-md); background:var(--white);
-  font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700;
-  color:var(--gray-soft); cursor:pointer; transition:.15s;
-}
-.tab-btn.active {
-  background:var(--green-main); color:white; border-color:var(--green-main);
-}
-
-/* CARD */
-.card {
-  background:var(--white); border-radius:var(--r-lg);
-  box-shadow:var(--sh); padding:22px; margin-bottom:16px;
-  max-width:620px; margin-left:auto; margin-right:auto;
-}
-.card-title {
-  font-size:12px; font-weight:700; color:var(--gray-soft);
-  text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px;
-  display:flex; align-items:center; gap:6px;
-}
+.header p { font-size:13px; color:var(--gray-soft); }
+.tab-bar { display:flex; gap:8px; max-width:620px; margin:0 auto 16px; }
+.tab-btn { flex:1; padding:10px; border:1.5px solid var(--gray-line); border-radius:var(--r-md); background:var(--white); font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:var(--gray-soft); cursor:pointer; transition:.15s; }
+.tab-btn.active { background:var(--green-main); color:white; border-color:var(--green-main); }
+.card { background:var(--white); border-radius:var(--r-lg); box-shadow:var(--sh); padding:22px; margin-bottom:16px; max-width:620px; margin-left:auto; margin-right:auto; }
+.card-title { font-size:12px; font-weight:700; color:var(--gray-soft); text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
 .card-title .dot { width:8px;height:8px;border-radius:50%;background:var(--green-main);flex-shrink:0; }
-
-/* INPUT */
-textarea {
-  width:100%; padding:12px 14px; border:1.5px solid var(--gray-line);
-  border-radius:var(--r-md); font-family:'JetBrains Mono',monospace;
-  font-size:12px; color:var(--gray-dark); background:var(--gray-bg);
-  resize:vertical; min-height:100px; transition:border-color .2s; line-height:1.6;
-}
+textarea { width:100%; padding:12px 14px; border:1.5px solid var(--gray-line); border-radius:var(--r-md); font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gray-dark); background:var(--gray-bg); resize:vertical; min-height:100px; transition:border-color .2s; line-height:1.6; }
 textarea:focus { outline:none; border-color:var(--green-mid); box-shadow:0 0 0 3px rgba(16,185,129,.12); }
 textarea::placeholder { color:var(--gray-soft); }
-
-input[type="text"] {
-  width:100%; padding:11px 14px; border:1.5px solid var(--gray-line);
-  border-radius:var(--r-md); font-family:'JetBrains Mono',monospace;
-  font-size:12px; color:var(--gray-dark); background:var(--gray-bg);
-  transition:border-color .2s;
-}
-input[type="text"]:focus { outline:none; border-color:var(--green-mid); box-shadow:0 0 0 3px rgba(16,185,129,.12); }
-input[type="text"]::placeholder { color:var(--gray-soft); }
-
-.btn-convert {
-  width:100%; margin-top:12px; padding:13px;
-  background:linear-gradient(135deg,var(--green-deep),var(--green-mid));
-  color:white; border:none; border-radius:var(--r-md);
-  font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700;
-  cursor:pointer; transition:opacity .2s,transform .1s;
-}
+.btn-convert { width:100%; margin-top:12px; padding:13px; background:linear-gradient(135deg,var(--green-deep),var(--green-mid)); color:white; border:none; border-radius:var(--r-md); font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s,transform .1s; }
 .btn-convert:hover { opacity:.9; transform:translateY(-1px); }
-.btn-convert:active { transform:translateY(0); }
-.btn-convert:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-
-/* AUTH SECTION */
-.auth-card {
-  background:var(--white); border-radius:var(--r-lg); box-shadow:var(--sh);
-  padding:22px; margin-bottom:16px; max-width:620px; margin-left:auto; margin-right:auto;
-  display:flex; align-items:center; gap:14px;
-}
-.auth-avatar {
-  width:40px; height:40px; border-radius:50%; border:2px solid var(--green-light);
-  object-fit:cover; flex-shrink:0; display:none;
-}
+.btn-convert:disabled { opacity:.5; cursor:not-allowed; }
+.auth-card { background:var(--white); border-radius:var(--r-lg); box-shadow:var(--sh); padding:22px; margin-bottom:16px; max-width:620px; margin-left:auto; margin-right:auto; display:flex; align-items:center; gap:14px; }
+.auth-avatar { width:40px;height:40px;border-radius:50%;border:2px solid var(--green-light);object-fit:cover;flex-shrink:0;display:none; }
 .auth-info { flex:1; }
 .auth-name { font-size:14px; font-weight:700; color:var(--gray-dark); }
 .auth-email { font-size:11px; color:var(--gray-soft); margin-top:2px; }
-.btn-google {
-  display:flex; align-items:center; gap:8px; padding:10px 16px;
-  border:1.5px solid var(--gray-line); border-radius:var(--r-md);
-  background:var(--white); font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:13px; font-weight:700; color:var(--gray-dark); cursor:pointer;
-  transition:.15s; white-space:nowrap;
-}
-.btn-google:hover { background:var(--gray-bg); border-color:var(--gray-soft); }
-.btn-logout {
-  padding:8px 14px; border:1.5px solid #F5B7B1; border-radius:var(--r-sm);
-  background:var(--red-light); color:var(--red); font-size:12px; font-weight:700;
-  cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;
-}
-
-/* RESULT */
-.result-box {
-  background:var(--green-pale); border:1.5px solid var(--green-light);
-  border-radius:var(--r-md); padding:12px 14px; margin-bottom:12px;
-}
+.btn-google { display:flex; align-items:center; gap:8px; padding:10px 16px; border:1.5px solid var(--gray-line); border-radius:var(--r-md); background:var(--white); font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:700; color:var(--gray-dark); cursor:pointer; transition:.15s; white-space:nowrap; }
+.btn-google:hover { background:var(--gray-bg); }
+.btn-logout { padding:8px 14px; border:1.5px solid #F5B7B1; border-radius:var(--r-sm); background:var(--red-light); color:var(--red); font-size:12px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
+.picker-zone { border:2px dashed var(--green-light); border-radius:var(--r-lg); background:var(--green-pale); padding:32px 20px; text-align:center; cursor:pointer; transition:.2s; margin-bottom:12px; }
+.picker-zone:hover { border-color:var(--green-main); background:#d1fae5; }
+.picker-zone svg { display:block; margin:0 auto 12px; color:var(--green-main); }
+.picker-zone .pz-title { font-size:15px; font-weight:800; color:var(--green-deep); margin-bottom:4px; }
+.picker-zone .pz-sub { font-size:12px; color:var(--gray-soft); }
+.selected-info { background:var(--blue-light); border:1px solid #C7D2FE; border-radius:var(--r-md); padding:10px 14px; font-size:13px; color:var(--blue-main); font-weight:600; margin-bottom:12px; display:none; }
+.sort-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.sort-chip { display:flex; align-items:center; gap:5px; padding:6px 12px; border:1.5px solid var(--gray-line); border-radius:20px; font-size:12px; font-weight:700; color:var(--gray-mid); cursor:pointer; background:var(--white); transition:.15s; user-select:none; }
+.sort-chip.active { background:var(--green-main); color:white; border-color:var(--green-main); }
+.result-box { background:var(--green-pale); border:1.5px solid var(--green-light); border-radius:var(--r-md); padding:12px 14px; margin-bottom:12px; }
 .result-label { font-size:10px; font-weight:700; color:var(--green-main); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
 .result-url { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gray-dark); word-break:break-all; line-height:1.6; }
-.id-pill {
-  display:inline-block; margin-top:8px; background:var(--green-light);
-  color:var(--green-deep); font-family:'JetBrains Mono',monospace;
-  font-size:10px; font-weight:600; padding:3px 10px; border-radius:20px; word-break:break-all;
-}
-
+.id-pill { display:inline-block; margin-top:8px; background:var(--green-light); color:var(--green-deep); font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; padding:3px 10px; border-radius:20px; word-break:break-all; }
 .btn-row { display:flex; gap:8px; margin-top:12px; }
-.btn-sm {
-  flex:1; padding:10px; border:1.5px solid var(--gray-line); border-radius:var(--r-sm);
-  background:var(--white); font-family:'Plus Jakarta Sans',sans-serif; font-size:12px;
-  font-weight:700; color:var(--gray-dark); cursor:pointer; transition:.15s;
-  display:flex; align-items:center; justify-content:center; gap:6px;
-}
+.btn-sm { flex:1; padding:10px; border:1.5px solid var(--gray-line); border-radius:var(--r-sm); background:var(--white); font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:700; color:var(--gray-dark); cursor:pointer; transition:.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
 .btn-sm:hover { background:var(--gray-bg); border-color:var(--gray-soft); }
 .btn-sm.green { background:var(--green-main); color:white; border-color:var(--green-main); }
 .btn-sm.green:hover { opacity:.88; }
-
-/* PREVIEW */
 .preview-wrap { text-align:center; min-height:80px; display:flex; align-items:center; justify-content:center; }
 #preview-img { max-width:100%; max-height:320px; border-radius:var(--r-md); border:1.5px solid var(--gray-line); display:none; }
 .img-placeholder { color:var(--gray-soft); font-size:13px; text-align:center; padding:20px; }
 .img-placeholder svg { display:block; margin:0 auto 8px; opacity:.4; }
-
-/* MULTI RESULT */
-.multi-item {
-  background:var(--gray-bg); border:1px solid var(--gray-line);
-  border-radius:var(--r-sm); padding:10px 12px; margin-bottom:8px;
-  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gray-dark);
-  display:flex; align-items:flex-start; gap:10px;
-}
-.multi-item .num {
-  background:var(--green-main); color:white; border-radius:50%;
-  width:20px; height:20px; flex-shrink:0; font-size:10px; font-weight:700;
-  display:flex; align-items:center; justify-content:center; margin-top:1px;
-}
+.multi-item { background:var(--gray-bg); border:1px solid var(--gray-line); border-radius:var(--r-sm); padding:10px 12px; margin-bottom:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gray-dark); display:flex; align-items:flex-start; gap:10px; }
+.multi-item .num { background:var(--green-main); color:white; border-radius:50%; width:20px;height:20px; flex-shrink:0; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
 .multi-item .url { word-break:break-all; line-height:1.6; flex:1; }
 .multi-item .fname { font-size:10px; color:var(--gray-soft); margin-bottom:3px; }
-.multi-copy {
-  flex-shrink:0; background:none; border:1px solid var(--gray-line);
-  border-radius:4px; padding:3px 8px; font-size:11px;
-  font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; color:var(--gray-mid); margin-top:1px;
-}
+.multi-copy { flex-shrink:0; background:none; border:1px solid var(--gray-line); border-radius:4px; padding:3px 8px; font-size:11px; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; color:var(--gray-mid); margin-top:1px; }
 .multi-copy:hover { background:var(--gray-bg); }
-
-/* ERROR */
-.error-box {
-  background:var(--red-light); border:1.5px solid #F5B7B1;
-  border-radius:var(--r-md); padding:12px 14px; color:var(--red);
-  font-size:13px; font-weight:600; display:none; max-width:620px;
-  margin:0 auto 16px;
-}
-
-/* HISTORY */
-.hist-item {
-  display:flex; align-items:flex-start; gap:8px; padding:10px 0;
-  border-bottom:1px solid var(--gray-line);
-}
+.error-box { background:var(--red-light); border:1.5px solid #F5B7B1; border-radius:var(--r-md); padding:12px 14px; color:var(--red); font-size:13px; font-weight:600; display:none; max-width:620px; margin:0 auto 16px; }
+.hist-item { display:flex; align-items:flex-start; gap:8px; padding:10px 0; border-bottom:1px solid var(--gray-line); }
 .hist-item:last-child { border-bottom:none; }
 .hist-url { font-family:'JetBrains Mono',monospace; font-size:11px; word-break:break-all; line-height:1.5; }
-.hist-btn {
-  flex-shrink:0; padding:4px 10px; border:1px solid var(--gray-line);
-  border-radius:4px; font-size:11px; background:var(--white);
-  font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; color:var(--gray-mid);
-}
+.hist-btn { flex-shrink:0; padding:4px 10px; border:1px solid var(--gray-line); border-radius:4px; font-size:11px; background:var(--white); font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; color:var(--gray-mid); }
 .hist-btn:hover { background:var(--gray-bg); }
 .empty-hist { color:var(--gray-soft); font-size:13px; text-align:center; padding:16px 0; }
-
-/* FORMAT GUIDE */
-.fmt-item {
-  background:var(--gray-bg); border-radius:var(--r-sm); padding:8px 12px;
-  font-family:'JetBrains Mono',monospace; font-size:11px; margin-bottom:6px;
-  color:var(--gray-mid); border:1px solid var(--gray-line);
-}
-
-/* FOLDER SCAN */
-.folder-hint { font-size:11px; color:var(--gray-soft); margin-top:6px; line-height:1.6; }
-.scan-status {
-  background:var(--blue-light); border:1px solid #C7D2FE; border-radius:var(--r-md);
-  padding:10px 14px; font-size:13px; color:var(--blue-main); font-weight:600;
-  margin-top:10px; display:none;
-}
-.file-count-badge {
-  display:inline-block; background:var(--green-main); color:white;
-  border-radius:20px; padding:2px 10px; font-size:11px; font-weight:700; margin-left:6px;
-}
-
-/* TOAST */
-.toast {
-  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
-  background:var(--gray-dark); color:white; padding:10px 20px; border-radius:20px;
-  font-size:13px; font-weight:600; opacity:0; transition:.25s; pointer-events:none; z-index:999;
-}
+.fmt-item { background:var(--gray-bg); border-radius:var(--r-sm); padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; margin-bottom:6px; color:var(--gray-mid); border:1px solid var(--gray-line); }
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--gray-dark); color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:600; opacity:0; transition:.25s; pointer-events:none; z-index:9999; }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-
-/* LOADING SPINNER */
-.spinner {
-  width:16px; height:16px; border:2px solid rgba(255,255,255,.3);
-  border-top-color:white; border-radius:50%; animation:spin .6s linear infinite; display:none;
-}
-@keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="badge">🌿 CBT KABUT DIGITAL</div>
+  <div class="badge">&#127807; CBT KABUT DIGITAL</div>
   <h1>Konverter Link GDrive</h1>
-  <p>Manual atau scan otomatis dari folder Google Drive</p>
+  <p>Manual atau pilih file langsung dari Google Drive</p>
 </div>
 
 <!-- AUTH -->
-<div class="auth-card" id="auth-card">
+<div class="auth-card">
   <div id="auth-loggedout" style="display:flex;align-items:center;gap:14px;width:100%">
     <div class="auth-info">
       <div class="auth-name">Belum login</div>
-      <div class="auth-email">Login untuk scan folder GDrive</div>
+      <div class="auth-email">Login untuk pilih file langsung dari GDrive</div>
     </div>
     <button class="btn-google" onclick="handleLogin()">
       <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
@@ -270,49 +114,40 @@ input[type="text"]::placeholder { color:var(--gray-soft); }
 
 <!-- TABS -->
 <div class="tab-bar">
-  <button class="tab-btn active" id="tab-manual" onclick="switchTab('manual')">✏️ Manual</button>
-  <button class="tab-btn" id="tab-folder" onclick="switchTab('folder')">📁 Scan Folder</button>
+  <button class="tab-btn active" id="tab-manual" onclick="switchTab('manual')">&#9999;&#65039; Manual</button>
+  <button class="tab-btn" id="tab-picker" onclick="switchTab('picker')">&#128194; Pilih dari GDrive</button>
 </div>
 
 <!-- TAB MANUAL -->
 <div id="pane-manual">
   <div class="card">
     <div class="card-title"><div class="dot"></div>Tempel link Google Drive</div>
-    <textarea id="inp" rows="4" placeholder="Tempel satu atau beberapa link Google Drive di sini...&#10;https://drive.google.com/file/d/FILE_ID/view&#10;https://drive.google.com/open?id=FILE_ID"></textarea>
-    <button class="btn-convert" onclick="convert()">⚡ Konversi Link</button>
+    <textarea id="inp" rows="4" placeholder="Tempel satu atau beberapa link Google Drive di sini...&#10;https://drive.google.com/file/d/FILE_ID/view"></textarea>
+    <button class="btn-convert" onclick="convert()">&#9889; Konversi Link</button>
   </div>
 </div>
 
-<!-- TAB FOLDER -->
-<div id="pane-folder" style="display:none">
+<!-- TAB PICKER -->
+<div id="pane-picker" style="display:none">
   <div class="card">
-    <div class="card-title"><div class="dot"></div>Link folder Google Drive</div>
-    <input type="text" id="folder-inp" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
-    <p class="folder-hint">⚠ Pastikan sudah login Google di atas. Folder bisa privat maupun publik selama akun kamu punya akses.</p>
-
-    <div style="margin-top:12px;">
-      <div class="card-title" style="margin-bottom:8px"><div class="dot"></div>Urutkan berdasarkan</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-          <input type="radio" name="sort-by" value="name" checked style="accent-color:var(--green-main)"> Nama (A→Z)
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-          <input type="radio" name="sort-by" value="name desc" style="accent-color:var(--green-main)"> Nama (Z→A)
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-          <input type="radio" name="sort-by" value="modifiedTime desc" style="accent-color:var(--green-main)"> Terbaru diubah
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-          <input type="radio" name="sort-by" value="modifiedTime" style="accent-color:var(--green-main)"> Terlama diubah
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-          <input type="radio" name="sort-by" value="createdTime desc" style="accent-color:var(--green-main)"> Terbaru dibuat
-        </label>
-      </div>
+    <div class="card-title"><div class="dot"></div>Urutan hasil konversi</div>
+    <div class="sort-row">
+      <span class="sort-chip active" data-sort="picker">Sesuai urutan pilih</span>
+      <span class="sort-chip" data-sort="name_asc">Nama A&#8594;Z</span>
+      <span class="sort-chip" data-sort="name_desc">Nama Z&#8594;A</span>
     </div>
 
-    <div class="scan-status" id="scan-status">🔍 Sedang memindai file...</div>
-    <button class="btn-convert" id="btn-scan" onclick="scanFolder()">🔍 Scan &amp; Konversi Folder</button>
+    <div class="picker-zone" onclick="openPicker()">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 7a2 2 0 012-2h3.17a2 2 0 011.42.59L11 7h9a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+        <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+      </svg>
+      <div class="pz-title">Buka Google Drive Picker</div>
+      <div class="pz-sub">Klik untuk membuka &mdash; pilih banyak file sekaligus (Ctrl/Shift+klik di desktop)</div>
+    </div>
+
+    <div class="selected-info" id="selected-info"></div>
+    <button class="btn-convert" id="btn-konversi-picker" onclick="konversiPicker()" style="display:none">&#9889; Konversi File Terpilih</button>
   </div>
 </div>
 
@@ -358,7 +193,7 @@ input[type="text"]::placeholder { color:var(--gray-soft); }
 </div>
 
 <!-- HISTORY -->
-<div class="card" id="hist-card">
+<div class="card">
   <div class="card-title" style="justify-content:space-between">
     <span style="display:flex;align-items:center;gap:6px"><div class="dot"></div>Riwayat konversi</span>
     <button class="btn-sm" onclick="clearHist()" style="padding:4px 10px;font-size:11px">Hapus semua</button>
@@ -378,37 +213,45 @@ input[type="text"]::placeholder { color:var(--gray-soft); }
 
 <div class="toast" id="toast"></div>
 
-<!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
 
 <script>
-// ===================== CONFIG =====================
-var CLIENT_ID = '822278229469-0no0doa3qfge7116ntloe8hb7gna3n77.apps.googleusercontent.com';
-var SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+var CLIENT_ID   = '822278229469-0no0doa3qfge7116ntloe8hb7gna3n77.apps.googleusercontent.com';
+var API_KEY     = 'AIzaSyDRDXGrwF5tfrYC4Q-yGZ8LucZ6wQPW8j4';
+var SCOPES      = 'https://www.googleapis.com/auth/drive.readonly';
 
 var tokenClient;
 var accessToken = null;
 var historyData = [];
+var pickerFiles = [];
+var activeSort  = 'picker';
 
-// ===================== AUTH =====================
 window.onload = function() {
   loadHistory();
-  initGSI();
+  // sort chips
+  document.querySelectorAll('.sort-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('.sort-chip').forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      activeSort = chip.getAttribute('data-sort');
+    });
+  });
 };
 
-function initGSI() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: function(resp) {
-      if (resp.error) { showErr('Login gagal: ' + resp.error); return; }
-      accessToken = resp.access_token;
-      fetchUserInfo();
-    }
-  });
-}
-
+/* ===== AUTH ===== */
 function handleLogin() {
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: function(resp) {
+        if (resp.error) { showErr('Login gagal: ' + resp.error); return; }
+        accessToken = resp.access_token;
+        fetchUserInfo();
+      }
+    });
+  }
   tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
@@ -423,49 +266,36 @@ function handleLogout() {
 function fetchUserInfo() {
   fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: { Authorization: 'Bearer ' + accessToken }
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(u) {
-    document.getElementById('auth-name').textContent = u.name || 'Pengguna';
+  }).then(function(r){ return r.json(); }).then(function(u) {
+    document.getElementById('auth-name').textContent  = u.name || 'Pengguna';
     document.getElementById('auth-email').textContent = u.email || '';
     var av = document.getElementById('auth-avatar');
     if (u.picture) { av.src = u.picture; av.style.display = 'block'; }
     document.getElementById('auth-loggedout').style.display = 'none';
-    document.getElementById('auth-loggedin').style.display = 'flex';
-    showToast('Login berhasil sebagai ' + (u.name || u.email));
-  })
-  .catch(function(){ showErr('Gagal mengambil info akun.'); });
+    document.getElementById('auth-loggedin').style.display  = 'flex';
+    showToast('Login berhasil: ' + (u.name || u.email));
+  });
 }
 
-// ===================== TABS =====================
+/* ===== TABS ===== */
 function switchTab(tab) {
   document.getElementById('pane-manual').style.display = tab === 'manual' ? 'block' : 'none';
-  document.getElementById('pane-folder').style.display = tab === 'folder' ? 'block' : 'none';
+  document.getElementById('pane-picker').style.display = tab === 'picker' ? 'block' : 'none';
   document.getElementById('tab-manual').className = 'tab-btn' + (tab === 'manual' ? ' active' : '');
-  document.getElementById('tab-folder').className = 'tab-btn' + (tab === 'folder' ? ' active' : '');
+  document.getElementById('tab-picker').className = 'tab-btn' + (tab === 'picker' ? ' active' : '');
   hideAll();
 }
 
-// ===================== MANUAL =====================
+/* ===== MANUAL ===== */
 function extractId(u) {
   if (!u) return null;
   u = u.trim();
-  var patterns = [
-    /[?&]id=([a-zA-Z0-9_-]{10,})/,
-    /\/d\/([a-zA-Z0-9_-]{10,})/,
-    /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{10,})/,
-    /thumbnail\?id=([a-zA-Z0-9_-]{10,})/
-  ];
-  for (var i = 0; i < patterns.length; i++) {
-    var m = u.match(patterns[i]);
-    if (m) return m[1];
-  }
+  var pts = [/[?&]id=([a-zA-Z0-9_-]{10,})/, /\/d\/([a-zA-Z0-9_-]{10,})/, /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{10,})/, /thumbnail\?id=([a-zA-Z0-9_-]{10,})/];
+  for (var i=0;i<pts.length;i++){var m=u.match(pts[i]);if(m)return m[1];}
   return null;
 }
 
-function toLink(id) {
-  return 'https://drive.google.com/thumbnail?id=' + id + '&sz=s4000';
-}
+function toLink(id) { return 'https://drive.google.com/thumbnail?id=' + id + '&sz=s4000'; }
 
 function convert() {
   var raw = document.getElementById('inp').value.trim();
@@ -473,97 +303,54 @@ function convert() {
   if (!raw) { showErr('Tempel link Google Drive terlebih dahulu.'); return; }
   var lines = raw.split('\n').map(function(l){return l.trim();}).filter(Boolean);
   var results = [];
-  for (var i = 0; i < lines.length; i++) {
-    var id = extractId(lines[i]);
-    if (id) results.push({ id: id, url: toLink(id), name: '' });
-  }
-  if (!results.length) { showErr('ID file tidak ditemukan. Pastikan link berasal dari Google Drive dan formatnya benar.'); return; }
-  if (results.length === 1) showSingle(results[0]);
-  else showMulti(results);
+  for (var i=0;i<lines.length;i++){var id=extractId(lines[i]);if(id)results.push({id:id,url:toLink(id),name:''});}
+  if (!results.length) { showErr('ID file tidak ditemukan.'); return; }
+  if (results.length===1) showSingle(results[0]); else showMulti(results);
 }
 
-// ===================== FOLDER SCAN =====================
-function extractFolderId(u) {
-  if (!u) return null;
-  u = u.trim();
-  var m = u.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
-  if (m) return m[1];
-  m = u.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
-  if (m) return m[1];
-  // bare ID
-  if (/^[a-zA-Z0-9_-]{10,}$/.test(u)) return u;
-  return null;
-}
-
-function scanFolder() {
-  if (!accessToken) {
-    showErr('Login dengan Google terlebih dahulu untuk scan folder.');
-    return;
-  }
-  var raw = document.getElementById('folder-inp').value.trim();
-  var folderId = extractFolderId(raw);
-  if (!folderId) { showErr('Link folder tidak valid. Pastikan menggunakan link drive.google.com/drive/folders/...'); return; }
-
-  var sortEl = document.querySelector('input[name="sort-by"]:checked');
-  var orderBy = sortEl ? sortEl.value : 'name';
-
-  hideAll();
-  var btn = document.getElementById('btn-scan');
-  btn.disabled = true;
-  btn.textContent = '\u23F3 Memindai...';
-  var status = document.getElementById('scan-status');
-  status.style.display = 'block';
-  status.textContent = '\uD83D\uDD0D Memindai file di folder...';
-
-  fetchFolderFiles(folderId, orderBy, null, [], status, btn);
-}
-
-function fetchFolderFiles(folderId, orderBy, pageToken, accumulated, status, btn) {
-  var url = 'https://www.googleapis.com/drive/v3/files?' +
-    'q=' + encodeURIComponent("'" + folderId + "' in parents and mimeType contains 'image/' and trashed=false") +
-    '&fields=nextPageToken,files(id,name,mimeType,modifiedTime,createdTime)' +
-    '&orderBy=' + encodeURIComponent(orderBy) +
-    '&pageSize=1000' +
-    (pageToken ? '&pageToken=' + pageToken : '');
-
-  fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } })
-  .then(function(r){
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
-  })
-  .then(function(data) {
-    var files = data.files || [];
-    accumulated = accumulated.concat(files);
-    status.textContent = '\uD83D\uDD0D Ditemukan ' + accumulated.length + ' file gambar...';
-
-    if (data.nextPageToken) {
-      fetchFolderFiles(folderId, orderBy, data.nextPageToken, accumulated, status, btn);
-    } else {
-      btn.disabled = false;
-      btn.textContent = '\uD83D\uDD0D Scan & Konversi Folder';
-      status.style.display = 'none';
-
-      if (!accumulated.length) {
-        showErr('Tidak ada file gambar di folder ini, atau kamu tidak punya akses ke folder tersebut.');
-        return;
-      }
-
-      var results = accumulated.map(function(f) {
-        return { id: f.id, url: toLink(f.id), name: f.name };
-      });
-
-      showMulti(results);
-    }
-  })
-  .catch(function(err) {
-    btn.disabled = false;
-    btn.textContent = '\uD83D\uDD0D Scan & Konversi Folder';
-    status.style.display = 'none';
-    showErr('Gagal memindai folder: ' + err.message + '. Pastikan folder bisa diakses oleh akun yang login.');
+/* ===== PICKER ===== */
+function openPicker() {
+  if (!accessToken) { showErr('Login dengan Google terlebih dahulu.'); return; }
+  gapi.load('picker', function() {
+    var view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES)
+      .setIncludeFolders(false)
+      .setSelectFolderEnabled(false);
+    var picker = new google.picker.PickerBuilder()
+      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .setOAuthToken(accessToken)
+      .setDeveloperKey(API_KEY)
+      .addView(view)
+      .setCallback(pickerCallback)
+      .build();
+    picker.setVisible(true);
   });
 }
 
-// ===================== DISPLAY =====================
+function pickerCallback(data) {
+  if (data.action === google.picker.Action.PICKED) {
+    pickerFiles = data.docs.map(function(d){ return {id:d.id, name:d.name}; });
+    var info = document.getElementById('selected-info');
+    info.style.display = 'block';
+    info.innerHTML = '<b>' + pickerFiles.length + ' file dipilih:</b> ' + pickerFiles.map(function(f){return f.name;}).join(', ');
+    document.getElementById('btn-konversi-picker').style.display = 'block';
+    hideAll();
+  }
+}
+
+function konversiPicker() {
+  if (!pickerFiles.length) { showErr('Belum ada file dipilih.'); return; }
+  hideAll();
+  var files = pickerFiles.slice();
+  if (activeSort === 'name_asc') {
+    files.sort(function(a,b){ return a.name.localeCompare(b.name,'id',{numeric:true,sensitivity:'base'}); });
+  } else if (activeSort === 'name_desc') {
+    files.sort(function(a,b){ return b.name.localeCompare(a.name,'id',{numeric:true,sensitivity:'base'}); });
+  }
+  var results = files.map(function(f){ return {id:f.id, url:toLink(f.id), name:f.name}; });
+  if (results.length===1) showSingle(results[0]); else showMulti(results);
+}
+
+/* ===== DISPLAY ===== */
 function hideAll() {
   document.getElementById('err-box').style.display = 'none';
   document.getElementById('result-single').style.display = 'none';
@@ -572,101 +359,64 @@ function hideAll() {
 
 function showErr(msg) {
   var el = document.getElementById('err-box');
-  el.textContent = '⚠ ' + msg;
+  el.textContent = '\u26A0 ' + msg;
   el.style.display = 'block';
 }
 
 function showSingle(r) {
   document.getElementById('out-url').textContent = r.url;
-  document.getElementById('out-id').textContent = 'File ID: ' + r.id;
+  document.getElementById('out-id').textContent  = 'File ID: ' + r.id;
   document.getElementById('result-single').style.display = 'block';
-  var img = document.getElementById('preview-img');
-  var ph  = document.getElementById('img-placeholder');
-  img.style.display = 'none'; ph.style.display = 'flex';
-  ph.innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><br>Memuat preview...';
-  img.onload  = function(){ img.style.display='block'; ph.style.display='none'; };
-  img.onerror = function(){ ph.innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg><br>Gambar tidak bisa dimuat.<br><small>Pastikan akses sudah dibagikan ke publik.</small>'; };
-  img.src = r.url;
+  var img=document.getElementById('preview-img'), ph=document.getElementById('img-placeholder');
+  img.style.display='none'; ph.style.display='flex';
+  ph.innerHTML='<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><br>Memuat preview...';
+  img.onload=function(){img.style.display='block';ph.style.display='none';};
+  img.onerror=function(){ph.innerHTML='Gambar tidak bisa dimuat.';};
+  img.src=r.url;
 }
 
 function showMulti(results) {
   document.getElementById('multi-count').textContent = results.length;
   var list = document.getElementById('multi-list');
   list.innerHTML = '';
-  for (var i = 0; i < results.length; i++) {
-    var item = document.createElement('div');
-    item.className = 'multi-item';
-    item.innerHTML =
-      '<div class="num">' + (i+1) + '</div>' +
-      '<div class="url">' +
-        (results[i].name ? '<div class="fname">📄 ' + results[i].name + '</div>' : '') +
-        results[i].url +
-      '</div>' +
-      '<button class="multi-copy" onclick="copySingle(this,\'' + results[i].url + '\')">Salin</button>';
-    list.appendChild(item);
-  }
+  results.forEach(function(item, idx) {
+    var div = document.createElement('div');
+    div.className = 'multi-item';
+    div.innerHTML =
+      '<div class="num">'+(idx+1)+'</div>'+
+      '<div class="url">'+
+        (item.name ? '<div class="fname">\uD83D\uDCC4 '+item.name+'</div>' : '')+
+        item.url+
+      '</div>'+
+      '<button class="multi-copy">Salin</button>';
+    div.querySelector('.multi-copy').onclick = (function(u){ return function(){ copySingle(this,u); }; })(item.url);
+    list.appendChild(div);
+  });
   document.getElementById('result-multi').style.display = 'block';
   window._allResults = results;
 }
 
-// ===================== COPY =====================
-function copySingle(btn, url) { copyText(url); btn.textContent='✓'; setTimeout(function(){btn.textContent='Salin';},1500); }
-function copyOne() { copyText(document.getElementById('out-url').textContent); showToast('Link disalin!'); }
-function pasteToSheet() {
-  var url = document.getElementById('out-url').textContent;
-  var id  = document.getElementById('out-id').textContent.replace('File ID: ','');
-  copyText(url); addToHistory(url, id); showToast('Disalin & disimpan ke riwayat!');
-}
-function copyAll() {
-  if (!window._allResults) return;
-  var text = window._allResults.map(function(r){return r.url;}).join('\n');
-  copyText(text);
-  window._allResults.forEach(function(r){ addToHistory(r.url, r.id); });
-  showToast('Semua link disalin (' + window._allResults.length + ')!');
-}
-function copyText(text) {
-  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){legacyCopy(text);});
-  else legacyCopy(text);
-}
-function legacyCopy(text) {
-  var ta = document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
-  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-}
+/* ===== COPY ===== */
+function copySingle(btn,url){copyText(url);btn.textContent='\u2713';setTimeout(function(){btn.textContent='Salin';},1500);}
+function copyOne(){copyText(document.getElementById('out-url').textContent);showToast('Link disalin!');}
+function pasteToSheet(){var url=document.getElementById('out-url').textContent,id=document.getElementById('out-id').textContent.replace('File ID: ','');copyText(url);addToHistory(url,id);showToast('Disalin & disimpan!');}
+function copyAll(){if(!window._allResults)return;var t=window._allResults.map(function(r){return r.url;}).join('\n');copyText(t);window._allResults.forEach(function(r){addToHistory(r.url,r.id);});showToast('Semua link disalin ('+window._allResults.length+')!');}
+function copyText(t){if(navigator.clipboard)navigator.clipboard.writeText(t).catch(function(){legacyCopy(t);});else legacyCopy(t);}
+function legacyCopy(t){var ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}
 
-// ===================== HISTORY =====================
-function addToHistory(url, id) {
-  for (var i=0;i<historyData.length;i++) if(historyData[i].url===url) return;
-  historyData.unshift({url:url,id:id,time:new Date().toLocaleTimeString('id-ID')});
-  if (historyData.length>20) historyData.pop();
-  renderHistory(); saveHistory();
-}
-function renderHistory() {
-  var list = document.getElementById('hist-list');
-  if (!historyData.length) { list.innerHTML='<div class="empty-hist">Belum ada riwayat</div>'; return; }
-  list.innerHTML='';
-  historyData.forEach(function(item,i){
-    var div=document.createElement('div'); div.className='hist-item';
-    div.innerHTML='<div style="flex:1"><div class="hist-url">'+item.url+'</div><div style="font-size:10px;color:var(--gray-soft);margin-top:2px">'+item.time+'</div></div>'+
-      '<button class="hist-btn" onclick="reuse('+i+')">Pakai</button>'+
-      '<button class="hist-btn" onclick="copyText(\''+item.url+'\');showToast(\'Disalin!\')">Salin</button>';
-    list.appendChild(div);
-  });
-}
-function reuse(i) { document.getElementById('inp').value=historyData[i].url; switchTab('manual'); convert(); window.scrollTo({top:0,behavior:'smooth'}); }
-function clearHist() { historyData=[]; localStorage.removeItem('gdrive_hist'); renderHistory(); }
-function saveHistory() { try{localStorage.setItem('gdrive_hist',JSON.stringify(historyData));}catch(e){} }
-function loadHistory() { try{var r=localStorage.getItem('gdrive_hist');if(r)historyData=JSON.parse(r);renderHistory();}catch(e){} }
+/* ===== HISTORY ===== */
+function addToHistory(url,id){for(var i=0;i<historyData.length;i++)if(historyData[i].url===url)return;historyData.unshift({url:url,id:id,time:new Date().toLocaleTimeString('id-ID')});renderHistory();saveHistory();}
+function renderHistory(){var list=document.getElementById('hist-list');if(!historyData.length){list.innerHTML='<div class="empty-hist">Belum ada riwayat</div>';return;}list.innerHTML='';historyData.forEach(function(item,i){var div=document.createElement('div');div.className='hist-item';div.innerHTML='<div style="flex:1"><div class="hist-url">'+item.url+'</div><div style="font-size:10px;color:var(--gray-soft);margin-top:2px">'+item.time+'</div></div><button class="hist-btn" onclick="reuse('+i+')">Pakai</button><button class="hist-btn" onclick="copyText(\''+item.url+'\');showToast(\'Disalin!\')">Salin</button>';list.appendChild(div);});}
+function reuse(i){document.getElementById('inp').value=historyData[i].url;switchTab('manual');convert();window.scrollTo({top:0,behavior:'smooth'});}
+function clearHist(){historyData=[];localStorage.removeItem('gdrive_hist');renderHistory();}
+function saveHistory(){try{localStorage.setItem('gdrive_hist',JSON.stringify(historyData));}catch(e){}}
+function loadHistory(){try{var r=localStorage.getItem('gdrive_hist');if(r)historyData=JSON.parse(r);renderHistory();}catch(e){}}
 
-// ===================== TOAST =====================
+/* ===== TOAST ===== */
 var toastTimer;
-function showToast(msg) {
-  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove('show');},2000);
-}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show');},2000);}
 
-document.getElementById('inp').addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();convert();}
-});
+document.getElementById('inp').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();convert();}});
 </script>
 </body>
 </html>
