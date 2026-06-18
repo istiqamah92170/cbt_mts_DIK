@@ -290,7 +290,6 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
       <button class="btn-sm" onclick="backupDB()">&#x1F4BE; Backup Database</button>
       <button class="btn-sm" onclick="document.getElementById('dbRestore').click()">&#x1F504; Restore Database</button>
       <button class="btn-sm" onclick="showStorageInfo()">&#x2139;&#xFE0F; Info Penyimpanan</button>
-      <button class="btn-sm" onclick="showModal('modalPanduan')">&#x2753; Panduan</button>
       <input type="file" id="dbRestore" accept=".json" style="display:none" onchange="restoreDB(this)">
       <input type="file" id="dbImport" accept=".json" style="display:none" onchange="importDB(this)">
       <input type="file" id="dbExcel" accept=".xlsx,.xls" style="display:none" onchange="importDBExcel(this)">
@@ -5376,6 +5375,238 @@ function panduanTab(name, btn) {
   if (modal) modal.querySelectorAll('.kur-tab').forEach(function(b){ b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PATCH 4 — BUGFIX LANJUTAN
+// 1. Fix: dropdown Mapel & Kelas kosong (populateMapelSelects tidak trigger kelas)
+// 2. Fix: esai gambar — pertanyaan kosong + hanya link gambar harus bisa dianalisis
+// 3. UX: notifikasi setelah download template
+// 4. Panduan: gabungkan ke tombol ? kanan bawah, hapus dari toolbar DB
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 1: populateMapelSelects — restore mapel+kelas yang tersimpan di localStorage
+// dan trigger onAMapelChange agar dropdown kelas terisi
+// ─────────────────────────────────────────────────────────────────────────────
+var _origPopulateMapelSelects = populateMapelSelects;
+populateMapelSelects = function() {
+  _origPopulateMapelSelects();
+
+  // Restore pilihan terakhir dari localStorage
+  var lastMapel = localStorage.getItem('mts_last_mapel') || '';
+  var lastKelas = localStorage.getItem('mts_last_kelas') || '';
+
+  var selMapel = $id('aMapel');
+  if (selMapel && lastMapel) {
+    selMapel.value = lastMapel;
+    if (selMapel.value === lastMapel) {
+      // Isi dropdown kelas
+      var selKelas = $id('aKelas');
+      if (selKelas) {
+        selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+        var ks = getKelasList(lastMapel);
+        ks.forEach(function(k) {
+          var o = document.createElement('option');
+          o.value = k; o.textContent = 'Kelas ' + k;
+          selKelas.appendChild(o);
+        });
+        if (lastKelas) selKelas.value = lastKelas;
+      }
+    }
+  }
+
+  // Restore sMapel
+  var selSMapel = $id('sMapel');
+  if (selSMapel && lastMapel) {
+    selSMapel.value = lastMapel;
+    if (selSMapel.value === lastMapel && typeof onSMapelChange === 'function') {
+      onSMapelChange();
+      var selSKelas = $id('sKelas');
+      if (selSKelas && lastKelas) selSKelas.value = lastKelas;
+    }
+  }
+
+  if (typeof checkRunnable === 'function') checkRunnable();
+  if (typeof onAKelasChange === 'function') onAKelasChange();
+};
+
+// Simpan pilihan mapel+kelas ke localStorage saat berubah
+var _origOnAMapelChange = onAMapelChange;
+onAMapelChange = function() {
+  _origOnAMapelChange();
+  var m = $id('aMapel') && $id('aMapel').value;
+  if (m) localStorage.setItem('mts_last_mapel', m);
+  else    localStorage.removeItem('mts_last_mapel');
+  localStorage.removeItem('mts_last_kelas');
+};
+
+var _origOnAKelasChange = onAKelasChange;
+onAKelasChange = function() {
+  _origOnAKelasChange();
+  var k = $id('aKelas') && $id('aKelas').value;
+  if (k) localStorage.setItem('mts_last_kelas', k);
+  else    localStorage.removeItem('mts_last_kelas');
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 2: validateFile — esai_gambar dengan pertanyaan kosong tapi ada vrl_gambar
+// harus lolos filter dan bisa dianalisis
+// ─────────────────────────────────────────────────────────────────────────────
+var _origValidateFile = validateFile;
+validateFile = function(json, file) {
+  if (!json || json.length < 2) { showV('error', 'File kosong.'); return; }
+  origHeaders = json[0].map(function(h) { return String(h).trim(); });
+
+  // Kolom wajib: hanya 'tipe' — 'pertanyaan' opsional jika ada vrl_gambar
+  var missingRequired = ['tipe'].filter(function(h) { return !origHeaders.includes(h); });
+  var hasPert    = origHeaders.includes('pertanyaan');
+  var hasGambar  = origHeaders.includes('vrl_gambar');
+
+  if (missingRequired.length || (!hasPert && !hasGambar)) {
+    var msg = '<strong>Kolom wajib tidak ditemukan:</strong><ul>';
+    if (missingRequired.length) missingRequired.forEach(function(h) { msg += '<li><code>' + h + '</code></li>'; });
+    if (!hasPert && !hasGambar) msg += '<li>Minimal salah satu: <code>pertanyaan</code> atau <code>vrl_gambar</code></li>';
+    showV('error', msg + '</ul>'); return;
+  }
+
+  sheetData = json.slice(1).map(function(row, ri) {
+    var obj = { _ri: ri + 1 };
+    origHeaders.forEach(function(h, i) { obj[h] = row[i] !== undefined ? row[i] : ''; });
+    return obj;
+  }).filter(function(row) {
+    var tipe   = String(row['tipe'] || '').toLowerCase().trim();
+    var pert   = String(row['pertanyaan'] || '').trim();
+    var gambar = String(row['vrl_gambar'] || '').trim();
+    // Lolos jika: ada pertanyaan, atau ada gambar, atau tipe mengandung 'gambar'
+    return pert !== '' || gambar !== '' || tipe.includes('gambar');
+  });
+
+  showV('ok', '✓ File valid. <strong>' + sheetData.length + ' soal</strong> siap dianalisis.');
+  $id('aFileInfo').classList.add('show');
+  $id('aFileName').textContent = file.name;
+  $id('aFileStats').textContent = sheetData.length + ' soal · ' + (file.size / 1024).toFixed(1) + ' KB';
+  checkRunnable();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 2b: buildPayload — esai gambar dengan pertanyaan kosong
+// Tipe esai_gambar / essay_gambar diperlakukan seperti pg_gambar untuk pertanyaan
+// ─────────────────────────────────────────────────────────────────────────────
+var _origBuildPayload = buildPayload;
+buildPayload = function(row, mapel, kelas) {
+  var tipe   = String(row['tipe'] || '').toLowerCase().trim();
+  var isEsaiGambar = tipe === 'esai_gambar' || tipe === 'essay_gambar';
+  var pert   = String(row['pertanyaan'] || '').trim();
+  var gambar = String(row['vrl_gambar'] || '').trim();
+
+  // Jika esai gambar dan pertanyaan kosong tapi ada URL gambar
+  if (isEsaiGambar && !pert && gambar) {
+    var p = {
+      mapel:       mapel,
+      kelas:       kelas,
+      tipe:        row['tipe'] || 'esai_gambar',
+      pertanyaan:  '[Soal esai ada di gambar]',
+      url_gambar:  gambar
+    };
+    if (row['kunci'] && String(row['kunci']).trim()) p.kunci = String(row['kunci']).trim();
+    return p;
+  }
+
+  // Esai biasa dengan gambar — pastikan pertanyaan terisi walau kosong
+  if (ESAI.includes(tipe) && !pert && gambar) {
+    var p2 = {
+      mapel:      mapel,
+      kelas:      kelas,
+      tipe:       row['tipe'] || 'esai',
+      pertanyaan: '[Lihat gambar]',
+      url_gambar: gambar
+    };
+    if (row['kunci'] && String(row['kunci']).trim()) p2.kunci = String(row['kunci']).trim();
+    return p2;
+  }
+
+  return _origBuildPayload(row, mapel, kelas);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 2c: buildPrompt — instruksi tambahan untuk soal esai gambar
+// ─────────────────────────────────────────────────────────────────────────────
+var _origBuildPrompt = buildPrompt;
+buildPrompt = function(items, materiList) {
+  var hasEsaiGambar = items.some(function(item) {
+    var t = String(item.tipe || '').toLowerCase();
+    return (t === 'esai_gambar' || t === 'essay_gambar') ||
+           (String(item.pertanyaan || '').includes('[Soal esai ada di gambar]')) ||
+           (String(item.pertanyaan || '').includes('[Lihat gambar]'));
+  });
+
+  var base = _origBuildPrompt(items, materiList);
+
+  if (hasEsaiGambar) {
+    base += '\n\nCATATAN KHUSUS SOAL ESAI GAMBAR:\n' +
+      '- Soal bertanda "[Soal esai ada di gambar]" atau "[Lihat gambar]" adalah soal berbasis gambar.\n' +
+      '- Analisis berdasarkan URL gambar jika dapat diakses, atau gunakan konteks mapel dan kelas.\n' +
+      '- Untuk kunci_ai soal esai, tulis "Esai" atau deskripsi singkat jawaban.\n' +
+      '- Confidence untuk soal gambar yang tidak dapat diakses isi dengan nilai 40-60.';
+  }
+
+  return base;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 3: Notifikasi download template
+// ─────────────────────────────────────────────────────────────────────────────
+var _origDownloadTemplateMateri = downloadTemplateMateri;
+downloadTemplateMateri = function() {
+  _origDownloadTemplateMateri();
+  _showDownloadToast('Template Excel Database Materi sedang diunduh...', 'template_import_materi.xlsx');
+};
+
+var _origDownloadTemplateKurikulum = downloadTemplateKurikulum;
+downloadTemplateKurikulum = function() {
+  _origDownloadTemplateKurikulum();
+  _showDownloadToast('Template Excel Database Kurikulum sedang diunduh...', 'template_import_kurikulum.xlsx');
+};
+
+function _showDownloadToast(msg, filename) {
+  var toast = document.getElementById('_dlToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = '_dlToast';
+    toast.style.cssText = [
+      'position:fixed', 'bottom:80px', 'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(34,197,94,0.95)', 'color:#fff', 'padding:10px 18px',
+      'border-radius:8px', 'font-size:13px', 'font-weight:600',
+      'z-index:9999', 'box-shadow:0 4px 16px rgba(0,0,0,0.4)',
+      'display:none', 'text-align:center', 'max-width:320px'
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = '&#x2B07; ' + msg + '<br><small style="font-weight:400;opacity:0.85">' + filename + '</small>';
+  toast.style.display = 'block';
+  setTimeout(function() { toast.style.display = 'none'; }, 4000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 4: Pindahkan panduan ke tombol ? kanan bawah
+// Patch showHelp agar membuka modal panduan (bukan modal lama)
+// ─────────────────────────────────────────────────────────────────────────────
+// Override showHelp yang sudah ada (tombol ? kanan bawah)
+var _origShowHelp = typeof showHelp === 'function' ? showHelp : null;
+showHelp = function() {
+  // Reset ke tab pertama
+  document.querySelectorAll('.panduan-panel').forEach(function(p) { p.classList.remove('active'); });
+  var first = document.getElementById('ppanel-alur');
+  if (first) first.classList.add('active');
+  // Reset tab button
+  var modal = document.getElementById('modalPanduan');
+  if (modal) {
+    modal.querySelectorAll('.kur-tab').forEach(function(b, i) { b.classList.toggle('active', i === 0); });
+  }
+  showModal('modalPanduan');
+};
+
+
 
 // ─── PATCH aKelas change event binding ────────────────────────────────────────
 // The original aKelas listener in DOMContentLoaded binds to onAKelasChange
