@@ -2508,9 +2508,46 @@ window.addEventListener('DOMContentLoaded',function(){
       DB=JSON.parse(JSON.stringify(DEFAULT_DB));
     }
   }catch(e){DB=JSON.parse(JSON.stringify(DEFAULT_DB));}
+
+  // GUARD: Jika mapel kosong setelah load, inject DEFAULT_DB.mapel
+  if (!DB.mapel || Object.keys(DB.mapel).length === 0) {
+    var _defClone = JSON.parse(JSON.stringify(DEFAULT_DB));
+    DB.mapel = _defClone.mapel;
+    if (!DB.database_version) DB.database_version = '2.0';
+    // Inject content_version ke setiap item
+    for (var _m in DB.mapel) {
+      for (var _k in DB.mapel[_m]) {
+        DB.mapel[_m][_k] = DB.mapel[_m][_k].map(function(item) {
+          if (!item.content_version)    item.content_version    = '1.0';
+          if (!item.content_updated_at) item.content_updated_at = new Date().toISOString().slice(0,10);
+          if (!item.kurikulum_ref)      item.kurikulum_ref      = {kurikulum_id:null,cp_id:null,tp_ids:[],atp_id:null,kd_ids:[],indikator_ids:[]};
+          return item;
+        });
+      }
+    }
+  }
+
   const k=localStorage.getItem('gemini_api_key')||'';
   if(k){syncKey(k);scheduleTest(k);}
-  populateMapelSelects();renderDbMapelList();
+
+  // Populate mapel dropdowns
+  populateMapelSelects();
+  renderDbMapelList();
+
+  // Trigger kelas dropdown dengan mapel pertama jika belum ada pilihan
+  (function() {
+    var selMapel = document.getElementById('aMapel');
+    if (!selMapel) return;
+    // Jika mapel sudah terpilih (dari patch restore), trigger change
+    if (selMapel.value && typeof onAMapelChange === 'function') {
+      onAMapelChange();
+      // Restore kelas
+      var lastKelas = localStorage.getItem('mts_last_kelas') || '';
+      var selKelas = document.getElementById('aKelas');
+      if (selKelas && lastKelas) selKelas.value = lastKelas;
+      if (typeof onAKelasChange === 'function') onAKelasChange();
+    }
+  })();
   $id('apiKey').addEventListener('input',function(){syncKey(this.value.trim());checkRunnable();scheduleTest(this.value.trim());});
   $id('sApiKey').addEventListener('input',function(){syncKey(this.value.trim());});
   $id('aModel').addEventListener('change',function(){activeModel=null;scheduleTest($id('apiKey').value.trim());});
