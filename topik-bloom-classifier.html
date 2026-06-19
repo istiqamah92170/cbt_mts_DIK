@@ -1092,9 +1092,7 @@ function setTipe(t){
   $id('sResult').classList.remove('show');
 }
 function onAMapelChange(){
-  var m=$id('aMapel').value,sel=$id('aKelas');
-  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m){var ks=getKelasList(m);for(var i=0;i<ks.length;i++){var o=document.createElement('option');o.value=ks[i];o.textContent='Kelas '+ks[i];sel.appendChild(o);}}
+  _fillKelasDropdown('aMapel','aKelas');
   onAKelasChange();
 }
 function onAKelasChange(){
@@ -1104,9 +1102,7 @@ function onAKelasChange(){
   if(typeof checkRunnable==='function')checkRunnable();
 }
 function onSMapelChange(){
-  var m=$id('sMapel').value,sel=$id('sKelas');
-  sel.innerHTML='<option value="">-- Pilih Kelas --</option>';
-  if(m){var ks=getKelasList(m);for(var i=0;i<ks.length;i++){var o=document.createElement('option');o.value=ks[i];o.textContent='Kelas '+ks[i];sel.appendChild(o);}}
+  _fillKelasDropdown('sMapel','sKelas');
 }
 function resetAFile(){if(typeof doResetAFile==='function')doResetAFile();}
 function addMateri(){
@@ -2534,20 +2530,7 @@ window.addEventListener('DOMContentLoaded',function(){
   populateMapelSelects();
   renderDbMapelList();
 
-  // Trigger kelas dropdown dengan mapel pertama jika belum ada pilihan
-  (function() {
-    var selMapel = document.getElementById('aMapel');
-    if (!selMapel) return;
-    // Jika mapel sudah terpilih (dari patch restore), trigger change
-    if (selMapel.value && typeof onAMapelChange === 'function') {
-      onAMapelChange();
-      // Restore kelas
-      var lastKelas = localStorage.getItem('mts_last_kelas') || '';
-      var selKelas = document.getElementById('aKelas');
-      if (selKelas && lastKelas) selKelas.value = lastKelas;
-      if (typeof onAKelasChange === 'function') onAKelasChange();
-    }
-  })();
+  // populateMapelSelects() sudah otomatis mengisi kelas
   $id('apiKey').addEventListener('input',function(){syncKey(this.value.trim());checkRunnable();scheduleTest(this.value.trim());});
   $id('sApiKey').addEventListener('input',function(){syncKey(this.value.trim());});
   $id('aModel').addEventListener('change',function(){activeModel=null;scheduleTest($id('apiKey').value.trim());});
@@ -2899,8 +2882,90 @@ function saveDB(){
   }catch(e){}
 }
 function populateMapelSelects(){
-  const mapels=getMapelList();
-  ['aMapel','sMapel'].forEach(function(id){const sel=$id(id);if(!sel)return;sel.innerHTML='<option value="">-- Pilih Mapel --</option>';mapels.forEach(function(m){const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});});
+  // SELF-HEALING: Jika DB.mapel kosong, langsung inject DEFAULT_DB sekarang
+  if (!DB || !DB.mapel || Object.keys(DB.mapel).length === 0) {
+    DB = JSON.parse(JSON.stringify(DEFAULT_DB));
+  }
+
+  var mapels = Object.keys(DB.mapel);
+
+  function fillSelect(selMapelId, selKelasId, placeholder) {
+    var selMapel = document.getElementById(selMapelId);
+    var selKelas = document.getElementById(selKelasId);
+    if (!selMapel) return;
+
+    var prev = selMapel.value;
+    selMapel.innerHTML = '<option value="">' + placeholder + '</option>';
+    mapels.forEach(function(m) {
+      var o = document.createElement('option');
+      o.value = m; o.textContent = m;
+      selMapel.appendChild(o);
+    });
+
+    // Pilih mapel: pertahankan lama jika masih ada, atau mapel pertama
+    if (prev && mapels.indexOf(prev) >= 0) {
+      selMapel.value = prev;
+    } else if (mapels.length > 0) {
+      selMapel.value = mapels[0];
+    }
+
+    // Isi kelas sekarang juga
+    if (selKelas && selMapel.value) {
+      var kelas = Object.keys(DB.mapel[selMapel.value] || {});
+      var prevK = selKelas.value;
+      selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+      if (kelas.length > 1) {
+        var oAll = document.createElement('option');
+        oAll.value = '__SEMUA__'; oAll.textContent = 'Semua Kelas';
+        selKelas.appendChild(oAll);
+      }
+      kelas.forEach(function(k) {
+        var o = document.createElement('option');
+        o.value = k; o.textContent = 'Kelas ' + k;
+        selKelas.appendChild(o);
+      });
+      // Pertahankan pilihan kelas lama atau pilih pertama
+      if (prevK && (prevK === '__SEMUA__' || kelas.indexOf(prevK) >= 0)) {
+        selKelas.value = prevK;
+      } else if (kelas.length > 0) {
+        selKelas.value = kelas[0];
+      }
+    }
+  }
+
+  fillSelect('aMapel', 'aKelas', '-- Pilih Mapel --');
+  fillSelect('sMapel', 'sKelas', '-- Pilih --');
+
+  if (typeof checkRunnable === 'function') checkRunnable();
+  if (typeof onAKelasChange === 'function') onAKelasChange();
+}
+
+// Fungsi tunggal isi dropdown kelas berdasarkan mapel yang sudah terpilih
+function _fillKelasDropdown(mapelSelectId, kelasSelectId) {
+  var selMapel = $id(mapelSelectId);
+  var selKelas = $id(kelasSelectId);
+  if (!selMapel || !selKelas) return;
+  var mapel = selMapel.value;
+  var prevKelas = selKelas.value;
+  selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+  if (!mapel) return;
+  var kelasList = getKelasList(mapel);
+  // Tambah opsi Semua Kelas jika lebih dari satu
+  if (kelasList.length > 1) {
+    var oAll = document.createElement('option');
+    oAll.value = '__SEMUA__'; oAll.textContent = 'Semua Kelas';
+    selKelas.appendChild(oAll);
+  }
+  kelasList.forEach(function(k) {
+    var o = document.createElement('option');
+    o.value = k; o.textContent = 'Kelas ' + k; selKelas.appendChild(o);
+  });
+  // Pilih kelas: pertahankan lama, atau pilih pertama
+  if (prevKelas && (prevKelas === '__SEMUA__' || kelasList.includes(prevKelas))) {
+    selKelas.value = prevKelas;
+  } else if (kelasList.length > 0) {
+    selKelas.value = kelasList[0];
+  }
 }
 function renderDbMapelList(){
   const list=$id('dbMapelList');list.innerHTML='';
@@ -3078,37 +3143,7 @@ function getMateriListForKelas(mapel, kelas) {
   return getMateriList(mapel, kelas);
 }
 
-// ─── PATCH onAMapelChange + onAKelasChange to use Semua ──────────────────────
-// Override onAMapelChange in block 1 is already defined — patch here at runtime
-var _origOnAMapelChange = onAMapelChange;
-onAMapelChange = function() {
-  var m = $id('aMapel').value;
-  var sel = $id('aKelas');
-  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
-  var ks = m ? getKelasList(m) : [];
-  if (ks.length > 1) {
-    var o = document.createElement('option'); o.value = '__SEMUA__'; o.textContent = 'Semua Kelas';
-    sel.appendChild(o);
-  }
-  ks.forEach(function(k) {
-    var o = document.createElement('option'); o.value = k; o.textContent = 'Kelas ' + k;
-    sel.appendChild(o);
-  });
-  onAKelasChange();
-};
-var _origOnAKelasChange = onAKelasChange;
-onAKelasChange = function() {
-  var m = $id('aMapel').value, k = $id('aKelas').value;
-  var info = $id('aMateriInfo');
-  if (m && k) {
-    var ml = getMateriListForKelas(m, k);
-    if (ml.length) {
-      info.style.display = 'block';
-      info.textContent = '✓ ' + ml.length + ' materi' + (k === '__SEMUA__' ? ' (semua kelas)' : ' untuk ' + m + ' Kelas ' + k);
-    } else { info.style.display = 'none'; }
-  } else { info.style.display = 'none'; }
-  if (typeof checkRunnable === 'function') checkRunnable();
-};
+// [patch3 onAMapelChange/onAKelasChange override removed — now in main functions]
 var _origOnSMapelChange = onSMapelChange;
 onSMapelChange = function() {
   var m = $id('sMapel').value;
@@ -5425,65 +5460,9 @@ function panduanTab(name, btn) {
 // FIX 1: populateMapelSelects — restore mapel+kelas yang tersimpan di localStorage
 // dan trigger onAMapelChange agar dropdown kelas terisi
 // ─────────────────────────────────────────────────────────────────────────────
-var _origPopulateMapelSelects = populateMapelSelects;
-populateMapelSelects = function() {
-  _origPopulateMapelSelects();
+// [patch4 populateMapelSelects override removed — merged into main function]
 
-  // Restore pilihan terakhir dari localStorage
-  var lastMapel = localStorage.getItem('mts_last_mapel') || '';
-  var lastKelas = localStorage.getItem('mts_last_kelas') || '';
-
-  var selMapel = $id('aMapel');
-  if (selMapel && lastMapel) {
-    selMapel.value = lastMapel;
-    if (selMapel.value === lastMapel) {
-      // Isi dropdown kelas
-      var selKelas = $id('aKelas');
-      if (selKelas) {
-        selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>';
-        var ks = getKelasList(lastMapel);
-        ks.forEach(function(k) {
-          var o = document.createElement('option');
-          o.value = k; o.textContent = 'Kelas ' + k;
-          selKelas.appendChild(o);
-        });
-        if (lastKelas) selKelas.value = lastKelas;
-      }
-    }
-  }
-
-  // Restore sMapel
-  var selSMapel = $id('sMapel');
-  if (selSMapel && lastMapel) {
-    selSMapel.value = lastMapel;
-    if (selSMapel.value === lastMapel && typeof onSMapelChange === 'function') {
-      onSMapelChange();
-      var selSKelas = $id('sKelas');
-      if (selSKelas && lastKelas) selSKelas.value = lastKelas;
-    }
-  }
-
-  if (typeof checkRunnable === 'function') checkRunnable();
-  if (typeof onAKelasChange === 'function') onAKelasChange();
-};
-
-// Simpan pilihan mapel+kelas ke localStorage saat berubah
-var _origOnAMapelChange = onAMapelChange;
-onAMapelChange = function() {
-  _origOnAMapelChange();
-  var m = $id('aMapel') && $id('aMapel').value;
-  if (m) localStorage.setItem('mts_last_mapel', m);
-  else    localStorage.removeItem('mts_last_mapel');
-  localStorage.removeItem('mts_last_kelas');
-};
-
-var _origOnAKelasChange = onAKelasChange;
-onAKelasChange = function() {
-  _origOnAKelasChange();
-  var k = $id('aKelas') && $id('aKelas').value;
-  if (k) localStorage.setItem('mts_last_kelas', k);
-  else    localStorage.removeItem('mts_last_kelas');
-};
+// [patch4 onAMapelChange/onAKelasChange localStorage override removed]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIX 2: validateFile — esai_gambar dengan pertanyaan kosong tapi ada vrl_gambar
