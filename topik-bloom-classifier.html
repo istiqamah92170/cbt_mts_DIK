@@ -1097,7 +1097,7 @@ function onAMapelChange(){
 }
 function onAKelasChange(){
   var m=$id('aMapel').value,k=$id('aKelas').value,info=$id('aMateriInfo');
-  if(m&&k){var _ml=getMateriList(m,k);if(_ml.length){info.style.display='block';info.textContent='✓ '+_ml.length+' materi untuk '+m+' Kelas '+k;}else{info.style.display='none';}}
+  if(m&&k){var _ml=getMateriListForKelas(m,k);if(_ml.length){info.style.display='block';info.textContent='✓ '+_ml.length+' materi untuk '+m+(k==='__SEMUA__'?' (semua kelas)':' Kelas '+k);}else{info.style.display='none';}}
   else{info.style.display='none';}
   if(typeof checkRunnable==='function')checkRunnable();
 }
@@ -2505,22 +2505,13 @@ window.addEventListener('DOMContentLoaded',function(){
     }
   }catch(e){DB=JSON.parse(JSON.stringify(DEFAULT_DB));}
 
-  // GUARD: Jika mapel kosong setelah load, inject DEFAULT_DB.mapel
+  // GUARD: Jika mapel kosong, inject DEFAULT_DB.mapel lalu SIMPAN ke localStorage
   if (!DB.mapel || Object.keys(DB.mapel).length === 0) {
     var _defClone = JSON.parse(JSON.stringify(DEFAULT_DB));
     DB.mapel = _defClone.mapel;
     if (!DB.database_version) DB.database_version = '2.0';
-    // Inject content_version ke setiap item
-    for (var _m in DB.mapel) {
-      for (var _k in DB.mapel[_m]) {
-        DB.mapel[_m][_k] = DB.mapel[_m][_k].map(function(item) {
-          if (!item.content_version)    item.content_version    = '1.0';
-          if (!item.content_updated_at) item.content_updated_at = new Date().toISOString().slice(0,10);
-          if (!item.kurikulum_ref)      item.kurikulum_ref      = {kurikulum_id:null,cp_id:null,tp_ids:[],atp_id:null,kd_ids:[],indikator_ids:[]};
-          return item;
-        });
-      }
-    }
+    // Simpan segera agar refresh tidak hilang
+    try { localStorage.setItem('mts_db', JSON.stringify(DB)); } catch(e) {}
   }
 
   const k=localStorage.getItem('gemini_api_key')||'';
@@ -2599,8 +2590,8 @@ async function startAnalysis(){
   const batchSize=aMode==='local'?50:parseInt($id('aBatch').value);
   const delay=aMode==='local'?0:parseInt($id('aDelay').value);
   const skipFilled=$id('aSkip').checked;
-  const materiList=getMateriList(mapel,kelas);
-  if(!materiList.length){alert('Tidak ada daftar materi. Tambahkan di tab Database Materi.');return;}
+  const materiList=getMateriListForKelas(mapel,kelas);
+  if(!materiList.length){alert('Tidak ada daftar materi untuk '+mapel+' Kelas '+kelas+'. Tambahkan di tab Database Materi.');return;}
   abortFlag=false;resultData=JSON.parse(JSON.stringify(sheetData));
   $id('btnRun').disabled=true;$id('aProgress').classList.add('show');$id('aResults').classList.remove('show');clearLog();
   let ok=0,err=0,skip=0;const total=resultData.length;let i=0;
@@ -2834,7 +2825,7 @@ function doDownload(){
 async function doSingleAnalyze(){
   const mapel=$id('sMapel').value,kelas=$id('sKelas').value;
   if(!mapel||!kelas){showSErr('Pilih Mapel dan Kelas.');return;}
-  const materiList=getMateriList(mapel,kelas);
+  const materiList=getMateriListForKelas(mapel,kelas);
   if(!materiList.length){showSErr('Tidak ada materi.');return;}
   const row={tipe:currentTipe,pertanyaan:currentTipe==='pg_gambar'?'':$id('sPert').value.trim(),vrl_gambar:currentTipe==='pg_gambar'?$id('sPgGambar').value.trim():$id('sGambar').value.trim(),opsi_a:$id('sA')?$id('sA').value.trim():'',opsi_b:$id('sB')?$id('sB').value.trim():'',opsi_c:$id('sC')?$id('sC').value.trim():'',opsi_d:$id('sD')?$id('sD').value.trim():'',kunci:currentTipe==='pg_gambar'?$id('sPgKunci').value.trim():$id('sKunci').value.trim()};
   if(!row.pertanyaan&&!row.vrl_gambar){showSErr('Pertanyaan atau URL gambar wajib diisi.');return;}
@@ -2882,9 +2873,10 @@ function saveDB(){
   }catch(e){}
 }
 function populateMapelSelects(){
-  // SELF-HEALING: Jika DB.mapel kosong, langsung inject DEFAULT_DB sekarang
+  // SELF-HEALING: Jika DB.mapel kosong, inject lalu SIMPAN
   if (!DB || !DB.mapel || Object.keys(DB.mapel).length === 0) {
     DB = JSON.parse(JSON.stringify(DEFAULT_DB));
+    try { localStorage.setItem('mts_db', JSON.stringify(DB)); } catch(e) {}
   }
 
   var mapels = Object.keys(DB.mapel);
@@ -2924,11 +2916,11 @@ function populateMapelSelects(){
         o.value = k; o.textContent = 'Kelas ' + k;
         selKelas.appendChild(o);
       });
-      // Pertahankan pilihan kelas lama atau pilih pertama
-      if (prevK && (prevK === '__SEMUA__' || kelas.indexOf(prevK) >= 0)) {
+      // Pertahankan pilihan kelas lama atau pilih kelas pertama (bukan __SEMUA__)
+      if (prevK && prevK !== '__SEMUA__' && kelas.indexOf(prevK) >= 0) {
         selKelas.value = prevK;
       } else if (kelas.length > 0) {
-        selKelas.value = kelas[0];
+        selKelas.value = kelas[0]; // kelas[0] = kelas pertama misal 'VII', bukan __SEMUA__
       }
     }
   }
@@ -2961,10 +2953,11 @@ function _fillKelasDropdown(mapelSelectId, kelasSelectId) {
     o.value = k; o.textContent = 'Kelas ' + k; selKelas.appendChild(o);
   });
   // Pilih kelas: pertahankan lama, atau pilih pertama
-  if (prevKelas && (prevKelas === '__SEMUA__' || kelasList.includes(prevKelas))) {
+  // Pilih kelas lama jika masih ada, atau kelas pertama spesifik (bukan __SEMUA__)
+  if (prevKelas && prevKelas !== '__SEMUA__' && kelasList.includes(prevKelas)) {
     selKelas.value = prevKelas;
   } else if (kelasList.length > 0) {
-    selKelas.value = kelasList[0];
+    selKelas.value = kelasList[0]; // 'VII', 'VIII', dst — bukan __SEMUA__
   }
 }
 function renderDbMapelList(){
@@ -3169,18 +3162,8 @@ checkRunnable = function() {
   $id('btnRun').disabled = !(apiOk && sheetData.length > 0 && mapelOk);
 };
 
-// Patch startAnalysis to use getMateriListForKelas
-var _origStartAnalysis = startAnalysis;
-startAnalysis = async function() {
-  var mapel = $id('aMapel').value, kelas = $id('aKelas').value;
-  var materiList = getMateriListForKelas(mapel, kelas);
-  if (!materiList.length) { alert('Tidak ada daftar materi. Tambahkan di tab Database Materi.'); return; }
-  // Proceed with original but we need to inject materiList — call original and let it re-fetch
-  // Since original also calls getMateriListForKelas via getMateriList, we patch getMateriList temporarily
-  await _origStartAnalysis();
-};
-
-// Patch getMateriList to handle __SEMUA__ transparently
+// startAnalysis (fungsi asli) sudah memakai getMateriListForKelas — tidak perlu override lagi.
+// getMateriList tetap di-patch agar __SEMUA__ ditangani transparan di seluruh pemanggil lain.
 var _origGetMateriList = getMateriList;
 getMateriList = function(mapel, kelas) {
   if (kelas === '__SEMUA__') return getMateriListForKelas(mapel, kelas);
