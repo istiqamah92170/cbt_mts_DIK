@@ -149,6 +149,22 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
 .kur-ver-history.show{display:block;}
 .kur-ver-entry{font-size:11px;color:var(--text3);padding:3px 0;border-bottom:1px solid var(--border);line-height:1.5;}
 .kur-ver-entry:last-child{border-bottom:none;}
+/* Drift status badges */
+.drift-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap;}
+.drift-verified{background:rgba(34,197,94,0.15);color:#4ade80;}
+.drift-ringan{background:rgba(251,191,36,0.15);color:#fbbf24;}
+.drift-signifikan{background:rgba(248,113,113,0.15);color:#f87171;}
+.drift-historis{background:rgba(148,163,184,0.15);color:#94a3b8;}
+.drift-notfound{background:rgba(168,85,247,0.15);color:#c084fc;}
+.riwayat-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;}
+.riwayat-item:hover{border-color:var(--border2);}
+.riwayat-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.riwayat-meta{font-size:11px;color:var(--text3);line-height:1.7;margin-top:4px;}
+.riwayat-stats{display:flex;gap:14px;margin-top:8px;font-size:12px;flex-wrap:wrap;}
+.riwayat-stat-item{color:var(--text2);}
+.riwayat-stat-item strong{color:var(--text);}
+.linkkur-row{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;}
+.linkkur-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;background:rgba(99,102,241,0.15);color:#818cf8;}
 /* Panduan modal */
 .panduan-panel{display:none;}
 .panduan-panel.active{display:block;}
@@ -167,6 +183,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
   <button class="tab-btn" onclick="switchTab('single',this)">&#x1F50D; Analisis 1 Soal</button>
   <button class="tab-btn" onclick="switchTab('db',this)">&#x1F4DA; Database Materi</button>
   <button class="tab-btn" onclick="switchTab('kurikulum',this)">&#x1F4D6; Database Kurikulum</button>
+  <button class="tab-btn" onclick="switchTab('riwayat',this)">&#x1F551; Riwayat Sesi</button>
 </div>
 <main>
 <div class="tab-panel active" id="tab-analyze">
@@ -943,6 +960,39 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: RIWAYAT SESI + DRIFT DETECTION                                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-riwayat">
+  <div class="card">
+    <div class="card-title">&#x1F551; Riwayat Sesi Analisis</div>
+    <div class="info-box">
+      Setiap sesi analisis tercatat di sini (maksimal 20 sesi terakhir). Status <strong>drift</strong>
+      menunjukkan apakah Database Kurikulum atau Materi telah berubah sejak sesi tersebut dijalankan.
+    </div>
+    <div class="row-btns" style="margin-top:10px">
+      <button class="btn-sm" onclick="renderRiwayatSesi()">&#x1F504; Muat Ulang</button>
+      <button class="btn-sm danger" onclick="clearSessionHistory();renderRiwayatSesi()">&#x1F5D1; Hapus Riwayat</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="riwayatSesiList"><div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Belum ada riwayat sesi.</div></div>
+  </div>
+</div>
+
+<!-- Modal Detail Drift -->
+<div class="modal-overlay" id="modalDriftDetail">
+  <div class="modal-box" style="max-width:640px;max-height:85vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeModal('modalDriftDetail')">&#x2715;</button>
+    <div class="modal-title">&#x1F50D; Detail Drift Check</div>
+    <div id="driftDetailContent" style="font-size:13px;line-height:1.8;color:var(--text2)">Memuat...</div>
+    <div class="row-btns" style="margin-top:16px">
+      <button class="btn-sec" onclick="closeModal('modalDriftDetail')">Tutup</button>
+    </div>
+  </div>
+</div>
+
 </main>
 <!-- Help button -->
 <button class="help-btn" onclick="showModal('modalGuide')" title="Panduan">&#x2753;</button>
@@ -1248,7 +1298,13 @@ function getMateriById(id) {
       var list = src[mapel][kelas];
       for (var i = 0; i < list.length; i++) {
         if (typeof list[i] === 'object' && list[i].id === id) {
-          return { mapel: mapel, kelas: kelas, id: list[i].id, materi: list[i].materi };
+          // Kembalikan REFERENSI ASLI ke object (bukan salinan baru) agar
+          // perubahan seperti kurikulum_ref tersimpan langsung ke DB.
+          // 'mapel' dan 'kelas' bukan field asli materi item sehingga aman
+          // ditambahkan untuk kompatibilitas dengan kode yang mengharapkannya.
+          list[i].mapel = mapel;
+          list[i].kelas = kelas;
+          return list[i];
         }
       }
     }
@@ -1536,6 +1592,14 @@ resetDBConfirm = function() {
   // Save changelog before reset
   var savedChangelog = DB.changelog ? DB.changelog.slice() : [];
   DB = JSON.parse(JSON.stringify(DEFAULT_DB));
+  // Pastikan setiap item materi punya content_version + kurikulum_ref
+  if (DB.mapel && typeof _ensureMateriVersion === 'function') {
+    for (var _rm in DB.mapel) {
+      for (var _rk in DB.mapel[_rm]) {
+        DB.mapel[_rm][_rk] = DB.mapel[_rm][_rk].map(_ensureMateriVersion);
+      }
+    }
+  }
   DB.changelog = savedChangelog; // restore changelog
   dbLog('reset_db', 'root', null, 'DEFAULT_DB v2.0');
   if (typeof saveDB === 'function') saveDB();
@@ -2466,12 +2530,27 @@ const MAX_RETRY=3;
 let workbook=null,sheetData=[],resultData=[],abortFlag=false,origHeaders=[];
 
 window.addEventListener('DOMContentLoaded',function(){
+  // Fungsi tunggal: clone DEFAULT_DB DAN pastikan setiap item materi
+  // punya content_version + kurikulum_ref. Dipakai di SEMUA jalur inisialisasi
+  // DB agar tidak ada lagi celah field yang hilang.
+  function _cloneDefaultDBSafe() {
+    var db = JSON.parse(JSON.stringify(DEFAULT_DB));
+    if (db.mapel && typeof _ensureMateriVersion === 'function') {
+      for (var _m in db.mapel) {
+        for (var _k in db.mapel[_m]) {
+          db.mapel[_m][_k] = db.mapel[_m][_k].map(_ensureMateriVersion);
+        }
+      }
+    }
+    return db;
+  }
+
   try{
     var _raw=localStorage.getItem('mts_db');
     if(_raw){
       var _parsed=JSON.parse(_raw);
       var _migrated=migrateDB(_parsed);
-      DB=_migrated||JSON.parse(JSON.stringify(DEFAULT_DB));
+      DB=_migrated||_cloneDefaultDBSafe();
       // Restore changelog from separate key if missing
       var _cl=localStorage.getItem('mts_db_changelog');
       if(_cl&&(!DB.changelog||!DB.changelog.length)){
@@ -2483,13 +2562,14 @@ window.addEventListener('DOMContentLoaded',function(){
         localStorage.setItem('mts_db_changelog',JSON.stringify(DB.changelog||[]));
       }
     }else{
-      DB=JSON.parse(JSON.stringify(DEFAULT_DB));
+      DB=_cloneDefaultDBSafe();
     }
-  }catch(e){DB=JSON.parse(JSON.stringify(DEFAULT_DB));}
+  }catch(e){DB=_cloneDefaultDBSafe();}
 
-  // GUARD: Jika mapel kosong, inject DEFAULT_DB.mapel lalu SIMPAN ke localStorage
+  // GUARD: Jika mapel tetap kosong (mis. localStorage rusak/format aneh),
+  // inject DEFAULT_DB.mapel lalu SIMPAN ke localStorage
   if (!DB.mapel || Object.keys(DB.mapel).length === 0) {
-    var _defClone = JSON.parse(JSON.stringify(DEFAULT_DB));
+    var _defClone = _cloneDefaultDBSafe(); // sudah termasuk _ensureMateriVersion
     DB.mapel = _defClone.mapel;
     if (!DB.database_version) DB.database_version = '2.0';
     // Simpan segera agar refresh tidak hilang
@@ -2858,6 +2938,13 @@ function populateMapelSelects(){
   // SELF-HEALING: Jika DB.mapel kosong, inject lalu SIMPAN
   if (!DB || !DB.mapel || Object.keys(DB.mapel).length === 0) {
     DB = JSON.parse(JSON.stringify(DEFAULT_DB));
+    if (typeof _ensureMateriVersion === 'function') {
+      for (var _sm in DB.mapel) {
+        for (var _sk in DB.mapel[_sm]) {
+          DB.mapel[_sm][_sk] = DB.mapel[_sm][_sk].map(_ensureMateriVersion);
+        }
+      }
+    }
     try { localStorage.setItem('mts_db', JSON.stringify(DB)); } catch(e) {}
   }
 
@@ -4934,17 +5021,10 @@ migrateDB = function(raw) {
 };
 
 // Patch juga DEFAULT_DB path (saat tidak ada localStorage)
-var _origDefaultDBClone = function() {
-  var db = JSON.parse(JSON.stringify(DEFAULT_DB));
-  if (db.mapel) {
-    for (var m in db.mapel) {
-      for (var k in db.mapel[m]) {
-        db.mapel[m][k] = db.mapel[m][k].map(_ensureMateriVersion);
-      }
-    }
-  }
-  return db;
-};
+// Catatan: fungsi clone DEFAULT_DB dengan _ensureMateriVersion kini terpusat
+// di _cloneDefaultDBSafe() (dalam DOMContentLoaded) dan inline di
+// populateMapelSelects() + resetDBConfirm(). Variabel _origDefaultDBClone
+// yang sebelumnya ada di sini dihapus karena tidak pernah dipakai di manapun.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIX 2: Form KD — sediakan kelas dari semua option standar, bukan hardcode
@@ -5588,6 +5668,425 @@ showHelp = function() {
   }
   showModal('modalPanduan');
 };
+
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAHAP 3 — DRIFT DETECTION
+// Fase localStorage: deteksi versi berbeda + entitas hilang.
+// Perbandingan narasi penuh ditunda ke fase server (sesuai Audit Konsistensi).
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Bandingkan satu entitas snapshot terhadap kondisi DB aktif saat ini.
+ * Mengembalikan satu drift_item atau null jika tidak ada perubahan.
+ */
+function _checkEntityDrift(type, id, snapshotVersi) {
+  if (!id) return null;
+
+  if (type === 'materi') {
+    var item = getMateriById(id);
+    if (!item) {
+      return { type: type, id: id, status: 'tidak_ditemukan',
+               snapshot_versi: snapshotVersi, versi_sekarang: null,
+               pesan: 'Materi dengan ID ini sudah tidak ada di Database Materi.' };
+    }
+    var verSekarang = item.content_version || '1.0';
+    if (verSekarang !== snapshotVersi) {
+      return { type: type, id: id, status: 'versi_berubah',
+               snapshot_versi: snapshotVersi, versi_sekarang: verSekarang,
+               pesan: 'Materi "' + item.materi + '" telah diperbarui (v' + snapshotVersi + ' → v' + verSekarang + ').' };
+    }
+    return null;
+  }
+
+  if (type === 'cp' || type === 'tp' || type === 'atp' || type === 'kd' || type === 'indikator' || type === 'kurikulum' || type === 'regulasi') {
+    var entity = DB_KUR[type] ? DB_KUR[type][id] : null;
+    if (!entity) {
+      return { type: type, id: id, status: 'tidak_ditemukan',
+               snapshot_versi: snapshotVersi, versi_sekarang: null,
+               pesan: type.toUpperCase() + ' "' + id + '" sudah tidak ada di Database Kurikulum.' };
+    }
+    var verSekarang2 = entity.current_version;
+    if (verSekarang2 !== snapshotVersi) {
+      return { type: type, id: id, status: 'versi_berubah',
+               snapshot_versi: snapshotVersi, versi_sekarang: verSekarang2,
+               pesan: type.toUpperCase() + ' "' + id + '" telah diperbarui (v' + snapshotVersi + ' → v' + verSekarang2 + ').' };
+    }
+    // Cek status aktif/tidak aktif khusus untuk kurikulum
+    if (type === 'kurikulum') {
+      var cur = _kurGetCurrent('kurikulum', id);
+      if (cur && cur.status !== 'aktif') {
+        return { type: type, id: id, status: 'tidak_aktif',
+                 snapshot_versi: snapshotVersi, versi_sekarang: verSekarang2,
+                 pesan: 'Kurikulum "' + (cur.nama||id) + '" sudah tidak aktif (digantikan kurikulum lain).' };
+      }
+    }
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * Jalankan drift check menyeluruh untuk satu Session Record (versi ringkasan
+ * yang tersimpan di localStorage). Mengembalikan Drift Report.
+ */
+function checkDriftSession(sessionSummary) {
+  var report = {
+    session_id: sessionSummary.session_id,
+    status:     'terverifikasi',
+    drift_items: [],
+    dicek_pada: new Date().toISOString()
+  };
+
+  if (!sessionSummary) {
+    report.status = 'tidak_dapat_diverifikasi';
+    return report;
+  }
+
+  // 1. Cek snapshot materi
+  var matSnap = sessionSummary.snapshot_materi_ringkas || [];
+  matSnap.forEach(function(m) {
+    var d = _checkEntityDrift('materi', m.materi_id, m.content_version);
+    if (d) report.drift_items.push(d);
+  });
+
+  // 2. Cek snapshot kurikulum (entitas CP/TP yang direferensikan)
+  var kurSnap = sessionSummary.snapshot_kurikulum_ringkas || {};
+  Object.keys(kurSnap).forEach(function(entId) {
+    var e = kurSnap[entId];
+    var d = _checkEntityDrift(e.type, entId, e.versi);
+    if (d) report.drift_items.push(d);
+  });
+
+  // 3. Cek versi Knowledge Engine
+  var keSnap = sessionSummary.snapshot_ke_versions || {};
+  var keDrift = [];
+  Object.keys(keSnap).forEach(function(eng) {
+    var snapVer = keSnap[eng];
+    var curVer  = KnowledgeEngine[eng] ? KnowledgeEngine[eng].getVersion().versi : null;
+    if (snapVer !== curVer) {
+      keDrift.push({ type: 'knowledge_engine', id: eng, status: 'versi_berubah',
+                     snapshot_versi: snapVer, versi_sekarang: curVer,
+                     pesan: 'Engine ' + eng + ' versi berubah (v' + snapVer + ' → v' + curVer + '). Hasil mungkin tidak reprodusibel persis sama jika diulang.' });
+    }
+  });
+  report.drift_items = report.drift_items.concat(keDrift);
+
+  // 4. Tentukan status keseluruhan berdasarkan drift_items
+  if (report.drift_items.length === 0) {
+    report.status = 'terverifikasi';
+  } else {
+    var hasNotFound = report.drift_items.some(function(d){ return d.status === 'tidak_ditemukan'; });
+    var hasInactive  = report.drift_items.some(function(d){ return d.status === 'tidak_aktif'; });
+    var keOnly = report.drift_items.every(function(d){ return d.type === 'knowledge_engine'; });
+
+    if (hasNotFound) report.status = 'tidak_dapat_diverifikasi';
+    else if (hasInactive) report.status = 'kurikulum_historis';
+    else if (keOnly) report.status = 'ke_berubah';
+    else report.status = report.drift_items.length > 2 ? 'drift_signifikan' : 'drift_ringan';
+  }
+
+  return report;
+}
+
+/** Label dan warna badge untuk status drift */
+function _driftStatusLabel(status) {
+  var map = {
+    'terverifikasi':          { label: '&#x2713; Terverifikasi',        cls: 'drift-verified' },
+    'drift_ringan':           { label: '&#x26A0; Drift Ringan',         cls: 'drift-ringan' },
+    'drift_signifikan':       { label: '&#x26A0; Drift Signifikan',     cls: 'drift-signifikan' },
+    'kurikulum_historis':     { label: '&#x1F4DC; Kurikulum Historis',  cls: 'drift-historis' },
+    'ke_berubah':             { label: '&#x1F501; KE Berubah',          cls: 'drift-ringan' },
+    'tidak_dapat_diverifikasi': { label: '&#x2753; Tidak Dapat Diverifikasi', cls: 'drift-notfound' }
+  };
+  return map[status] || { label: status, cls: 'drift-notfound' };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Perluasan _pushSessionSummary agar menyimpan field yang dibutuhkan drift check
+// (snapshot_materi_ringkas, snapshot_kurikulum_ringkas)
+// ─────────────────────────────────────────────────────────────────────────────
+var _origPushSessionSummary = _pushSessionSummary;
+_pushSessionSummary = function(sess) {
+  var sessions = _loadSessions();
+  var summary = {
+    session_id:     sess.session_id,
+    tipe:           sess.tipe,
+    dijalankan_pada:sess.dijalankan_pada,
+    status:         sess.status,
+    konteks:        sess.konteks_analisis,
+    ringkasan:      sess.ringkasan_hasil,
+    snapshot_aplikasi: sess.snapshot_aplikasi,
+    snapshot_ke_versions: _keVersionsSummary(sess.snapshot_ke),
+    // Tambahan untuk drift check:
+    snapshot_materi_ringkas: (sess.snapshot_materi || []).map(function(m) {
+      return { materi_id: m.materi_id, nama_materi: m.nama_materi, content_version: m.content_version };
+    }),
+    snapshot_kurikulum_ringkas: (function() {
+      var out = {};
+      var ent = (sess.snapshot_kurikulum && sess.snapshot_kurikulum.entitas) || {};
+      Object.keys(ent).forEach(function(id) {
+        out[id] = { type: ent[id].type, versi: ent[id].versi };
+      });
+      return out;
+    })()
+  };
+  sessions = sessions.filter(function(s){ return s.session_id !== sess.session_id; });
+  sessions.unshift(summary);
+  if (sessions.length > SESSION_MAX) sessions = sessions.slice(0, SESSION_MAX);
+  _saveSessions(sessions);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI: RENDER RIWAYAT SESI
+// ─────────────────────────────────────────────────────────────────────────────
+function renderRiwayatSesi() {
+  var container = $id('riwayatSesiList');
+  if (!container) return;
+  var sessions = getSessionHistory();
+
+  if (!sessions.length) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Belum ada riwayat sesi.</div>';
+    return;
+  }
+
+  var html = '';
+  sessions.forEach(function(s) {
+    var report = checkDriftSession(s);
+    var badge  = _driftStatusLabel(report.status);
+    var ctx    = s.konteks || {};
+    var ring   = s.ringkasan || {};
+    var tanggal = s.dijalankan_pada ? new Date(s.dijalankan_pada).toLocaleString('id-ID', {dateStyle:'medium', timeStyle:'short'}) : '—';
+
+    html += '<div class="riwayat-item">';
+    html += '<div class="riwayat-header">';
+    html += '<div>';
+    html += '<div class="kur-entity-id">' + kurEsc(s.session_id) + '</div>';
+    html += '<div class="kur-entity-title">' + kurEsc(ctx.mapel||'—') + ' &middot; Kelas ' + kurEsc(ctx.kelas||'—') + '</div>';
+    html += '<div class="riwayat-meta">' + tanggal + ' &middot; Tipe: ' + kurEsc(s.tipe||'—') + ' &middot; Status: ' + kurEsc(s.status||'—') + '</div>';
+    html += '</div>';
+    html += '<span class="drift-badge ' + badge.cls + '">' + badge.label + '</span>';
+    html += '</div>';
+
+    html += '<div class="riwayat-stats">';
+    html += '<span class="riwayat-stat-item">Total: <strong>' + (ring.total_soal||0) + '</strong></span>';
+    html += '<span class="riwayat-stat-item">Berhasil: <strong style="color:#4ade80">' + (ring.berhasil||0) + '</strong></span>';
+    if (ring.gagal) html += '<span class="riwayat-stat-item">Gagal: <strong style="color:#f87171">' + ring.gagal + '</strong></span>';
+    html += '</div>';
+
+    if (report.drift_items.length > 0) {
+      html += '<div style="margin-top:8px">';
+      html += '<button class="btn-sm" onclick="showDriftDetail(\'' + s.session_id + '\')">&#x1F50D; Lihat ' + report.drift_items.length + ' Perubahan</button>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+/** Tampilkan detail drift dalam modal */
+function showDriftDetail(sessionId) {
+  var sessions = getSessionHistory();
+  var s = sessions.find(function(x) { return x.session_id === sessionId; });
+  if (!s) { alert('Sesi tidak ditemukan.'); return; }
+
+  var report = checkDriftSession(s);
+  var badge  = _driftStatusLabel(report.status);
+
+  var html = '<div style="margin-bottom:12px"><span class="drift-badge ' + badge.cls + '">' + badge.label + '</span></div>';
+
+  if (report.drift_items.length === 0) {
+    html += '<p>Tidak ada perubahan terdeteksi. Seluruh entitas yang direferensikan sesi ini masih pada versi yang sama dengan kondisi database saat ini.</p>';
+  } else {
+    html += '<p style="margin-bottom:10px">Berikut entitas yang telah berubah sejak sesi ini dijalankan pada <strong>' +
+            (s.dijalankan_pada ? new Date(s.dijalankan_pada).toLocaleString('id-ID') : '—') + '</strong>:</p>';
+    report.drift_items.forEach(function(d) {
+      var icon = d.status === 'tidak_ditemukan' ? '&#x274C;' : (d.status === 'tidak_aktif' ? '&#x1F4DC;' : '&#x1F504;');
+      html += '<div class="kur-entity-card" style="margin-bottom:8px">';
+      html += '<div class="kur-entity-meta">' + icon + ' <strong>' + kurEsc(d.type.toUpperCase()) + '</strong> — ' + kurEsc(d.id) + '</div>';
+      html += '<div style="font-size:12px;color:var(--text2);margin-top:4px">' + kurEsc(d.pesan) + '</div>';
+      html += '</div>';
+    });
+    html += '<div class="info-box" style="margin-top:12px">';
+    html += 'Hasil analisis pada sesi ini tetap tersimpan dan dapat dirujuk, namun jika ingin merefleksikan ' +
+            'kondisi kurikulum/materi terkini, pertimbangkan untuk mengulang analisis.';
+    html += '</div>';
+  }
+
+  $id('driftDetailContent').innerHTML = html;
+  showModal('modalDriftDetail');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook switchTab agar render riwayat saat tab dibuka
+// ─────────────────────────────────────────────────────────────────────────────
+var _origSwitchTabDrift = switchTab;
+switchTab = function(name, btn) {
+  _origSwitchTabDrift(name, btn);
+  if (name === 'riwayat') renderRiwayatSesi();
+};
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAHAP 3 — UI PENGHUBUNG MATERI → KURIKULUM (CP/TP)
+// Prasyarat agar Drift Detection dan bloom_match bermakna.
+// ══════════════════════════════════════════════════════════════════════════════
+
+var _origRenderDbDetail = renderDbDetail;
+renderDbDetail = function() {
+  _origRenderDbDetail();
+  // Setelah render asli selesai, sisipkan tombol "Hubungkan ke Kurikulum"
+  // dan badge status link di setiap baris materi.
+  if (!dbActiveKelas) return;
+  var materiObjs = getMateriObjects(dbActiveMapel, dbActiveKelas);
+  var listEl = document.querySelector('#dbDetail .materi-list, .materi-list');
+  if (!listEl) return;
+
+  var items = listEl.querySelectorAll('.materi-item');
+  items.forEach(function(itemEl, i) {
+    var obj = materiObjs[i];
+    if (!obj) return;
+    var hasLink = obj.kurikulum_ref && (obj.kurikulum_ref.cp_id || (obj.kurikulum_ref.tp_ids && obj.kurikulum_ref.tp_ids.length));
+
+    // Hindari duplikasi tombol jika sudah pernah ditambahkan
+    if (itemEl.querySelector('.linkkur-btn')) return;
+
+    var linkBtn = document.createElement('button');
+    linkBtn.className = 'btn-sm linkkur-btn';
+    linkBtn.style.marginRight = '4px';
+    linkBtn.title = 'Hubungkan materi ini ke CP/TP Database Kurikulum';
+    linkBtn.innerHTML = hasLink ? '&#x1F517; Terhubung' : '&#x1F517; Hubungkan';
+    linkBtn.style.opacity = hasLink ? '1' : '0.7';
+    linkBtn.onclick = function(e) {
+      e.stopPropagation();
+      showLinkMateriModal(obj.id, dbActiveMapel, dbActiveKelas);
+    };
+
+    var deleteBtn = itemEl.querySelector('button.btn-sm.danger');
+    if (deleteBtn) itemEl.insertBefore(linkBtn, deleteBtn);
+    else itemEl.appendChild(linkBtn);
+  });
+};
+
+/**
+ * Modal untuk memilih CP dan TP yang relevan dengan satu materi item.
+ * Menulis ke item.kurikulum_ref { cp_id, tp_ids }.
+ */
+function showLinkMateriModal(materiId, mapel, kelas) {
+  var item = getMateriById(materiId);
+  if (!item) { alert('Materi tidak ditemukan.'); return; }
+
+  // Cari CP yang cocok dengan nama mapel (pencarian longgar)
+  var cpCandidates = kurGetCpForContext(null, mapel);
+
+  var html = '<div style="margin-bottom:10px"><strong>Materi:</strong> ' + kurEsc(item.materi) + '</div>';
+
+  if (!cpCandidates.length) {
+    html += '<div class="info-box">Belum ada Capaian Pembelajaran (CP) untuk mapel "' + kurEsc(mapel) +
+            '" di Database Kurikulum. Tambahkan CP terlebih dahulu di tab Database Kurikulum.</div>';
+  } else {
+    html += '<label class="lbl" style="margin-top:0">Pilih CP</label>';
+    html += '<div class="sw"><select id="linkKurCpSelect" onchange="_linkKurOnCpChange()"><option value="">-- Tidak dihubungkan --</option>';
+    cpCandidates.forEach(function(cp) {
+      var selected = (item.kurikulum_ref && item.kurikulum_ref.cp_id === cp.id) ? ' selected' : '';
+      html += '<option value="' + cp.id + '"' + selected + '>' + kurEsc(cp.elemen || cp.id) + '</option>';
+    });
+    html += '</select></div>';
+
+    html += '<label class="lbl">Pilih TP (opsional, untuk validasi target Bloom)</label>';
+    html += '<div class="sw"><select id="linkKurTpSelect"><option value="">-- Tidak dihubungkan --</option></div>';
+    html += '</div>';
+  }
+
+  html += '<input type="hidden" id="linkKurMateriId" value="' + materiId + '">';
+  html += '<div class="row-btns" style="margin-top:16px">';
+  html += '<button class="btn-run" style="margin-top:0" onclick="saveLinkMateri()">&#x1F4BE; Simpan</button>';
+  if (item.kurikulum_ref && item.kurikulum_ref.cp_id) {
+    html += '<button class="btn-sm danger" onclick="unlinkMateri(\'' + materiId + '\')">Putuskan Hubungan</button>';
+  }
+  html += '<button class="btn-sec" onclick="closeModal(\'modalLinkMateri\')">Batal</button>';
+  html += '</div>';
+
+  // Buat modal jika belum ada
+  if (!$id('modalLinkMateri')) {
+    var modalDiv = document.createElement('div');
+    modalDiv.className = 'modal-overlay';
+    modalDiv.id = 'modalLinkMateri';
+    modalDiv.innerHTML = '<div class="modal-box"><button class="modal-close" onclick="closeModal(\'modalLinkMateri\')">&#x2715;</button>' +
+                          '<div class="modal-title">&#x1F517; Hubungkan Materi ke Kurikulum</div>' +
+                          '<div id="linkMateriContent"></div></div>';
+    document.body.appendChild(modalDiv);
+  }
+  $id('linkMateriContent').innerHTML = html;
+
+  // Populate TP jika CP sudah terpilih sebelumnya
+  if (item.kurikulum_ref && item.kurikulum_ref.cp_id) {
+    _linkKurOnCpChange();
+    setTimeout(function() {
+      var tpSel = $id('linkKurTpSelect');
+      if (tpSel && item.kurikulum_ref.tp_ids && item.kurikulum_ref.tp_ids.length) {
+        tpSel.value = item.kurikulum_ref.tp_ids[0];
+      }
+    }, 0);
+  }
+
+  showModal('modalLinkMateri');
+}
+
+function _linkKurOnCpChange() {
+  var cpId = $id('linkKurCpSelect') ? $id('linkKurCpSelect').value : '';
+  var tpSel = $id('linkKurTpSelect');
+  if (!tpSel) return;
+  if (!cpId) { tpSel.innerHTML = '<option value="">-- Tidak dihubungkan --</option>'; return; }
+  var tps = kurGetTpForCp(cpId);
+  var html = '<option value="">-- Tidak dihubungkan --</option>';
+  tps.forEach(function(tp) {
+    html += '<option value="' + tp.id + '">' + kurEsc((tp.narasi||'').slice(0,60)) +
+            (tp.bloom_target && tp.bloom_target.length ? ' [' + tp.bloom_target.join(',') + ']' : '') + '</option>';
+  });
+  tpSel.innerHTML = html;
+}
+
+function saveLinkMateri() {
+  var materiId = $id('linkKurMateriId').value;
+  var cpId     = $id('linkKurCpSelect') ? $id('linkKurCpSelect').value : '';
+  var tpId     = $id('linkKurTpSelect') ? $id('linkKurTpSelect').value : '';
+
+  var item = getMateriById(materiId);
+  if (!item) { alert('Materi tidak ditemukan.'); return; }
+
+  if (!item.kurikulum_ref) {
+    item.kurikulum_ref = { kurikulum_id:null, cp_id:null, tp_ids:[], atp_id:null, kd_ids:[], indikator_ids:[] };
+  }
+  item.kurikulum_ref.cp_id  = cpId || null;
+  item.kurikulum_ref.tp_ids = tpId ? [tpId] : [];
+
+  // Catat kurikulum_id dari CP yang dipilih
+  if (cpId) {
+    var cpCur = kurGetCpCurrent(cpId);
+    item.kurikulum_ref.kurikulum_id = cpCur ? cpCur.kurikulum_id : null;
+  }
+
+  saveDB();
+  closeModal('modalLinkMateri');
+  renderDbDetail();
+  alert(cpId ? 'Materi berhasil dihubungkan ke kurikulum.' : 'Hubungan materi ke kurikulum dihapus.');
+}
+
+function unlinkMateri(materiId) {
+  var item = getMateriById(materiId);
+  if (!item || !item.kurikulum_ref) return;
+  item.kurikulum_ref.cp_id  = null;
+  item.kurikulum_ref.tp_ids = [];
+  saveDB();
+  closeModal('modalLinkMateri');
+  renderDbDetail();
+}
 
 
 
