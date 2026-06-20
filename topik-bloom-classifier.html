@@ -1896,24 +1896,8 @@ var KnowledgeEngine = {
   },
 };
 
-// ── TKBEngine: add _reloadRules() to hot-swap rules from KELoader ─────────────
-// Called when new TKB module is imported
-TKBEngine._reloadRules = function() {
-  var c1Rules = KELoader.getRules('TKB','C1');
-  var c2Rules = KELoader.getRules('TKB','C2');
-  var hasReal = c1Rules.some(function(r){ return !r.id.includes('prototype'); }) ||
-                c2Rules.some(function(r){ return !r.id.includes('prototype'); });
-  if (hasReal) {
-    // Real rules available — use them, mark engine as active
-    TKBEngine._rules_c1 = c1Rules;
-    TKBEngine._rules_c2 = c2Rules;
-    TKBEngine.status    = 'active';
-    TKBEngine.version   = KELoader.getModule('TKB','TKB-CORE-v1.0')
-                          ? KELoader.getModule('TKB','TKB-CORE-v1.0').version
-                          : 'loaded';
-    console.log('[TKBEngine] Rules reloaded from KELoader: C1='+c1Rules.length+', C2='+c2Rules.length);
-  }
-};
+// ── TKBEngine._reloadRules dipindahkan ke setelah definisi var TKBEngine (lihat di bawah)
+// untuk menghindari "Cannot set properties of undefined" — TKBEngine belum ada di titik ini.
 
 // ── Register prototype rules into KELoader ─────────────────────────────────────
 // This makes prototype auditable and replaceable via same interface
@@ -1926,31 +1910,10 @@ TKBEngine._reloadRules = function() {
   }
 })();
 
-// ── Patch TKBEngine._classify to use KELoader when real rules available ────────
-var _origTKBClassify = TKBEngine._classify;
-TKBEngine._classify = function(text, payload) {
-  // Use KELoader rules if real rules loaded (not prototype)
-  var c1 = TKBEngine._rules_c1 || TKB_RULES_C1;
-  var c2 = TKBEngine._rules_c2 || TKB_RULES_C2;
-  var matched = [];
-  c1.concat(c2).forEach(function(rule) {
-    var hits = TKBEngine._matchRule(rule, text);
-    if (hits.length) {
-      matched.push({
-        rule_id: rule.id, level: rule.level, type: rule.type,
-        weight: rule.weight, reason: rule.reason, matched_patterns: hits
-      });
-    }
-  });
-  // Check disambiguator
-  var forced = null;
-  TKB_DISAMBIGUATOR.forEach(function(d) {
-    if (forced) return;
-    var hits = d.pattern.filter(function(p){ return text.includes(p.toLowerCase()); });
-    if (hits.length) forced = { level: d.force_level, signal: d.signal, reason: d.reason, weight: d.weight };
-  });
-  return TKBEngine._score(matched, forced, text, payload);
-};
+// ── Catatan: TKBEngine._classify sudah memiliki implementasi lengkap di dalam
+// definisi var TKBEngine (lihat di bawah). Patch duplikat sebelumnya di sini
+// dihapus karena menyebabkan crash ("Cannot read properties of undefined") —
+// TKBEngine belum ada di titik eksekusi ini.
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2225,6 +2188,25 @@ var TKBEngine = {
       details:       [],
     };
   },
+};
+
+// ── TKBEngine: add _reloadRules() to hot-swap rules from KELoader ─────────────
+// Called when new TKB module is imported. Ditempatkan SETELAH var TKBEngine
+// selesai didefinisikan agar tidak "Cannot set properties of undefined".
+TKBEngine._reloadRules = function() {
+  if (typeof KELoader === 'undefined' || !KELoader.getRules) return;
+  var c1Rules = KELoader.getRules('TKB','C1');
+  var c2Rules = KELoader.getRules('TKB','C2');
+  var hasReal = c1Rules.some(function(r){ return !r.id.includes('prototype'); }) ||
+                c2Rules.some(function(r){ return !r.id.includes('prototype'); });
+  if (hasReal) {
+    TKBEngine._rules_c1 = c1Rules;
+    TKBEngine._rules_c2 = c2Rules;
+    TKBEngine.status    = 'active';
+    TKBEngine.version   = KELoader.getModule('TKB','TKB-CORE-v1.0')
+                          ? KELoader.getModule('TKB','TKB-CORE-v1.0').version
+                          : 'loaded';
+  }
 };
 
 // ─── TKB INTEGRATION POINT ────────────────────────────────────────────────────
@@ -4634,9 +4616,9 @@ function buildJejak(row, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH runAnalysis — inject session tracking
+// (Catatan: patch Session Record yang sesungguhnya ada di bawah, menargetkan
+//  startAnalysis — fungsi nyata yang dipanggil tombol Mulai Analisis)
 // ─────────────────────────────────────────────────────────────────────────────
-var _origRunAnalysis = typeof runAnalysis !== 'undefined' ? runAnalysis : null;
 
 // Patch doDownload — tambahkan sheet _Metadata_Analisis
 var _origDoDownload = doDownload;
@@ -4820,10 +4802,12 @@ function _buildMetadataSheet() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH runAnalysis — wrap untuk inject Session Record
+// PATCH startAnalysis — wrap untuk inject Session Record
+// (sebelumnya salah menargetkan "runAnalysis" yang tidak pernah didefinisikan —
+//  fungsi nyata yang dipanggil tombol Mulai Analisis adalah startAnalysis)
 // ─────────────────────────────────────────────────────────────────────────────
-var _origRunAnalysisFn = runAnalysis;
-runAnalysis = async function() {
+var _origStartAnalysisFn = startAnalysis;
+startAnalysis = async function() {
   // Ambil file info dari workbook (sudah ada di memori)
   var fileInfo = null;
   var fileInput = document.getElementById('aFile');
@@ -4841,7 +4825,7 @@ runAnalysis = async function() {
   createSession('batch', mapel, kelas, fileInfo, model, mode);
 
   // Jalankan analisis asli
-  await _origRunAnalysisFn();
+  await _origStartAnalysisFn();
 
   // Finalisasi session
   var total  = parseInt($id('sTotal') && $id('sTotal').textContent) || 0;
