@@ -1785,8 +1785,18 @@ var KELoader = {
   // ── Module Schema ─────────────────────────────────────────────────────────────
   // Setiap modul KE harus mengikuti schema ini
   MODULE_SCHEMA: {
-    required: ['module_id','module_type','version','status','rules'],
-    optional: ['description','author','created_at','updated_at','dependencies','metadata'],
+    // Field universal minimum yang harus ada di SEMUA modul KE, apapun strukturnya.
+    // 'module_type' TIDAK diwajibkan karena modul resmi proyek (mis. TKB-C1-v1.0.json)
+    // tidak selalu menyertakan field ini — engine cukup diturunkan dari prefix
+    // module_id (lihat KELoader.importFromFile). 'status' dan 'rules' juga TIDAK
+    // diwajibkan karena modul resmi TKB memakai struktur sendiri (strong_kko,
+    // strong_objects, dst), bukan array 'rules' generik. Memaksakan field-field
+    // ini akan menolak modul resmi yang sah.
+    required: ['module_id','version'],
+    optional: ['module_type','description','author','created_at','updated_at','dependencies','metadata','status','rules'],
+    // rule_required hanya dipakai JIKA modul memang memuat array 'rules' generik
+    // (format prototype/legacy). Modul dengan struktur lain (mis. TKB resmi)
+    // tidak divalidasi terhadap rule_required ini.
     rule_required: ['id','level','type','pattern','weight','reason'],
   },
 
@@ -1835,13 +1845,19 @@ var KELoader = {
     KELoader.MODULE_SCHEMA.required.forEach(function(f) {
       if (data[f] === undefined) errors.push('field wajib tidak ada: ' + f);
     });
-    if (data.rules && !Array.isArray(data.rules)) errors.push('rules harus berupa array');
-    if (data.rules) {
-      data.rules.forEach(function(rule, i) {
-        KELoader.MODULE_SCHEMA.rule_required.forEach(function(f) {
-          if (rule[f] === undefined) errors.push('rule['+i+'] field wajib: ' + f);
+    // Validasi rule_required HANYA jika modul ini memang memuat array 'rules'.
+    // Modul dengan struktur lain (strong_kko, strong_objects, boundary_alerts, dst —
+    // seperti format resmi TKB) tidak diwajibkan punya 'rules' sama sekali.
+    if (data.rules !== undefined) {
+      if (!Array.isArray(data.rules)) {
+        errors.push('rules harus berupa array jika field ini disertakan');
+      } else {
+        data.rules.forEach(function(rule, i) {
+          KELoader.MODULE_SCHEMA.rule_required.forEach(function(f) {
+            if (rule[f] === undefined) errors.push('rules['+i+'] field wajib: ' + f);
+          });
         });
-      });
+      }
     }
     return { valid: errors.length === 0, errors: errors };
   },
@@ -1922,14 +1938,17 @@ var KELoader = {
     // Support single module or array of modules
     var modules = Array.isArray(jsonData) ? jsonData : [jsonData];
     modules.forEach(function(mod) {
-      if (!mod.module_type || !mod.module_id) {
-        errors.push('File tidak memiliki module_type atau module_id');
+      if (!mod.module_id) {
+        errors.push('File tidak memiliki module_id');
         return;
       }
-      // Detect engine from module_type: 'TKB-C1' → engine='TKB'
-      var engine = mod.module_type.split('-')[0].toUpperCase();
+      // Tentukan engine: utamakan module_type jika ada (format lama/prototype),
+      // jika tidak ada fallback ke prefix module_id (format modul resmi proyek,
+      // mis. "TKB-C1-v1.0" → engine TKB, "BKB-01-C1-vs-C2-v1.0" → engine BKB).
+      var engineSource = mod.module_type || mod.module_id;
+      var engine = engineSource.split('-')[0].toUpperCase();
       if (!KELoader.LOAD_ORDER[engine]) {
-        errors.push('Engine tidak dikenali: ' + engine);
+        errors.push('Engine tidak dikenali dari "' + engineSource + '": ' + engine);
         return;
       }
       var result = KELoader.register(engine, mod.module_id, mod, 'upload');
@@ -2194,8 +2213,18 @@ var TKBEngine = {
   _classify: function(text, payload) {
     var matched = [];
 
-    // Match all rules
-    var allRules = TKB_RULES_C1.concat(TKB_RULES_C2);
+    // Gunakan rules dari registry (modul resmi ter-adapt atau format internal)
+    // jika sudah dimuat via TKBEngine._reloadRules(); jika belum, fallback ke
+    // rules prototype bawaan (TKB_RULES_C1/C2) agar engine tetap berfungsi
+    // sebelum modul resmi diimport.
+    var allRules = []
+      .concat(TKBEngine._rules_c1 || TKB_RULES_C1)
+      .concat(TKBEngine._rules_c2 || TKB_RULES_C2)
+      .concat(TKBEngine._rules_c3 || [])
+      .concat(TKBEngine._rules_c4 || [])
+      .concat(TKBEngine._rules_c5 || [])
+      .concat(TKBEngine._rules_c6 || []);
+
     allRules.forEach(function(rule) {
       var hits = TKBEngine._matchRule(rule, text);
       if (hits.length) {
@@ -2244,20 +2273,35 @@ var TKBEngine = {
       };
     }
 
-    // Aggregate scores per level
-    var scores = { C1: 0, C2: 0 };
+    // Aggregate scores per level — generik untuk C1-C6 (bukan hardcode C1/C2 saja)
+    // agar rules dari modul resmi C3-C6 (bila sudah dimuat) ikut terhitung.
+    var scores = { C1: 0, C2: 0, C3: 0, C4: 0, C5: 0, C6: 0 };
     var reasons = [];
     matched.forEach(function(m) {
       scores[m.level] = (scores[m.level] || 0) + m.weight;
       reasons.push(m.rule_id + ': ' + m.reason + ' [pattern: ' + m.matched_patterns.join(', ') + ']');
     });
 
-    var totalScore = scores.C1 + scores.C2;
+    var totalScore = scores.C1 + scores.C2 + scores.C3 + scores.C4 + scores.C5 + scores.C6;
     if (totalScore === 0) return TKBEngine._noResult('Skor nol');
 
-    var winner = scores.C2 >= scores.C1 ? 'C2' : 'C1';
+    // Cari level dengan skor tertinggi di antara SEMUA level yang punya skor > 0.
+    // Logika tie-break detail (stimulus bonus, ambiguitas) tetap dirancang khusus
+    // untuk C1 vs C2 karena itulah pasangan level yang sudah divalidasi modul
+    // resminya; level lain memakai pemenang skor murni sampai modul C3-C6
+    // resmi tersedia dan tie-break-nya dapat dirancang berdasarkan isi modul itu.
+    var levelKeys = Object.keys(scores).filter(function(k){ return scores[k] > 0; });
+    var winner = levelKeys.reduce(function(best, k) {
+      // Tie-break: jika skor sama, lebih utamakan level C2 dibanding C1
+      // (konsisten dengan logika asli: "scores.C2 >= scores.C1 ? C2 : C1").
+      if (scores[k] > scores[best]) return k;
+      if (scores[k] === scores[best] && k === 'C2' && best === 'C1') return k;
+      return best;
+    }, levelKeys[0]);
     var winScore = scores[winner];
-    var loseScore = scores[winner === 'C2' ? 'C1' : 'C2'];
+    var runnerUp = levelKeys.filter(function(k){ return k !== winner; })
+                            .reduce(function(best, k){ return (best===null||scores[k]>scores[best]) ? k : best; }, null);
+    var loseScore = runnerUp ? scores[runnerUp] : 0;
 
     // Confidence: based on margin and total evidence
     var margin = winScore - loseScore;
@@ -2270,7 +2314,7 @@ var TKBEngine = {
     }
 
     // Penalty: if both C1 and C2 patterns exist with similar scores
-    var ambiguous = scores.C1 > 0 && scores.C2 > 0 && margin <= 2;
+    var ambiguous = scores.C1 > 0 && scores.C2 > 0 && winner !== 'C3' && winner !== 'C4' && winner !== 'C5' && winner !== 'C6' && Math.abs(scores.C1 - scores.C2) <= 2;
     if (ambiguous) {
       rawConf = Math.max(rawConf - 15, 45);
       reasons.push('[AMBIGUITAS] Pola C1 dan C2 sama-sama ditemukan — perlu verifikasi');
@@ -6301,15 +6345,41 @@ function doImportKEModule() {
   var file = fileInput.files[0];
   if (!file) { alert('Pilih file JSON terlebih dahulu.'); return; }
 
-  KnowledgeEngine.importModule(file, function(success, message) {
-    var resultEl = $id('keImportResult');
-    if (success) {
-      resultEl.innerHTML = '<div style="color:#4ade80">&#x2713; Import berhasil.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
-    } else {
-      resultEl.innerHTML = '<div style="color:#f87171">&#x2715; Import gagal.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
+  // Baca dulu untuk cek apakah engine modul cocok dengan engine yang dipilih
+  // di modal ini — beri peringatan jelas jika tidak cocok (skenario umum:
+  // pengguna salah memilih kotak import, mis. file BKB diupload ke kotak TKB).
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var detectedEngine = null;
+    try {
+      var parsed = JSON.parse(e.target.result);
+      var engineSource = parsed.module_type || parsed.module_id || '';
+      detectedEngine = engineSource.split('-')[0].toUpperCase();
+    } catch(err) {
+      $id('keImportResult').innerHTML = '<div style="color:#f87171">&#x2715; File bukan JSON yang valid.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(err.message) + '</div>';
+      return;
     }
-    renderKEStatus();
-  });
+
+    if (detectedEngine && _keActiveImportEngine && detectedEngine !== _keActiveImportEngine) {
+      $id('keImportResult').innerHTML =
+        '<div style="color:#fbbf24">&#x26A0; File ini terdeteksi sebagai modul <strong>' + kurEsc(detectedEngine) +
+        '</strong>, bukan <strong>' + kurEsc(_keActiveImportEngine) + '</strong>.</div>' +
+        '<div style="color:var(--text3);margin-top:6px">Tutup jendela ini, lalu klik "Import Modul" pada kartu <strong>' +
+        kurEsc(detectedEngine) + '</strong> untuk mengimport file ini ke engine yang benar.</div>';
+      return;
+    }
+
+    KnowledgeEngine.importModule(file, function(success, message) {
+      var resultEl = $id('keImportResult');
+      if (success) {
+        resultEl.innerHTML = '<div style="color:#4ade80">&#x2713; Import berhasil.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
+      } else {
+        resultEl.innerHTML = '<div style="color:#f87171">&#x2715; Import gagal.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
+      }
+      renderKEStatus();
+    });
+  };
+  reader.readAsText(file);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -6363,6 +6433,153 @@ var _origSwitchTabKE = switchTab;
 switchTab = function(name, btn) {
   _origSwitchTabKE(name, btn);
   if (name === 'ke') renderKEStatus();
+};
+
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADAPTER: MODUL TKB RESMI → RULES INTERNAL CLASSIFIER
+// ──────────────────────────────────────────────────────────────────────────────
+// Modul TKB resmi proyek (TKB-C1-v1.0.json, dst) menggunakan struktur deskriptif:
+//   strong_kko, supporting_kko, strong_objects, strong_question_patterns,
+//   positive_indicators, negative_indicators, boundary_alerts, exceptions,
+//   confidence_scoring, final_rule, dst.
+// Struktur ini BERBEDA dari format prototype internal {id,level,type,pattern,
+// weight,reason} yang dipakai TKBEngine._classify().
+//
+// Adapter ini MENGKONVERSI struktur resmi menjadi rules internal secara
+// transformasi langsung (1:1) dari field yang memang ada di file resmi —
+// TIDAK menambahkan rule baru, TIDAK mengarang pattern, TIDAK menafsirkan
+// di luar apa yang tertulis di modul. Setiap rule hasil konversi melacak
+// field asal-nya untuk transparansi (explainability).
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Konversi satu modul TKB resmi (format strong_kko/strong_objects/dst)
+ * menjadi array rules format internal {id, level, type, pattern, weight, reason}.
+ * Mengembalikan null jika modul ini bukan format resmi TKB (mis. format
+ * prototype lama yang sudah punya field 'rules' — tidak perlu dikonversi).
+ */
+function _adaptTKBOfficialModule(moduleData) {
+  if (!moduleData || moduleData.rules !== undefined) return null; // sudah format internal / bukan modul ini
+  if (!moduleData.bloom_level) return null; // bukan format resmi TKB yang dikenali
+
+  var level = moduleData.bloom_level;
+  var rules = [];
+  var seq = 0;
+
+  function addRule(type, patterns, weight, reasonPrefix) {
+    if (!patterns || !patterns.length) return;
+    seq++;
+    rules.push({
+      id:      moduleData.module_id + '-AUTO-' + String(seq).padStart(3,'0'),
+      level:   level,
+      type:    type,
+      pattern: patterns.map(function(p){ return String(p).toLowerCase(); }),
+      weight:  weight,
+      reason:  reasonPrefix + ' (dari modul resmi ' + moduleData.module_id + ')',
+      _source_field: type, // jejak field asal untuk audit
+    });
+  }
+
+  // strong_kko → bobot tinggi (kata kerja operasional kuat)
+  addRule('kko_exact', moduleData.strong_kko, 4, 'KKO kuat ' + level);
+  // supporting_kko → bobot sedang (kata kerja pendukung, lebih ambigu)
+  addRule('kko_supporting', moduleData.supporting_kko, 2, 'KKO pendukung ' + level);
+  // strong_objects → bobot tinggi (objek/topik yang menjadi penanda level)
+  addRule('object_match', moduleData.strong_objects, 3, 'Objek kuat ' + level);
+  // strong_question_patterns → bobot tinggi (pola kalimat tanya lengkap)
+  if (moduleData.strong_question_patterns && moduleData.strong_question_patterns.length) {
+    var cleaned = moduleData.strong_question_patterns.map(function(p) {
+      // Buang elipsis "..." di akhir pola agar cocok sebagai substring
+      return String(p).toLowerCase().replace(/\s*\.\.\.\s*$/, '').trim();
+    }).filter(function(p){ return p.length > 0; });
+    addRule('question_pattern', cleaned, 4, 'Pola pertanyaan ' + level);
+  }
+
+  return {
+    rules: rules,
+    meta: {
+      module_id:    moduleData.module_id,
+      bloom_level:  moduleData.bloom_level,
+      bloom_name:   moduleData.bloom_name,
+      final_rule:   moduleData.final_rule || null,
+      audit_status: moduleData.audit_status || null,
+      boundary_alerts: moduleData.boundary_alerts || [],
+      exceptions:      moduleData.exceptions || [],
+      confidence_scoring: moduleData.confidence_scoring || null,
+    }
+  };
+}
+
+/**
+ * Ambil rules gabungan dari semua modul TKB yang terdaftar di KELoader,
+ * baik format internal (rules[]) maupun format resmi (di-adapt otomatis).
+ */
+function getTKBRulesFromRegistry(level) {
+  var combined = [];
+  var metaByModule = {};
+
+  Object.keys(KELoader.registry).forEach(function(key) {
+    if (!key.startsWith('TKB/')) return;
+    var entry = KELoader.registry[key];
+    if (entry.status !== 'ready') return;
+
+    var data = entry.data;
+    if (level && data.bloom_level && data.bloom_level !== level) return;
+
+    if (Array.isArray(data.rules)) {
+      // Format internal langsung
+      data.rules.forEach(function(r) {
+        if (!level || r.level === level) combined.push(r);
+      });
+    } else {
+      // Coba adapter format resmi
+      var adapted = _adaptTKBOfficialModule(data);
+      if (adapted) {
+        combined = combined.concat(adapted.rules);
+        metaByModule[data.module_id] = adapted.meta;
+      }
+    }
+  });
+
+  return { rules: combined, meta: metaByModule };
+}
+
+/**
+ * Override TKBEngine._reloadRules agar mendukung modul resmi (format
+ * strong_kko/strong_objects/dst), bukan hanya format internal {rules:[]}.
+ * Dipanggil setiap kali modul TKB baru berhasil diimport.
+ */
+var _origReloadRulesOfficial = TKBEngine._reloadRules;
+TKBEngine._reloadRules = function() {
+  if (typeof KELoader === 'undefined') return;
+
+  var c1 = getTKBRulesFromRegistry('C1');
+  var c2 = getTKBRulesFromRegistry('C2');
+  var c3 = getTKBRulesFromRegistry('C3');
+  var c4 = getTKBRulesFromRegistry('C4');
+  var c5 = getTKBRulesFromRegistry('C5');
+  var c6 = getTKBRulesFromRegistry('C6');
+
+  var totalRules = c1.rules.length + c2.rules.length + c3.rules.length +
+                    c4.rules.length + c5.rules.length + c6.rules.length;
+
+  if (totalRules > 0) {
+    TKBEngine._rules_c1 = c1.rules.length ? c1.rules : TKB_RULES_C1;
+    TKBEngine._rules_c2 = c2.rules.length ? c2.rules : TKB_RULES_C2;
+    TKBEngine._rules_c3 = c3.rules;
+    TKBEngine._rules_c4 = c4.rules;
+    TKBEngine._rules_c5 = c5.rules;
+    TKBEngine._rules_c6 = c6.rules;
+    TKBEngine._meta     = Object.assign({}, c1.meta, c2.meta, c3.meta, c4.meta, c5.meta, c6.meta);
+    TKBEngine.status    = 'active';
+    TKBEngine.coverage  = ['C1','C2'].concat(c3.rules.length?['C3']:[]).concat(c4.rules.length?['C4']:[])
+                          .concat(c5.rules.length?['C5']:[]).concat(c6.rules.length?['C6']:[]);
+    var c1HasOfficial = Object.keys(c1.meta).length > 0 || c2.rules.some(function(r){ return r._source_field; });
+    TKBEngine.version  = 'official-' + new Date().toISOString().slice(0,10);
+  }
 };
 
 
