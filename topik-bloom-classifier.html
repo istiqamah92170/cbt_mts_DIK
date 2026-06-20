@@ -165,6 +165,22 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
 .riwayat-stat-item strong{color:var(--text);}
 .linkkur-row{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;}
 .linkkur-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;background:rgba(99,102,241,0.15);color:#818cf8;}
+/* Knowledge Engine status cards */
+.ke-engine-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px;}
+.ke-engine-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;}
+.ke-engine-card:hover{border-color:var(--border2);}
+.ke-engine-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.ke-engine-desc{font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px;min-height:32px;}
+.ke-status-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ke-status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;}
+.ke-status-active-registry{background:rgba(34,197,94,0.15);color:#4ade80;}
+.ke-status-active-prototype{background:rgba(251,191,36,0.15);color:#fbbf24;}
+.ke-status-waiting{background:rgba(148,163,184,0.15);color:#94a3b8;}
+.ke-engine-version{font-size:10px;color:var(--text3);font-family:monospace;}
+.ke-module-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.ke-module-meta{font-size:11px;color:var(--text3);}
+.ke-module-badge-valid{color:#4ade80;}
+.ke-module-badge-invalid{color:#f87171;}
 /* Panduan modal */
 .panduan-panel{display:none;}
 .panduan-panel.active{display:block;}
@@ -183,6 +199,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
   <button class="tab-btn" onclick="switchTab('single',this)">&#x1F50D; Analisis 1 Soal</button>
   <button class="tab-btn" onclick="switchTab('db',this)">&#x1F4DA; Database Materi</button>
   <button class="tab-btn" onclick="switchTab('kurikulum',this)">&#x1F4D6; Database Kurikulum</button>
+  <button class="tab-btn" onclick="switchTab('ke',this)">&#x1F9E0; Knowledge Engine</button>
   <button class="tab-btn" onclick="switchTab('riwayat',this)">&#x1F551; Riwayat Sesi</button>
 </div>
 <main>
@@ -956,6 +973,46 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
     <div id="kurInfoContent" style="font-size:13px;line-height:1.8;color:var(--text2)">Memuat...</div>
     <div class="row-btns" style="margin-top:16px">
       <button class="btn-sec" onclick="closeModal('modalKurInfo')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: KNOWLEDGE ENGINE — TKB / BKB / DKB / PKB / RKB                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-ke">
+  <div class="card">
+    <div class="card-title">&#x1F9E0; Knowledge Engine</div>
+    <div class="info-box">
+      Lima engine — <strong>TKB, BKB, DKB, PKB, RKB</strong> — adalah inti analisis aplikasi ini.
+      Kelima engine sudah aktif sejak awal. Rules/knowledge dimuat dari modul JSON eksternal,
+      bukan kode terprogram. Update rules tidak memerlukan perubahan source code aplikasi.
+    </div>
+    <div class="row-btns" style="margin-top:10px">
+      <button class="btn-sm" onclick="renderKEStatus()">&#x1F504; Muat Ulang Status</button>
+      <button class="btn-sm" onclick="downloadTemplateKEModule()">&#x1F4CB; Contoh Template Modul</button>
+    </div>
+  </div>
+
+  <div id="keEngineCards"></div>
+
+  <div class="card">
+    <div class="card-title">&#x1F4DC; Modul Terdaftar</div>
+    <div id="keModuleList"><div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Belum ada modul yang dimuat.</div></div>
+  </div>
+</div>
+
+<!-- Modal Import Modul KE -->
+<div class="modal-overlay" id="modalKEImport">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modalKEImport')">&#x2715;</button>
+    <div class="modal-title" id="keImportTitle">&#x1F4E5; Import Modul Knowledge Engine</div>
+    <div class="info-box" id="keImportInfo" style="margin-bottom:12px"></div>
+    <input type="file" id="keImportFile" accept=".json" style="margin-top:8px">
+    <div id="keImportResult" style="margin-top:12px;font-size:12px;line-height:1.7"></div>
+    <div class="row-btns" style="margin-top:16px">
+      <button class="btn-run" style="margin-top:0" onclick="doImportKEModule()">&#x1F4E5; Import</button>
+      <button class="btn-sec" onclick="closeModal('modalKEImport')">Tutup</button>
     </div>
   </div>
 </div>
@@ -4334,18 +4391,37 @@ var KnowledgeEngine = {
   getSnapshotAll:function(){
     var snap={}; ['TKB','BKB','DKB','PKB','RKB'].forEach(function(n){ snap[n]=KnowledgeEngine[n].getVersion(); }); return snap;
   },
+  /**
+   * Import satu modul JSON Knowledge Engine.
+   * onComplete dipanggil dengan (success: boolean, message: string).
+   * Mendelegasikan ke KELoader.importFromFile agar logika validasi dan
+   * registrasi tetap terpusat di satu tempat (single source of truth).
+   */
   importModule:function(file,onComplete){
     var r=new FileReader();
     r.onload=function(e){
       try {
-        var data=JSON.parse(e.target.result);
-        var engine=data.module_type?data.module_type.split('-')[0]:null;
-        if(!engine||!KELoader.LOAD_ORDER[engine]){
-          if(onComplete)onComplete(false,'module_type tidak dikenali: '+data.module_type); return;
-        }
-        var result=KELoader.register(engine,data.module_id||file.name,data,'upload');
-        if(onComplete)onComplete(result.valid,result.errors.join('; '));
-      } catch(err){if(onComplete)onComplete(false,err.message);}
+        var data = JSON.parse(e.target.result);
+        var result = KELoader.importFromFile(data, function(res) {
+          var success = res.registered.length > 0 && res.errors.length === 0 &&
+                        res.registered.every(function(m){ return m.valid; });
+          var msgParts = [];
+          res.registered.forEach(function(m) {
+            msgParts.push(m.engine + '/' + m.module_id + (m.valid ? ' ✓' : ' ✗ invalid'));
+          });
+          if (res.errors.length) msgParts = msgParts.concat(res.errors);
+
+          // Jika modul TKB berhasil dimuat, reload TKBEngine agar pakai rules baru
+          var hasTKB = res.registered.some(function(m){ return m.engine === 'TKB' && m.valid; });
+          if (hasTKB && typeof TKBEngine !== 'undefined' && TKBEngine._reloadRules) {
+            TKBEngine._reloadRules();
+          }
+
+          if (onComplete) onComplete(success, msgParts.join('; ') || 'Tidak ada modul terdaftar.');
+        });
+      } catch(err){
+        if(onComplete) onComplete(false, 'JSON tidak valid: ' + err.message);
+      }
     };
     r.readAsText(file);
   }
@@ -6087,6 +6163,207 @@ function unlinkMateri(materiId) {
   closeModal('modalLinkMateri');
   renderDbDetail();
 }
+
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAHAP 4 — UI KNOWLEDGE ENGINE: IMPORT MODUL + STATUS + DAFTAR MODUL
+// Menyambungkan KELoader.importFromFile / KnowledgeEngine.importModule
+// (logika sudah ada sejak Tahap 1) ke antarmuka pengguna.
+// ══════════════════════════════════════════════════════════════════════════════
+
+var _keEngineMeta = {
+  TKB: { nama: 'TKB', judul: 'Taxonomy Knowledge Base',
+         deskripsi: 'Klasifikasi dan validasi level Bloom (C1-C6) pada setiap soal.' },
+  BKB: { nama: 'BKB', judul: 'Bloom Knowledge Base',
+         deskripsi: 'Analisis distribusi Bloom dalam kumpulan soal terhadap target kurikulum.' },
+  DKB: { nama: 'DKB', judul: 'Difficulty Knowledge Base',
+         deskripsi: 'Validasi dan kalibrasi tingkat kesulitan soal.' },
+  PKB: { nama: 'PKB', judul: 'Pattern Knowledge Base',
+         deskripsi: 'Validasi pola soal (HOTS, variasi) terhadap karakteristik kurikulum.' },
+  RKB: { nama: 'RKB', judul: 'Recommendation Knowledge Base',
+         deskripsi: 'Rekomendasi berbasis gap antara kumpulan soal dan kurikulum.' }
+};
+
+var _keActiveImportEngine = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER: Kartu status 5 engine
+// ─────────────────────────────────────────────────────────────────────────────
+function renderKEStatus() {
+  var container = $id('keEngineCards');
+  if (!container) return;
+
+  var html = '<div class="ke-engine-grid">';
+  ['TKB','BKB','DKB','PKB','RKB'].forEach(function(eng) {
+    var meta = _keEngineMeta[eng];
+    var ver  = KnowledgeEngine[eng].getVersion();
+
+    var pillClass, pillLabel;
+    if (ver.status === 'aktif-registry' || ver.status === 'aktif') {
+      pillClass = 'ke-status-active-registry'; pillLabel = '&#x2713; Aktif (Modul Resmi)';
+    } else if (ver.status === 'aktif-prototype') {
+      pillClass = 'ke-status-active-prototype'; pillLabel = '&#x26A0; Prototype';
+    } else {
+      pillClass = 'ke-status-waiting'; pillLabel = '&#x231B; Menunggu Modul';
+    }
+
+    html += '<div class="ke-engine-card">';
+    html += '<div class="ke-engine-name">' + eng + '</div>';
+    html += '<div class="ke-engine-desc">' + kurEsc(meta.deskripsi) + '</div>';
+    html += '<div class="ke-status-row">';
+    html += '<span class="ke-status-pill ' + pillClass + '">' + pillLabel + '</span>';
+    html += '</div>';
+    html += '<div class="ke-engine-version">versi: ' + kurEsc(ver.versi || '—') +
+            (ver.modul_aktif && ver.modul_aktif.length ? ' &middot; ' + ver.modul_aktif.length + ' modul' : '') + '</div>';
+    if (ver.catatan) html += '<div style="font-size:10px;color:var(--text3);margin-top:4px">' + kurEsc(ver.catatan) + '</div>';
+    html += '<div class="row-btns" style="margin-top:10px">';
+    html += '<button class="btn-sm" onclick="showKEImportModal(\'' + eng + '\')">&#x1F4E5; Import Modul</button>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+
+  renderKEModuleList();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER: Daftar semua modul terdaftar di KELoader.registry
+// ─────────────────────────────────────────────────────────────────────────────
+function renderKEModuleList() {
+  var container = $id('keModuleList');
+  if (!container) return;
+
+  var keys = Object.keys(KELoader.registry);
+  if (!keys.length) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Belum ada modul yang dimuat.</div>';
+    return;
+  }
+
+  var html = '';
+  keys.forEach(function(key) {
+    var entry = KELoader.registry[key];
+    var validClass = entry.status === 'ready' ? 'ke-module-badge-valid' : 'ke-module-badge-invalid';
+    var validLabel = entry.status === 'ready' ? '&#x2713; Valid' : '&#x2715; Invalid';
+
+    html += '<div class="ke-module-row">';
+    html += '<div>';
+    html += '<div class="kur-entity-id">' + kurEsc(key) + '</div>';
+    html += '<div class="ke-module-meta">';
+    html += 'Versi: ' + kurEsc(entry.data.version || '—') + ' &middot; ';
+    html += 'Sumber: ' + kurEsc(entry.source || '—') + ' &middot; ';
+    html += 'Dimuat: ' + (entry.loaded_at ? new Date(entry.loaded_at).toLocaleString('id-ID') : '—');
+    html += '</div>';
+    if (entry.errors && entry.errors.length) {
+      html += '<div style="font-size:11px;color:#f87171;margin-top:4px">' + kurEsc(entry.errors.join('; ')) + '</div>';
+    }
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px">';
+    html += '<span class="' + validClass + '" style="font-size:11px;font-weight:600">' + validLabel + '</span>';
+    html += '<button class="btn-sm danger" onclick="removeKEModule(\'' + key + '\')">&#x2715;</button>';
+    html += '</div>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+/** Hapus satu modul dari registry (untuk koreksi jika salah upload) */
+function removeKEModule(key) {
+  if (!confirm('Hapus modul "' + key + '" dari registry?\nEngine akan kembali ke kondisi sebelum modul ini dimuat.')) return;
+  delete KELoader.registry[key];
+  renderKEStatus();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL: Import modul per engine
+// ─────────────────────────────────────────────────────────────────────────────
+function showKEImportModal(engine) {
+  _keActiveImportEngine = engine;
+  var meta = _keEngineMeta[engine];
+  $id('keImportTitle').innerHTML = '&#x1F4E5; Import Modul ' + engine + ' — ' + kurEsc(meta.judul);
+
+  var order = KELoader.LOAD_ORDER[engine] || [];
+  $id('keImportInfo').innerHTML =
+    'Urutan modul yang dikenali untuk ' + engine + ': <code>' + order.join('</code>, <code>') + '</code>. ' +
+    'Modul <code>FINAL</code> dapat menimpa modul sebelumnya. Field <code>module_type</code> dalam file JSON ' +
+    'harus diawali dengan "' + engine + '-" (contoh: <code>' + engine + '-CORE</code>).';
+
+  $id('keImportFile').value = '';
+  $id('keImportResult').innerHTML = '';
+  showModal('modalKEImport');
+}
+
+/** Eksekusi import setelah pengguna memilih file di modal */
+function doImportKEModule() {
+  var fileInput = $id('keImportFile');
+  var file = fileInput.files[0];
+  if (!file) { alert('Pilih file JSON terlebih dahulu.'); return; }
+
+  KnowledgeEngine.importModule(file, function(success, message) {
+    var resultEl = $id('keImportResult');
+    if (success) {
+      resultEl.innerHTML = '<div style="color:#4ade80">&#x2713; Import berhasil.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
+    } else {
+      resultEl.innerHTML = '<div style="color:#f87171">&#x2715; Import gagal.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
+    }
+    renderKEStatus();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEMPLATE: Contoh modul JSON untuk panduan pengguna
+// ─────────────────────────────────────────────────────────────────────────────
+function downloadTemplateKEModule() {
+  var contoh = {
+    module_id:   'TKB-C1-v1.0',
+    module_type: 'TKB-C1',
+    version:     '1.0',
+    status:      'active',
+    description: 'Rules TKB untuk klasifikasi level Bloom C1 (Mengingat)',
+    author:      'Tim Kurikulum',
+    created_at:  new Date().toISOString().slice(0,10),
+    rules: [
+      {
+        id:      'C1-001',
+        level:   'C1',
+        type:    'kko_exact',
+        pattern: ['sebutkan','jelaskan','tuliskan','identifikasi'],
+        weight:  4,
+        reason:  'Kata kerja operasional C1 (mengingat) terdeteksi langsung'
+      },
+      {
+        id:      'C1-002',
+        level:   'C1',
+        type:    'kko_partial',
+        pattern: ['apa yang dimaksud','apakah pengertian'],
+        weight:  3,
+        reason:  'Pola pertanyaan recall pengertian dasar'
+      }
+    ]
+  };
+
+  var blob = new Blob([JSON.stringify(contoh, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contoh_modul_TKB-C1.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 3000);
+
+  if (typeof _showDownloadToast === 'function') {
+    _showDownloadToast('Contoh template modul Knowledge Engine sedang diunduh...', 'contoh_modul_TKB-C1.json');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook switchTab agar render status saat tab Knowledge Engine dibuka
+// ─────────────────────────────────────────────────────────────────────────────
+var _origSwitchTabKE = switchTab;
+switchTab = function(name, btn) {
+  _origSwitchTabKE(name, btn);
+  if (name === 'ke') renderKEStatus();
+};
 
 
 
