@@ -726,6 +726,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
       <button class="kur-tab" onclick="panduanTab('kurikulum',this)">Database Kurikulum</button>
       <button class="kur-tab" onclick="panduanTab('analisis',this)">Analisis Soal</button>
       <button class="kur-tab" onclick="panduanTab('format',this)">Format File</button>
+      <button class="kur-tab" onclick="panduanTab('backup',this)">Backup &amp; Restore</button>
     </div>
 
     <!-- Alur Kerja -->
@@ -858,10 +859,28 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
       <div class="kur-entity-card">
         <div class="kur-entity-title">&#x1F4C4; Format File Excel Soal</div>
         <div class="kur-entity-narasi">
-          Kolom wajib: <code>pertanyaan</code><br>
-          Kolom opsional: <code>no</code>, <code>tipe</code> (pg/esai), <code>opsi_a</code>, <code>opsi_b</code>,
+          Kolom wajib: <code>tipe</code>, <code>pertanyaan</code><br>
+          Kolom opsional: <code>vrl_gambar</code>, <code>opsi_a</code>, <code>opsi_b</code>,
           <code>opsi_c</code>, <code>opsi_d</code>, <code>kunci</code><br><br>
-          Nilai kolom <code>tipe</code>: <code>pg</code>, <code>pg_gambar</code>, <code>esai</code>, <code>isian</code>
+          Nilai kolom <code>tipe</code>: <code>pg_teks</code>, <code>pg_gambar</code>, <code>esai</code>, <code>esai_gambar</code><br>
+          Urutan kolom boleh berubah — sistem membaca berdasarkan nama header, bukan posisi.
+        </div>
+      </div>
+      <div class="kur-entity-card">
+        <div class="kur-entity-title">&#x1F5BC;&#xFE0F; Format Gambar / Link Soal</div>
+        <div class="kur-entity-narasi">
+          Kolom <code>vrl_gambar</code> diisi URL gambar soal (https://...).<br>
+          Untuk tipe <code>pg_gambar</code> atau <code>esai_gambar</code>: seluruh soal (dan opsi, jika PG) ada di dalam gambar — kolom <code>pertanyaan</code> boleh dikosongkan, sistem tetap akan memprosesnya.<br>
+          Gunakan Google Drive (share link publik) atau hosting gambar lainnya yang dapat diakses langsung.
+        </div>
+      </div>
+      <div class="kur-entity-card">
+        <div class="kur-entity-title">&#x1F50D; Analisis 1 Soal</div>
+        <div class="kur-entity-narasi">
+          Buka tab <strong>Analisis 1 Soal</strong> untuk pengecekan cepat tanpa upload file.<br>
+          Pilih Mata Pelajaran dan Kelas terlebih dahulu, lalu pilih tipe soal (PG Teks/PG Gambar/Esai).<br>
+          Topik hasil AI dapat dikoreksi manual melalui dropdown jika kurang tepat.<br>
+          Klik <strong>Reset Analisis</strong> sebelum menganalisis soal berikutnya.
         </div>
       </div>
       <div class="kur-entity-card">
@@ -877,10 +896,11 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
         <div class="kur-entity-title">&#x1F4E5; File Hasil Analisis</div>
         <div class="kur-entity-narasi">
           File .xlsx yang diunduh berisi dua sheet:<br>
-          <strong>Sheet 1</strong> — Data soal + kolom hasil: Topik, Bloom, Kesulitan, Confidence, Kunci_AI, Status_Kunci<br>
+          <strong>Sheet 1</strong> — Data soal + kolom hasil: Topik, Bloom, Kesulitan, Confidence, Kunci_AI, Status_Kunci. Semua baris dapat diedit langsung di tabel sebelum diunduh.<br>
           <strong>Sheet _Metadata_Analisis</strong> — Informasi audit: versi aplikasi, versi prompt,
           snapshot materi, snapshot kurikulum, versi Knowledge Engine, distribusi Bloom<br><br>
-          Tombol <strong>Export JSON</strong> — simpan Session Record + Soal Records lengkap ke .json
+          Tombol <strong>Export JSON</strong> — simpan Session Record + Soal Records lengkap ke .json<br>
+          Batch default 10 soal per request untuk menghemat kuota API.
         </div>
       </div>
     </div>
@@ -958,6 +978,36 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
       </div>
     </div>
 
+    <!-- Backup & Restore -->
+    <div class="panduan-panel" id="ppanel-backup">
+      <div class="kur-entity-card">
+        <div class="kur-entity-title">&#x1F4DA; Database Materi</div>
+        <div class="kur-entity-narasi">
+          <strong>Export JSON</strong> — tab Database Materi → tombol Export JSON → simpan file ke perangkat.<br>
+          <strong>Import JSON</strong> — tab Database Materi → tombol Import JSON → pilih file.<br>
+          Format lama (v0) otomatis dimigrasi ke v2.0 saat diimport — tidak perlu konversi manual.<br>
+          <strong>Reset Database</strong> akan mengembalikan ke data default; riwayat perubahan (changelog) tetap dipertahankan.
+        </div>
+      </div>
+      <div class="kur-entity-card">
+        <div class="kur-entity-title">&#x1F9E0; Knowledge Engine</div>
+        <div class="kur-entity-narasi">
+          Modul yang sudah diimpor tersimpan otomatis di browser ini (localStorage) — tetap ada setelah refresh halaman.<br>
+          <strong>⚠️ Penting:</strong> data ini TIDAK ikut ter-backup jika cache/data browser dibersihkan, atau saat berpindah perangkat/browser lain.<br>
+          Gunakan tombol <strong>Backup Semua Modul</strong> di tab Knowledge Engine secara rutin, lalu simpan file hasilnya di Google Drive atau penyimpanan lain.<br>
+          Gunakan <strong>Restore dari Backup</strong> untuk memulihkan seluruh modul dari file backup tersebut kapan saja.
+        </div>
+      </div>
+      <div class="kur-entity-card">
+        <div class="kur-entity-title">&#x26A0;&#xFE0F; Catatan Umum Penyimpanan</div>
+        <div class="kur-entity-narasi">
+          Seluruh data aplikasi ini (Database Materi, Database Kurikulum, Knowledge Engine, Riwayat Sesi) tersimpan di <strong>localStorage browser</strong> perangkat ini saja — bukan di server.<br>
+          Membersihkan cache, data situs, atau menggunakan mode penyamaran akan menghapus semuanya.<br>
+          Lakukan backup/export rutin ke file, terutama sebelum membersihkan cache browser atau berganti perangkat.
+        </div>
+      </div>
+    </div>
+
     <div class="row-btns" style="margin-top:16px">
       <button class="btn-sec" onclick="closeModal('modalPanduan')">Tutup</button>
     </div>
@@ -1018,7 +1068,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
     <button class="modal-close" onclick="closeModal('modalKEImport')">&#x2715;</button>
     <div class="modal-title" id="keImportTitle">&#x1F4E5; Import Modul Knowledge Engine</div>
     <div class="info-box" id="keImportInfo" style="margin-bottom:12px"></div>
-    <input type="file" id="keImportFile" accept=".json" style="margin-top:8px">
+    <input type="file" id="keImportFile" accept=".json" multiple style="margin-top:8px">
     <div id="keImportResult" style="margin-top:12px;font-size:12px;line-height:1.7"></div>
     <div class="row-btns" style="margin-top:16px">
       <button class="btn-run" style="margin-top:0" onclick="doImportKEModule()">&#x1F4E5; Import</button>
@@ -1061,74 +1111,8 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);border-t
 </div>
 
 </main>
-<!-- Help button -->
-<button class="help-btn" onclick="showModal('modalGuide')" title="Panduan">&#x2753;</button>
-
-<!-- Guide Modal -->
-<div class="modal-overlay" id="modalGuide">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('modalGuide')">&#x2715;</button>
-    <div class="modal-title">&#x1F4D6; Panduan Penggunaan</div>
-
-    <div class="guide-section">
-      <h3>Format Excel</h3>
-      <ul>
-        <li>Kolom wajib: <code>tipe</code>, <code>pertanyaan</code></li>
-        <li>Kolom opsional AI: <code>vrl_gambar</code>, <code>opsi_a</code>, <code>opsi_b</code>, <code>opsi_c</code>, <code>opsi_d</code>, <code>kunci</code></li>
-        <li>Tipe soal: <code>pg_teks</code>, <code>pg_gambar</code>, <code>esai</code></li>
-        <li>Urutan kolom boleh berubah — sistem membaca berdasarkan nama header</li>
-      </ul>
-    </div>
-
-    <div class="guide-section">
-      <h3>Format Gambar / Link Soal</h3>
-      <ul>
-        <li>Kolom <code>vrl_gambar</code> diisi URL gambar soal (https://...)</li>
-        <li>Untuk <code>pg_gambar</code>: seluruh soal + opsi ada di gambar, kolom pertanyaan boleh kosong</li>
-        <li>Gunakan Google Drive (share link publik) atau hosting gambar lainnya</li>
-      </ul>
-    </div>
-
-    <div class="guide-section">
-      <h3>Analisis 1 Soal</h3>
-      <ul>
-        <li>Pilih Mata Pelajaran dan Kelas terlebih dahulu</li>
-        <li>Pilih tipe: PG Teks, PG Gambar, atau Esai</li>
-        <li>Topik hasil AI dapat dikoreksi manual via dropdown</li>
-        <li>Klik <strong>Reset Analisis</strong> sebelum menganalisis soal baru</li>
-      </ul>
-    </div>
-
-    <div class="guide-section">
-      <h3>Analisis Massal (Excel)</h3>
-      <ul>
-        <li>Upload file Excel → Pilih Mapel &amp; Kelas → Klik Mulai Analisis</li>
-        <li>Hasil muncul di tabel — semua baris dapat diedit langsung</li>
-        <li>Download Excel untuk menyimpan hasil</li>
-        <li>Batch default 10 soal per request — hemat kuota API</li>
-      </ul>
-    </div>
-
-    <div class="guide-section">
-      <h3>Export / Import Database JSON</h3>
-      <ul>
-        <li><strong>Export:</strong> tab Database Materi → tombol Export JSON → simpan file</li>
-        <li><strong>Import:</strong> tab Database Materi → tombol Import JSON → pilih file</li>
-        <li>Format lama (v0) otomatis dimigrasi ke v1.0 saat diimport</li>
-      </ul>
-    </div>
-
-    <div class="guide-section">
-      <h3>Backup &amp; Restore Database</h3>
-      <ul>
-        <li><strong>Backup:</strong> tab Database Materi → tombol Backup Database</li>
-        <li><strong>Restore:</strong> tab Database Materi → tombol Restore Database</li>
-        <li>⚠️ Data tersimpan di LocalStorage browser — akan hilang jika browser dibersihkan</li>
-        <li>Lakukan backup rutin ke file JSON</li>
-      </ul>
-    </div>
-  </div>
-</div>
+<!-- Help button: membuka panduan lengkap (modalPanduan) -->
+<button class="help-btn" onclick="showHelp()" title="Panduan">&#x2753;</button>
 
 <!-- Storage Warning Modal -->
 <div class="modal-overlay" id="modalStorage">
@@ -6367,7 +6351,8 @@ function showKEImportModal(engine) {
   $id('keImportInfo').innerHTML =
     'Urutan modul yang dikenali untuk ' + engine + ': <code>' + order.join('</code>, <code>') + '</code>. ' +
     'Modul <code>FINAL</code> dapat menimpa modul sebelumnya. Field <code>module_type</code> dalam file JSON ' +
-    'harus diawali dengan "' + engine + '-" (contoh: <code>' + engine + '-CORE</code>).';
+    'harus diawali dengan "' + engine + '-" (contoh: <code>' + engine + '-CORE</code>).<br><br>' +
+    '&#x1F4A1; Anda dapat memilih <strong>beberapa file sekaligus</strong> (tahan Ctrl/Cmd saat memilih, atau pilih rentang dengan Shift).';
 
   $id('keImportFile').value = '';
   $id('keImportResult').innerHTML = '';
@@ -6375,46 +6360,94 @@ function showKEImportModal(engine) {
 }
 
 /** Eksekusi import setelah pengguna memilih file di modal */
-function doImportKEModule() {
-  var fileInput = $id('keImportFile');
-  var file = fileInput.files[0];
-  if (!file) { alert('Pilih file JSON terlebih dahulu.'); return; }
+/**
+ * Baca satu file sebagai Promise — dipakai untuk memproses banyak file
+ * secara berurutan pada doImportKEModule().
+ */
+function _readFileAsText(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) { resolve(e.target.result); };
+    reader.onerror = function() { reject(new Error('Gagal membaca file ' + file.name)); };
+    reader.readAsText(file);
+  });
+}
 
-  // Baca dulu untuk cek apakah engine modul cocok dengan engine yang dipilih
-  // di modal ini — beri peringatan jelas jika tidak cocok (skenario umum:
-  // pengguna salah memilih kotak import, mis. file BKB diupload ke kotak TKB).
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var detectedEngine = null;
+/**
+ * Import satu atau banyak file modul Knowledge Engine sekaligus.
+ * Setiap file diproses berurutan; file dengan engine yang tidak cocok
+ * dengan kotak import yang aktif TIDAK membatalkan seluruh batch — cukup
+ * dilewati dengan peringatan, file lain yang cocok tetap diimport.
+ * TKBEngine._reloadRules() dan renderKEStatus() hanya dipanggil SEKALI di
+ * akhir batch untuk efisiensi, bukan per file.
+ */
+async function doImportKEModule() {
+  var fileInput = $id('keImportFile');
+  var files = Array.prototype.slice.call(fileInput.files);
+  if (!files.length) { alert('Pilih satu atau beberapa file JSON terlebih dahulu.'); return; }
+
+  var resultEl = $id('keImportResult');
+  resultEl.innerHTML = '<div style="color:var(--text3)">Mengimport ' + files.length + ' file...</div>';
+
+  var summary = { berhasil: [], gagal: [], mismatch: [] };
+
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    var text;
     try {
-      var parsed = JSON.parse(e.target.result);
+      text = await _readFileAsText(file);
+    } catch (err) {
+      summary.gagal.push(file.name + ': ' + err.message);
+      continue;
+    }
+
+    var parsed, detectedEngine;
+    try {
+      parsed = JSON.parse(text);
       var engineSource = parsed.module_type || parsed.module_id || '';
       detectedEngine = engineSource.split('-')[0].toUpperCase();
-    } catch(err) {
-      $id('keImportResult').innerHTML = '<div style="color:#f87171">&#x2715; File bukan JSON yang valid.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(err.message) + '</div>';
-      return;
+    } catch (err) {
+      summary.gagal.push(file.name + ': bukan JSON yang valid (' + err.message + ')');
+      continue;
     }
 
     if (detectedEngine && _keActiveImportEngine && detectedEngine !== _keActiveImportEngine) {
-      $id('keImportResult').innerHTML =
-        '<div style="color:#fbbf24">&#x26A0; File ini terdeteksi sebagai modul <strong>' + kurEsc(detectedEngine) +
-        '</strong>, bukan <strong>' + kurEsc(_keActiveImportEngine) + '</strong>.</div>' +
-        '<div style="color:var(--text3);margin-top:6px">Tutup jendela ini, lalu klik "Import Modul" pada kartu <strong>' +
-        kurEsc(detectedEngine) + '</strong> untuk mengimport file ini ke engine yang benar.</div>';
-      return;
+      summary.mismatch.push(file.name + ' → terdeteksi sebagai modul ' + detectedEngine);
+      continue;
     }
 
-    KnowledgeEngine.importModule(file, function(success, message) {
-      var resultEl = $id('keImportResult');
-      if (success) {
-        resultEl.innerHTML = '<div style="color:#4ade80">&#x2713; Import berhasil.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
-      } else {
-        resultEl.innerHTML = '<div style="color:#f87171">&#x2715; Import gagal.</div><div style="color:var(--text3);margin-top:4px">' + kurEsc(message) + '</div>';
-      }
-      renderKEStatus();
-    });
-  };
-  reader.readAsText(file);
+    // Import langsung lewat KELoader (tanpa lewat KnowledgeEngine.importModule
+    // yang berbasis File/FileReader) karena teks file sudah dibaca di atas.
+    var importResult = KELoader.importFromFile(parsed, function(){});
+    if (importResult.registered.length > 0 && importResult.errors.length === 0 &&
+        importResult.registered.every(function(m){ return m.valid; })) {
+      summary.berhasil.push(file.name + ' (' + importResult.registered.map(function(m){ return m.module_id; }).join(', ') + ')');
+    } else {
+      var errMsg = importResult.errors.length ? importResult.errors.join('; ') : 'modul tidak valid';
+      summary.gagal.push(file.name + ': ' + errMsg);
+    }
+  }
+
+  // Reload rules TKB sekali di akhir batch (bukan per file) jika ada modul TKB baru
+  if (typeof TKBEngine !== 'undefined' && TKBEngine._reloadRules) TKBEngine._reloadRules();
+
+  // Susun ringkasan hasil
+  var html = '<div style="font-weight:600;margin-bottom:6px">Hasil import ' + files.length + ' file:</div>';
+  if (summary.berhasil.length) {
+    html += '<div style="color:#4ade80;margin-top:6px">&#x2713; ' + summary.berhasil.length + ' berhasil:</div>';
+    html += '<div style="color:var(--text3);font-size:11px;margin-top:2px">' + summary.berhasil.map(kurEsc).join('<br>') + '</div>';
+  }
+  if (summary.mismatch.length) {
+    html += '<div style="color:#fbbf24;margin-top:6px">&#x26A0; ' + summary.mismatch.length + ' dilewati (engine tidak cocok dengan kotak ini):</div>';
+    html += '<div style="color:var(--text3);font-size:11px;margin-top:2px">' + summary.mismatch.map(kurEsc).join('<br>') + '</div>';
+  }
+  if (summary.gagal.length) {
+    html += '<div style="color:#f87171;margin-top:6px">&#x2715; ' + summary.gagal.length + ' gagal:</div>';
+    html += '<div style="color:var(--text3);font-size:11px;margin-top:2px">' + summary.gagal.map(kurEsc).join('<br>') + '</div>';
+  }
+  resultEl.innerHTML = html;
+
+  renderKEStatus();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
