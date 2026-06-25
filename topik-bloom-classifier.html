@@ -2863,7 +2863,7 @@ function buildPayload(row,mapel,kelas){
   const isPgG=tipe==='pg_gambar';
   const isEsai=ESAI.includes(tipe);
   const p={mapel:mapel,kelas:kelas,tipe:row['tipe']||''};
-  if(isPgG){p.pertanyaan='[Soal dan opsi ada di gambar]';if(row['vrl_gambar'])p.url_gambar=String(row['vrl_gambar']).trim();}
+  if(isPgG){p.pertanyaan='[Soal PG ada di gambar yang dikirim bersama prompt ini — baca gambar untuk menentukan jawaban yang benar]';if(row['vrl_gambar'])p.url_gambar=String(row['vrl_gambar']).trim();}
   else if(isEsai){p.pertanyaan=qbePrepare(row['pertanyaan']||'');if(row['vrl_gambar']&&String(row['vrl_gambar']).trim())p.url_gambar=String(row['vrl_gambar']).trim();}
   else{
     p.pertanyaan=qbePrepare(row['pertanyaan']||'');
@@ -2888,7 +2888,7 @@ function buildPrompt(items,materiList){
     : (isSingle
         ? '{"topik":"Nama | kw1, kw2","bloom":"C2","kesulitan":"Sedang","confidence":85,"kunci_ai":"B"}'
         : '[{"no":1,"topik":"...","bloom":"C2","kesulitan":"Sedang","confidence":85,"kunci_ai":"B"},...]');
-  return 'Kamu adalah guru berpengalaman ahli kurikulum Kemenag MTs dan taksonomi Bloom.\n\nAnalisis '+items.length+' soal berikut:\n'+JSON.stringify(isSingle?items[0]:items,null,2)+'\n\nDAFTAR MATERI (wajib pilih satu \u2014 dilarang membuat topik baru):\n'+materiList.map(function(m,i){return (i+1)+'. '+m;}).join('\n')+'\n\nINSTRUKSI:\n1. TOPIK \u2014 Format: "Nama Materi | keyword1, keyword2, keyword3"\n   Nama materi PERSIS dari daftar. Contoh: "Norma dan Keadilan | sanksi, adat, hukum"\n2. BLOOM \u2014 Berdasarkan PROSES BERPIKIR: Soal\u27f2Proses Berpikir\u27f2Bloom (bukan hanya KKO)\n   C1=Mengingat C2=Memahami C3=Menerapkan C4=Menganalisis C5=Mengevaluasi C6=Mencipta\n3. KESULITAN \u2014 5 level: Sangat Mudah/Mudah/Sedang/Sulit/Sangat Sulit\n4. CONFIDENCE \u2014 0-100. Dari kecocokan: proses berpikir+topik+pola soal+jawaban. Gambar tak bisa diakses=<60\n'+kunciNote+'\n\nJawab HANYA dengan JSON '+(isSingle?'object':'array')+' valid:\n'+contohEsai;
+  return 'Kamu adalah guru berpengalaman ahli kurikulum Kemenag MTs dan taksonomi Bloom.\n\nAnalisis '+items.length+' soal berikut:\n'+JSON.stringify(isSingle?items[0]:items,null,2)+'\n\nDAFTAR MATERI (wajib pilih satu \u2014 dilarang membuat topik baru):\n'+materiList.map(function(m,i){return (i+1)+'. '+m;}).join('\n')+'\n\nINSTRUKSI:\n1. TOPIK \u2014 Format: "Nama Materi | keyword1, keyword2, keyword3"\n   Nama materi PERSIS dari daftar. Contoh: "Norma dan Keadilan | sanksi, adat, hukum"\n2. BLOOM \u2014 Berdasarkan PROSES BERPIKIR: Soal\u27f2Proses Berpikir\u27f2Bloom (bukan hanya KKO)\n   C1=Mengingat C2=Memahami C3=Menerapkan C4=Menganalisis C5=Mengevaluasi C6=Mencipta\n3. KESULITAN \u2014 5 level: Sangat Mudah/Mudah/Sedang/Sulit/Sangat Sulit\n4. CONFIDENCE \u2014 0-100. Dari kecocokan: proses berpikir+topik+pola soal+jawaban+gambar (jika ada). Gambar dikirim langsung ke AI — confidence rendah hanya jika gambar gagal dimuat\n'+kunciNote+'\n\nJawab HANYA dengan JSON '+(isSingle?'object':'array')+' valid:\n'+contohEsai;
 }
 
 function normalizeItem(p,materiList,_soalPayload){
@@ -7226,6 +7226,195 @@ KnowledgeEngine.RKB.analyze = function(input, ctx) {
   var hasModule = Object.keys(KELoader.registry).some(function(k){ return k.startsWith('RKB/'); });
   if (!hasModule) return KnowledgeEngine._noModule('RKB');
   return rkbCalculateQuality(input.pertanyaan || '', input, ctx);
+};
+
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FIX KRITIS: GAMBAR DIKIRIM KE GEMINI SEBAGAI KONTEN NYATA (MULTIMODAL)
+// ──────────────────────────────────────────────────────────────────────────────
+// Sebelumnya: url_gambar hanya dikirim sebagai teks URL di dalam JSON payload.
+// Gemini tidak mengunduh URL — AI hanya bisa "mengarang" jawaban berdasarkan
+// teks yang ada, sehingga jawaban untuk soal bergambar sama sekali tidak akurat.
+//
+// Solusi: Fetch gambar dari URL di browser → konversi ke base64 → kirim ke
+// Gemini sebagai inline_data. Dengan ini Gemini benar-benar MELIHAT gambar soal.
+//
+// Batasan yang jujur:
+// - URL gambar harus publik/accessible dari browser pengguna
+// - Gambar dari Google Drive harus memakai link "uc?export=download&id=..." 
+//   bukan link "sharing" biasa
+// - Gambar terlalu besar (>4MB) akan di-skip dengan peringatan
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Konversi URL gambar ke base64 string untuk dikirim ke Gemini API */
+async function _fetchImageAsBase64(url) {
+  try {
+    // Konversi Google Drive sharing URL ke direct download URL
+    var directUrl = url;
+    var gdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+    if (gdMatch) {
+      directUrl = 'https://drive.google.com/uc?export=download&id=' + gdMatch[1];
+    }
+
+    var response = await fetch(directUrl);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+
+    var blob = await response.blob();
+    if (blob.size > 4 * 1024 * 1024) throw new Error('Gambar terlalu besar (>' + Math.round(blob.size/1024/1024) + 'MB)');
+
+    var mimeType = blob.type || 'image/jpeg';
+    if (!mimeType.startsWith('image/')) mimeType = 'image/jpeg';
+
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var dataUrl = e.target.result;
+        var base64 = dataUrl.split(',')[1];
+        resolve({ base64: base64, mimeType: mimeType });
+      };
+      reader.onerror = function() { reject(new Error('Gagal membaca gambar')); };
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Bangun array "parts" untuk Gemini API dari satu item soal.
+ * Mengembalikan Promise<parts[]> karena mungkin perlu fetch gambar dulu.
+ */
+async function _buildGeminiParts(promptText, items) {
+  // Kumpulkan semua URL gambar unik dari batch items ini
+  var imageMap = {}; // url -> {base64, mimeType} atau {error}
+  var urlsToFetch = [];
+  items.forEach(function(item) {
+    if (item.url_gambar && !imageMap[item.url_gambar]) {
+      urlsToFetch.push(item.url_gambar);
+      imageMap[item.url_gambar] = null; // placeholder
+    }
+  });
+
+  // Fetch semua gambar secara paralel
+  if (urlsToFetch.length > 0) {
+    var fetched = await Promise.all(urlsToFetch.map(function(url) {
+      return _fetchImageAsBase64(url).then(function(result) {
+        return { url: url, result: result };
+      });
+    }));
+    fetched.forEach(function(f) {
+      imageMap[f.url] = f.result;
+    });
+  }
+
+  // Susun parts: teks prompt + gambar-gambar yang berhasil di-fetch
+  var parts = [{ text: promptText }];
+  var imageErrors = [];
+  urlsToFetch.forEach(function(url) {
+    var img = imageMap[url];
+    if (img && img.base64) {
+      // Cari nomor soal yang pakai URL ini untuk label konteks
+      var soalNos = items.filter(function(it){ return it.url_gambar === url; }).map(function(it){ return it.no; });
+      parts.push({ text: '[GAMBAR SOAL NO ' + soalNos.join(', ') + ':]' });
+      parts.push({ inline_data: { mime_type: img.mimeType, data: img.base64 } });
+    } else if (img && img.error) {
+      imageErrors.push('Soal dengan url_gambar=' + url + ': ' + img.error);
+    }
+  });
+
+  if (imageErrors.length) {
+    parts.push({ text: '\n[CATATAN: Gambar berikut gagal dimuat — jawab berdasarkan konteks yang tersedia: ' + imageErrors.join('; ') + ']' });
+  }
+
+  return parts;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Override callGemini agar mengirim gambar sebagai inline_data
+// ─────────────────────────────────────────────────────────────────────────────
+var _origCallGemini = callGemini;
+callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
+  const items = rows.map(function(row, idx) {
+    return Object.assign({ no: idx + 1 }, buildPayload(row, mapel, kelas));
+  });
+  const prompt = buildPrompt(items, materiList);
+
+  // Cek apakah ada soal bergambar dalam batch ini
+  const hasImage = items.some(function(it) { return it.url_gambar; });
+
+  const order = [activeModel || model, ...FALLBACK_MODELS.filter(function(m) {
+    return m !== (activeModel || model);
+  })];
+  let lastErr = 'Terjadi kesalahan.';
+
+  for (const tryModel of order) {
+    for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+      try {
+        const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tryModel +
+                    ':generateContent?key=' + apiKey;
+
+        // Bangun parts dengan gambar jika ada, teks saja jika tidak ada gambar
+        let parts;
+        if (hasImage) {
+          parts = await _buildGeminiParts(prompt, items);
+        } else {
+          parts = [{ text: prompt }];
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: parts }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: rows.length === 1 ? 600 : 3000
+            }
+          })
+        });
+
+        if (!res.ok) {
+          const ed = await res.json().catch(function() { return {}; });
+          lastErr = friendlyErr((ed.error && ed.error.message) || 'HTTP ' + res.status, res.status);
+          if (res.status === 429 || res.status === 404 || res.status === 403) {
+            addLog('retry', '⟳ ' + tryModel + ': ' + lastErr + ' — model lain...');
+            break;
+          }
+          if (res.status === 401) throw new Error('API key tidak valid.');
+          if (attempt < MAX_RETRY) {
+            addLog('retry', '⟳ Percobaan ' + attempt + ': ' + lastErr);
+            await sleep(1500 * attempt);
+          }
+          continue;
+        }
+
+        const data = await res.json();
+        const raw = (data.candidates && data.candidates[0] && data.candidates[0].content &&
+                     data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+                     data.candidates[0].content.parts[0].text) || '';
+        const clean = raw.replace(/```json|```/g, '').trim();
+        activeModel = tryModel;
+
+        if (rows.length === 1) {
+          const p = JSON.parse(clean);
+          return [normalizeItem(Array.isArray(p) ? p[0] : p, materiList, rows[0])];
+        }
+        const parsed = JSON.parse(clean);
+        if (!Array.isArray(parsed)) throw new Error('Response bukan array');
+        return parsed.map(function(item, ri) { return normalizeItem(item, materiList, rows[ri]); });
+
+      } catch (e) {
+        lastErr = friendlyErr(e.message, 0);
+        if (attempt < MAX_RETRY) {
+          addLog('retry', '⟳ Percobaan ' + attempt + ': ' + lastErr);
+          await sleep(1500 * attempt);
+        }
+      }
+    }
+  }
+  return rows.map(function() { return { error: lastErr }; });
 };
 
 
