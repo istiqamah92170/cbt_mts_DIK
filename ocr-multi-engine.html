@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OCR Multi Engine — Kabut Digital</title>
+  <!-- Tesseract.js CDN — dimuat lazy saat diperlukan pertama kali -->
+  <script>
+    // Tesseract dimuat dinamis agar tidak memperlambat halaman
+    // Versi 5 mendukung WASM dan berjalan 100% offline setelah load pertama
+    window._TESSERACT_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    window._TESSERACT_WORKER_PATH = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js';
+    window._TESSERACT_LANG_PATH   = 'https://tessdata.projectnaptha.com/4.0.0';
+    window._TESSERACT_CORE_PATH   = 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core-simd-lstm.wasm.js';
+  </script>
   <style>
     /* ── Reset & Tokens ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -816,29 +825,36 @@
       <div class="section-label">📊 Koneksi Spreadsheet</div>
 
       <div class="form-group">
-        <label class="form-label">Google Sheet URL</label>
+        <label class="form-label">GAS Web App URL</label>
         <div class="form-input-icon">
-          <input class="form-input" id="sheetUrl" type="url"
-            placeholder="https://docs.google.com/spreadsheets/..." />
-          <span class="input-icon" onclick="pasteUrl()" title="Tempel">📋</span>
+          <input class="form-input" id="gasUrl" type="url"
+            placeholder="https://script.google.com/macros/s/..." />
+          <span class="input-icon" onclick="pasteGasUrl()" title="Tempel">📋</span>
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Nama Sheet</label>
-        <input class="form-input" id="sheetName" type="text" value="Sheet1" />
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="form-select" id="sheetName" style="flex:1">
+            <option value="">— Hubungkan dulu —</option>
+          </select>
+          <button class="btn btn-icon" id="btnRefreshSheets" onclick="refreshSheets()" title="Refresh daftar sheet">↻</button>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Kolom URL Gambar</label>
-        <input class="form-input" id="colUrl" type="text" value="B" style="width:60px;display:inline-block" />
-        <span style="font-size:11px;color:var(--text3);margin-left:6px">Kolom hasil OCR:</span>
-        <input class="form-input" id="colOcr" type="text" value="C" style="width:60px;display:inline-block;margin-left:4px" />
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5;padding:6px 8px;background:var(--glass2);border-radius:6px;border:1px solid var(--border)">
+        ✨ <strong>Auto-detect:</strong> GAS otomatis menemukan kolom
+        <em>URL gambar</em> dan <em>hasil OCR</em> dari baris header.
       </div>
 
       <button class="btn btn-primary btn-full" id="btnConnect" onclick="connectSheet()">
-        🔗 Hubungkan Spreadsheet
+        🔗 Hubungkan &amp; Muat Data
       </button>
+
+      <div id="sheetInfo" style="display:none;margin-top:8px;padding:7px 10px;background:var(--glass2);border:1px solid var(--border);border-radius:8px;font-size:11px">
+        <div id="sheetInfoText" style="color:var(--text2);line-height:1.6"></div>
+      </div>
     </div>
 
     <!-- API Keys -->
@@ -1296,16 +1312,18 @@
 
 <script>
 /* ════════════════════════════════════════════════════
-   OCR MULTI ENGINE — SKELETON v1.0
+   OCR MULTI ENGINE — v2.0
    Kabut Digital
+   Tahap 1: SpreadsheetManager (GAS Proxy) — LIVE
+   Tahap 2: TesseractEngine (Tesseract.js v5) — LIVE
    ════════════════════════════════════════════════════
 
    Struktur Class:
-   - OCRManager        : Orkestrasi utama
-   - GPTVisionEngine   : Engine GPT Vision (stub)
-   - GoogleVisionEngine: Engine Google Cloud Vision (stub)
-   - TesseractEngine   : Engine Tesseract offline (stub)
-   - SpreadsheetManager: Koneksi Google Sheets (stub)
+   - OCRManager        : Orkestrasi utama (Strategy Pattern)
+   - GPTVisionEngine   : Engine GPT Vision (stub — Tahap 5)
+   - GoogleVisionEngine: Engine Google Cloud Vision (stub — Tahap 4)
+   - TesseractEngine   : Engine Tesseract.js v5 — LIVE
+   - SpreadsheetManager: GAS Web App proxy — LIVE
    - QueueManager      : Manajemen antrian proses
    - Logger            : Panel log
    - UIManager         : Update UI dan status
@@ -1314,7 +1332,7 @@
    ════════════════════════════════════════════════════ */
 
   /* ── Konstanta ── */
-  const APP_VERSION = '1.0-skeleton';
+  const APP_VERSION = '2.0';
   const ENGINES     = ['gpt', 'gcv', 'tesseract'];
 
   /* ════════════════════════════════════════
@@ -1400,30 +1418,169 @@
     retry()  { super.retry(); }
   }
 
-  /* ── Tesseract Engine ── */
+  /* ── Tesseract Engine — LIVE (Tesseract.js v5) ── */
   class TesseractEngine extends BaseOCREngine {
-    constructor() { super('Tesseract'); this.worker = null; }
+    constructor() {
+      super('Tesseract');
+      this.worker      = null;   // Tesseract.js Worker instance
+      this.loadedLang  = null;   // bahasa yang sudah dimuat
+      this.abortCtrl   = null;
+    }
 
+    /**
+     * Muat Tesseract.js dari CDN secara dinamis (hanya sekali),
+     * lalu buat worker untuk bahasa yang dipilih.
+     */
     async initialize() {
-      UIManager.setEngineLed('tess', 'checking', 'Memuat...');
-      // TODO: const worker = await Tesseract.createWorker(lang)
-      await _simulateDelay(1200);
-      this.ready = true;
-      UIManager.setEngineLed('tess', 'ok', 'Siap (Offline)');
-      return true;
-    }
-
-    async processImage(url) {
-      if (!this.ready) return this._error('Tesseract belum dimuat');
-      if (this.cancelled) return this._error('Dibatalkan');
-      // TODO: const { data: { text, confidence } } = await this.worker.recognize(url)
-      await _simulateDelay(1400);
       const lang = SettingsManager.get('lang', 'ind');
-      return this._result('[STUB] Teks OCR Tesseract (lang:' + lang + '): ' + _shortUrl(url), 0.76);
+      UIManager.setEngineLed('tess', 'checking', 'Memuat Tesseract…');
+      Logger.info('Tesseract: memuat library…');
+
+      try {
+        // Muat skrip CDN jika belum ada
+        if (!window.Tesseract) {
+          await _loadScript(window._TESSERACT_CDN);
+          Logger.info('Tesseract: library berhasil dimuat dari CDN.');
+        }
+
+        // Jika worker sudah ada dengan bahasa sama, skip reinit
+        if (this.worker && this.loadedLang === lang) {
+          UIManager.setEngineLed('tess', 'ok', `Siap (${_langLabel(lang)})`);
+          return true;
+        }
+
+        // Hentikan worker lama jika ada
+        if (this.worker) {
+          await this.worker.terminate().catch(() => {});
+          this.worker = null;
+        }
+
+        UIManager.setEngineLed('tess', 'checking', `Muat bahasa ${_langLabel(lang)}…`);
+        Logger.info(`Tesseract: inisialisasi worker bahasa "${lang}"…`);
+
+        // Buat worker baru — Tesseract.js v5 API
+        this.worker = await Tesseract.createWorker(lang, 1, {
+          // Path ke WASM core dan worker
+          workerPath   : window._TESSERACT_WORKER_PATH,
+          langPath     : window._TESSERACT_LANG_PATH,
+          corePath     : window._TESSERACT_CORE_PATH,
+          // Logger progress muat bahasa
+          logger       : m => {
+            if (m.status === 'loading tesseract core')
+              UIManager.setEngineLed('tess', 'checking', 'Muat core WASM…');
+            if (m.status === 'initializing tesseract')
+              UIManager.setEngineLed('tess', 'checking', 'Init Tesseract…');
+            if (m.status === 'loading language traineddata') {
+              const pct = m.progress ? Math.round(m.progress * 100) : 0;
+              UIManager.setEngineLed('tess', 'checking', `Muat bahasa ${pct}%`);
+            }
+          },
+        });
+
+        this.loadedLang = lang;
+        this.ready      = true;
+        UIManager.setEngineLed('tess', 'ok', `Siap · ${_langLabel(lang)} (Offline)`);
+        Logger.ok(`Tesseract siap dengan bahasa "${lang}".`);
+        return true;
+
+      } catch (err) {
+        this.ready = false;
+        UIManager.setEngineLed('tess', 'err', 'Gagal dimuat');
+        Logger.err('Tesseract gagal inisialisasi: ' + err.message);
+        return false;
+      }
     }
 
-    cancel() { super.cancel(); /* TODO: worker.terminate() */ }
-    async retry() { super.retry(); await this.initialize(); }
+    /**
+     * Jalankan OCR pada satu URL gambar.
+     * URL GDrive format: drive.google.com/thumbnail?id=...&sz=s4000
+     * Tesseract bisa fetch URL langsung jika CORS diizinkan,
+     * atau kita fetch dulu sebagai blob.
+     */
+    async processImage(url) {
+      if (!this.ready || !this.worker) {
+        // Coba inisialisasi otomatis
+        const ok = await this.initialize();
+        if (!ok) return this._error('Tesseract tidak berhasil dimuat');
+      }
+      if (this.cancelled) return this._error('Dibatalkan');
+
+      try {
+        this.abortCtrl = new AbortController();
+        const timeout  = SettingsManager.get('timeout', 15000);
+
+        // Fetch gambar sebagai blob — menghindari masalah CORS GDrive
+        let imageSource = url;
+        try {
+          const resp = await fetch(url, {
+            signal: this.abortCtrl.signal,
+            // Tambahkan mode no-cors tidak akan membantu; biarkan default
+          });
+          if (resp.ok) {
+            const blob   = await resp.blob();
+            imageSource  = URL.createObjectURL(blob);
+          }
+        } catch (fetchErr) {
+          // Jika fetch gagal (CORS), coba langsung ke Tesseract dengan URL
+          Logger.warn(`Tesseract: fetch blob gagal (${fetchErr.message}), coba URL langsung.`);
+          imageSource = url;
+        }
+
+        // Set timer timeout
+        const timeoutPromise = new Promise((_, rej) =>
+          setTimeout(() => rej(new Error('Timeout OCR')), timeout)
+        );
+
+        const ocrPromise = this.worker.recognize(imageSource);
+        const { data }   = await Promise.race([ocrPromise, timeoutPromise]);
+
+        // Bersihkan blob URL
+        if (imageSource !== url) URL.revokeObjectURL(imageSource);
+
+        // Post-processing: bersihkan karakter noise umum
+        const cleaned = _cleanOcrText(data.text);
+
+        return this._result(cleaned, data.confidence / 100, {
+          rawText  : data.text,
+          words    : data.words?.length || 0,
+          hocr     : null, // tersedia via data.hocr jika diperlukan
+        });
+
+      } catch (err) {
+        if (err.message === 'Timeout OCR') {
+          return this._error('Timeout — gambar terlalu besar atau lambat');
+        }
+        if (err.name === 'AbortError') {
+          return this._error('Dibatalkan oleh pengguna');
+        }
+        return this._error('Tesseract error: ' + err.message);
+      }
+    }
+
+    cancel() {
+      super.cancel();
+      if (this.abortCtrl) this.abortCtrl.abort();
+    }
+
+    async retry() {
+      super.retry();
+      // Jika bahasa berubah di settings, reinit
+      const lang = SettingsManager.get('lang', 'ind');
+      if (lang !== this.loadedLang) {
+        await this.initialize();
+      }
+    }
+
+    /** Hentikan worker saat tidak diperlukan (hemat memory) */
+    async terminate() {
+      if (this.worker) {
+        await this.worker.terminate().catch(() => {});
+        this.worker     = null;
+        this.ready      = false;
+        this.loadedLang = null;
+        UIManager.setEngineLed('tess', 'off', 'Dihentikan');
+      }
+    }
   }
 
   /* ════════════════════════════════════════
@@ -1497,48 +1654,167 @@
     }
 
     async function initAll() {
-      for (const k of ENGINES) {
-        await engines[k].initialize();
+      // Selalu init Tesseract terlebih dahulu (butuh waktu muat WASM)
+      // Engine lain (GPT, GCV) diinit saat dibutuhkan (lazy)
+      const activeMode = mode;
+      if (activeMode === 'tesseract' || activeMode === 'auto' || activeMode === 'compare') {
+        await engines.tesseract.initialize();
+      }
+      if (activeMode === 'gpt' || activeMode === 'compare') {
+        await engines.gpt.initialize();
+      }
+      if (activeMode === 'gcv' || activeMode === 'compare') {
+        await engines.gcv.initialize();
+      }
+      // Auto: pastikan minimal satu engine siap
+      if (activeMode === 'auto') {
+        const anyReady = ENGINES.some(k => engines[k].ready);
+        if (!anyReady) Logger.warn('Peringatan: Tidak ada engine yang siap. Periksa API keys.');
       }
     }
 
     function cancelAll() { ENGINES.forEach(k => engines[k].cancel()); }
 
-    return { setMode, processUrl, initAll, cancelAll };
+    return { setMode, processUrl, initAll, cancelAll, _engines: () => engines };
   })();
 
   /* ════════════════════════════════════════
-     SpreadsheetManager
+     SpreadsheetManager — LIVE (GAS Proxy)
      ════════════════════════════════════════ */
   const SpreadsheetManager = (() => {
-    let connected = false;
+    let _gasUrl    = '';     // URL GAS Web App
+    let _sheetName = '';     // Nama sheet aktif
+    let _colMap    = null;   // { noIdx, urlIdx, ocrIdx, url, ocr, no }
+    let _connected = false;
 
-    async function connect(url, sheetName) {
-      // TODO: Gunakan Google Sheets API v4 atau Apps Script web app
-      // Endpoint: GET ?action=getData&sheet=sheetName
-      Logger.info('Mencoba koneksi ke Google Sheets...');
-      await _simulateDelay(1200);
-      connected = true;
-      Logger.ok('Koneksi berhasil! Memuat data...');
+    /* ── Ping GAS untuk cek koneksi ── */
+    async function ping(gasUrl) {
+      const res = await _gasGet(gasUrl, { action: 'ping' });
+      return res.ok === true;
+    }
+
+    /* ── Ambil daftar sheet ── */
+    async function getSheets(gasUrl) {
+      const res = await _gasGet(gasUrl, { action: 'getSheets' });
+      if (!res.ok) throw new Error(res.error || 'Gagal ambil daftar sheet');
+      return res.sheets; // [{ name, rows, cols, sheetId }]
+    }
+
+    /* ── Hubungkan & muat data dari sheet ── */
+    async function connect(gasUrl, sheetName) {
+      _gasUrl    = gasUrl.trim();
+      _sheetName = sheetName.trim();
+      _connected = false;
+
+      Logger.info(`Menghubungkan ke GAS: ${_shortUrl(_gasUrl)}`);
+      Logger.info(`Sheet target: "${_sheetName}"`);
+
+      const res = await _gasGet(_gasUrl, { action: 'getData', sheet: _sheetName });
+
+      if (!res.ok) {
+        Logger.err('Koneksi gagal: ' + (res.error || 'Error tidak diketahui'));
+        throw new Error(res.error || 'Gagal memuat data dari GAS');
+      }
+
+      _colMap    = res.colMap;
+      _connected = true;
+
+      Logger.ok(`Data berhasil dimuat: ${res.totalRows} baris, ${res.pendingRows} pending.`);
+      Logger.info(`Kolom terdeteksi → URL: "${res.colMap.url}" | OCR: "${res.colMap.ocr || 'belum ada'}"`);
+
+      return res; // { ok, sheet, headers, colMap, totalRows, pendingRows, rows }
+    }
+
+    /* ── Reload data tanpa mengubah konfigurasi ── */
+    async function reload() {
+      if (!_connected) throw new Error('Belum terhubung');
+      return await connect(_gasUrl, _sheetName);
+    }
+
+    /* ── Simpan satu hasil OCR ── */
+    async function saveResult(rowIndex, ocrText, engine, confidence) {
+      if (!_connected) { Logger.warn('saveResult: belum terhubung, skip.'); return false; }
+      const res = await _gasPost(_gasUrl, {
+        action     : 'saveOcr',
+        sheet      : _sheetName,
+        rowIndex,
+        ocrText,
+        engine     : engine || '',
+        confidence : confidence != null ? confidence : null,
+      });
+      if (!res.ok) {
+        Logger.err(`Gagal simpan baris ${rowIndex}: ${res.error}`);
+        return false;
+      }
       return true;
     }
 
-    async function loadData() {
-      // TODO: Fetch data nyata dari spreadsheet
-      await _simulateDelay(600);
-      return _generateDummy(20);
-    }
-
-    async function saveResult(rowId, text) {
-      // TODO: POST ke GAS endpoint untuk update sel kolom OCR
-      await _simulateDelay(200);
-      Logger.ok(`Hasil disimpan ke baris ${rowId}`);
+    /* ── Simpan banyak hasil sekaligus ── */
+    async function saveBatch(results) {
+      if (!_connected) { Logger.warn('saveBatch: belum terhubung, skip.'); return false; }
+      const res = await _gasPost(_gasUrl, {
+        action  : 'saveBatch',
+        sheet   : _sheetName,
+        results,
+      });
+      if (!res.ok) {
+        Logger.err('Batch save gagal: ' + (res.error || ''));
+        return false;
+      }
+      Logger.ok(`Batch save: ${res.saved}/${res.total} berhasil.`);
       return true;
     }
 
-    function isConnected() { return connected; }
+    /* ── Statistik cepat dari GAS ── */
+    async function getStats() {
+      if (!_connected) return null;
+      const res = await _gasGet(_gasUrl, { action: 'getStats', sheet: _sheetName });
+      return res.ok ? res : null;
+    }
 
-    return { connect, loadData, saveResult, isConnected };
+    function isConnected() { return _connected; }
+    function getColMap()   { return _colMap; }
+    function getGasUrl()   { return _gasUrl; }
+    function getSheet()    { return _sheetName; }
+
+    /* ── HTTP Helpers ── */
+
+    async function _gasGet(baseUrl, params) {
+      const url = baseUrl + '?' + new URLSearchParams(params).toString();
+      try {
+        const res  = await fetch(url, { redirect: 'follow' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        // GAS kadang redirect ke URL lain; coba dengan mode no-cors tidak ideal
+        // tapi kita bisa deteksi apakah ini CORS error
+        if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+          return { ok: false, error: 'CORS atau jaringan error. Pastikan GAS deploy dengan Access: Anyone.' };
+        }
+        return { ok: false, error: e.message };
+      }
+    }
+
+    async function _gasPost(baseUrl, body) {
+      try {
+        const res = await fetch(baseUrl, {
+          method   : 'POST',
+          redirect : 'follow',
+          headers  : { 'Content-Type': 'text/plain' }, // GAS butuh text/plain bukan application/json
+          body     : JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    return {
+      ping, getSheets, connect, reload,
+      saveResult, saveBatch, getStats,
+      isConnected, getColMap, getGasUrl, getSheet,
+    };
   })();
 
   /* ════════════════════════════════════════
@@ -1595,11 +1871,13 @@
         } else {
           item.qStatus = 'done';
           item.ocrText = res.text;
-          if (SettingsManager.get('autoSave', true)) {
-            await SpreadsheetManager.saveResult(item.no, res.text);
+          if (SettingsManager.get('autoSave', true) && SpreadsheetManager.isConnected()) {
+            // Gunakan rowIndex nyata dari spreadsheet (bukan nomor urut)
+            const rowIndex = item.rowIndex || (item.no + 1);
+            await SpreadsheetManager.saveResult(rowIndex, res.text, res.engine, res.confidence);
           }
           UIManager.updateRow(item.no - 1, 'done', res.text, res.engine, dur, res);
-          Logger.ok(`Gambar ${item.no} selesai (${res.engine}) — ${dur}`);
+          Logger.ok(`Gambar ${item.no} selesai (${res.engine}) · conf:${res.confidence != null ? Math.round(res.confidence*100)+'%' : '?'} · ${dur}`);
         }
 
         UIManager.updateStats();
@@ -1734,11 +2012,12 @@
       const row  = rows[idx];
       if (!row) return;
       row.dataset.status = status;
-      row.dataset.text   = text;
-      row.cells[3].innerHTML = `<span class="badge badge-${status}">${_statusLabel(status)}</span>`;
+      row.dataset.text   = text || '';
+      row.cells[3].innerHTML   = `<span class="badge badge-${status}">${_statusLabel(status)}</span>`;
       row.cells[4].textContent = text ? text.slice(0, 80) + (text.length > 80 ? '…' : '') : '—';
+      row.cells[4].style.color = text ? 'var(--text)' : 'var(--text3)';
       row.cells[5].textContent = engine || '—';
-      row.cells[6].textContent = dur || '—';
+      row.cells[6].textContent = dur    || '—';
       if (rawRes) row.dataset.rawRes = JSON.stringify(rawRes);
     }
 
@@ -1871,9 +2150,19 @@
       current.continueOnError = document.getElementById('togContinue').classList.contains('on');
       current.compress      = document.getElementById('togCompress').classList.contains('on');
       current.maxSize       = +document.getElementById('setMaxSize').value;
+      // Simpan juga GAS URL agar tidak hilang saat refresh
+      const gasUrlEl = document.getElementById('gasUrl');
+      if (gasUrlEl && gasUrlEl.value) current.gasUrl = gasUrlEl.value.trim();
       StorageManager.save(current);
       showToast('Pengaturan disimpan!', 'ok');
       Logger.ok('Pengaturan disimpan.');
+      // Jika bahasa berubah, reset worker Tesseract agar reload dengan bahasa baru
+      const tess = OCRManager._engines().tesseract;
+      if (tess.loadedLang && tess.loadedLang !== current.lang) {
+        tess.terminate().then(() => {
+          Logger.info('Worker Tesseract direset karena bahasa berubah ke: ' + current.lang);
+        });
+      }
     }
 
     function reset() {
@@ -1953,14 +2242,17 @@
       return;
     }
     body.innerHTML = rows.map((r, i) => `
-      <tr data-idx="${i}" data-no="${r.no}" data-url="${_esc(r.url)}" data-status="${r.status}" data-text="" onclick="onRowClick(this)">
+      <tr data-idx="${i}" data-no="${r.no}" data-url="${_esc(r.url)}"
+          data-status="${r.status}" data-text="${_esc(r.text || '')}"
+          data-rowindex="${r.rowIndex || ''}"
+          onclick="onRowClick(this)">
         <td onclick="event.stopPropagation()"><input type="checkbox" onchange="onCheckRow(this,${r.no})" /></td>
         <td class="mono">${r.no}</td>
         <td class="url-cell truncate" title="${_esc(r.url)}">${_shortUrl(r.url)}</td>
-        <td><span class="badge badge-pending">Pending</span></td>
-        <td style="color:var(--text3)">—</td>
-        <td style="color:var(--text3)">—</td>
-        <td style="color:var(--text3)">—</td>
+        <td><span class="badge badge-${r.status}">${_statusLabel(r.status)}</span></td>
+        <td style="color:${r.text ? 'var(--text)' : 'var(--text3)'}">${r.text ? _esc(r.text.slice(0,80)) + (r.text.length>80?'…':'') : '—'}</td>
+        <td style="color:var(--text3)">${r.engine || '—'}</td>
+        <td style="color:var(--text3)">${r.dur || '—'}</td>
         <td>
           <button class="btn btn-icon" title="Proses ulang" onclick="event.stopPropagation();reprocessRow(${i})">🔁</button>
         </td>
@@ -1969,7 +2261,6 @@
 
     document.getElementById('metaTotal').textContent  = rows.length;
     document.getElementById('statTotal').textContent  = rows.length;
-    document.getElementById('badgeQueue').textContent = rows.length;
   }
 
   function onRowClick(row) {
@@ -2028,51 +2319,126 @@
      ACTIONS
      ════════════════════════════════════════ */
   async function connectSheet() {
-    const url  = document.getElementById('sheetUrl').value.trim();
-    const name = document.getElementById('sheetName').value.trim();
-    if (!url) { showToast('Masukkan URL spreadsheet!', 'warn'); return; }
+    const gasUrl    = document.getElementById('gasUrl').value.trim();
+    const sheetName = document.getElementById('sheetName').value.trim();
+
+    if (!gasUrl) { showToast('Masukkan URL GAS Web App!', 'warn'); return; }
+    if (!sheetName || sheetName === '') { showToast('Pilih nama sheet!', 'warn'); return; }
 
     const btn = document.getElementById('btnConnect');
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Menghubungkan...';
-
-    const ok = await SpreadsheetManager.connect(url, name);
-    btn.disabled = false;
-    btn.innerHTML = '🔗 Hubungkan Spreadsheet';
+    btn.innerHTML = '<div class="spinner"></div> Menghubungkan…';
 
     const badge = document.getElementById('connBadge');
-    if (ok) {
+    badge.className = 'conn-badge';
+    badge.innerHTML = '<span class="dot"></span>Menghubungkan…';
+
+    try {
+      const res = await SpreadsheetManager.connect(gasUrl, sheetName);
+
+      // Update badge
       badge.className = 'conn-badge connected';
       badge.innerHTML = '<span class="dot"></span>Terhubung';
-      showToast('Spreadsheet berhasil dihubungkan!', 'ok');
-      const data = await SpreadsheetManager.loadData();
-      AppState.rows = data;
-      _renderTable(data);
-      QueueManager.addItems(data);
+
+      // Tampilkan info sheet
+      const info = document.getElementById('sheetInfo');
+      const infoTxt = document.getElementById('sheetInfoText');
+      info.style.display = '';
+      infoTxt.innerHTML = `
+        📊 <b>${sheetName}</b> &nbsp;·&nbsp; ${res.totalRows} baris<br>
+        🔗 Kolom URL: <b>${res.colMap.url || '?'}</b> &nbsp;·&nbsp;
+        📝 Kolom OCR: <b>${res.colMap.ocr || '(belum ada)'}</b><br>
+        ⏳ Pending: <b>${res.pendingRows}</b> &nbsp;·&nbsp;
+        ✅ Sudah OCR: <b>${res.totalRows - res.pendingRows}</b>
+      `;
+
+      // Render tabel & queue
+      AppState.rows = res.rows.map(r => ({
+        no      : r.no,
+        url     : r.url,
+        rowIndex: r.rowIndex,
+        status  : r.hasOcr ? 'done' : 'pending',
+        text    : r.ocr || '',
+        engine  : '',
+        dur     : '',
+      }));
+      _renderTable(AppState.rows);
+      QueueManager.addItems(AppState.rows.filter(r => r.status === 'pending'));
       UIManager.updateStats();
-    } else {
+
+      showToast(`${res.totalRows} baris dimuat, ${res.pendingRows} pending.`, 'ok');
+
+    } catch (err) {
       badge.className = 'conn-badge error';
       badge.innerHTML = '<span class="dot"></span>Gagal';
-      showToast('Koneksi gagal. Periksa URL.', 'err');
+      showToast('Koneksi gagal: ' + err.message, 'err');
+      Logger.err('connectSheet error: ' + err.message);
     }
+
+    btn.disabled = false;
+    btn.innerHTML = '🔗 Hubungkan &amp; Muat Data';
+  }
+
+  async function refreshSheets() {
+    const gasUrl = document.getElementById('gasUrl').value.trim();
+    if (!gasUrl) { showToast('Isi URL GAS dulu!', 'warn'); return; }
+
+    const btn = document.getElementById('btnRefreshSheets');
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+      // Ping dulu
+      const alive = await SpreadsheetManager.ping(gasUrl);
+      if (!alive) throw new Error('GAS tidak merespons. Cek URL dan mode deploy.');
+
+      const sheets = await SpreadsheetManager.getSheets(gasUrl);
+      const sel    = document.getElementById('sheetName');
+      sel.innerHTML = sheets.map(s =>
+        `<option value="${_esc(s.name)}">${_esc(s.name)} (${s.rows} baris)</option>`
+      ).join('');
+
+      // Simpan gasUrl ke storage
+      StorageManager.save({ ...StorageManager.load(), gasUrl });
+
+      showToast(`${sheets.length} sheet ditemukan.`, 'ok');
+      Logger.ok('Daftar sheet berhasil dimuat: ' + sheets.map(s => s.name).join(', '));
+    } catch (err) {
+      showToast('Gagal ambil sheet: ' + err.message, 'err');
+      Logger.err('refreshSheets: ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = '↻';
+  }
+
+  function pasteGasUrl() {
+    navigator.clipboard.readText().then(t => {
+      document.getElementById('gasUrl').value = t.trim();
+      showToast('URL ditempel. Klik ↻ untuk muat daftar sheet.', 'info');
+    }).catch(() => { showToast('Tidak bisa membaca clipboard.', 'warn'); });
   }
 
   async function validateKeys() {
-    Logger.info('Validasi API keys...');
-    UIManager.setEngineLed('gpt', 'checking', 'Mengecek...');
-    UIManager.setEngineLed('gcv', 'checking', 'Mengecek...');
-    UIManager.setEngineLed('tess','checking', 'Memuat...');
+    Logger.info('Validasi API keys dan engine…');
+    UIManager.setEngineLed('gpt',  'checking', 'Mengecek…');
+    UIManager.setEngineLed('gcv',  'checking', 'Mengecek…');
 
     const gptKey = document.getElementById('gptKey').value.trim();
     const gcvKey = document.getElementById('gcvKey').value.trim();
 
-    await _simulateDelay(800);
-    UIManager.setEngineLed('gpt',  gptKey ? 'ok'  : 'err', gptKey ? 'Key valid' : 'Key kosong');
-    UIManager.setEngineLed('gcv',  gcvKey ? 'ok'  : 'err', gcvKey ? 'Key valid' : 'Key kosong');
-    UIManager.setEngineLed('tess', 'ok', 'Offline — siap');
+    // GPT & GCV — masih stub, cek key saja
+    await _simulateDelay(400);
+    UIManager.setEngineLed('gpt', gptKey ? 'ok' : 'err', gptKey ? 'Key diisi (belum divalidasi)' : 'Key kosong');
+    UIManager.setEngineLed('gcv', gcvKey ? 'ok' : 'err', gcvKey ? 'Key diisi (belum divalidasi)' : 'Key kosong');
+
+    // Tesseract — inisialisasi nyata
+    Logger.info('Tesseract: memulai inisialisasi…');
+    const tessOk = await OCRManager._engines().tesseract.initialize();
+    if (!tessOk) showToast('Tesseract gagal dimuat. Cek koneksi internet.', 'err');
 
     Logger.ok('Validasi selesai.');
-    showToast('Validasi keys selesai.', 'ok');
+    showToast('Validasi engine selesai.', tessOk ? 'ok' : 'warn');
   }
 
   function selectMode(el) {
@@ -2093,12 +2459,6 @@
       case 'retrySelected':QueueManager.retrySelected(); break;
       case 'retryAll':     QueueManager.retryAll();      break;
     }
-  }
-
-  function pasteUrl() {
-    navigator.clipboard.readText().then(t => {
-      document.getElementById('sheetUrl').value = t;
-    }).catch(() => { showToast('Tidak bisa membaca clipboard.', 'warn'); });
   }
 
   function togglePass(id) {
@@ -2224,9 +2584,39 @@
      ════════════════════════════════════════ */
   function _simulateDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
   function _shortUrl(url)     { try { const u = new URL(url); return u.hostname + u.pathname.slice(0,30); } catch { return url.slice(0,40); } }
-  function _esc(s)            { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _esc(s)            { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function _statusLabel(s)    { return { pending:'Pending', done:'Selesai', failed:'Gagal', processing:'Diproses', queued:'Antrian', skipped:'Dilewati' }[s] || s; }
   function _fmtTime(sec)      { const m = Math.floor(sec/60); const s = Math.round(sec%60); return m > 0 ? `${m}m ${s}s` : `${s}s`; }
+  function _langLabel(code)   { return { ind:'Indonesia', eng:'Inggris', 'ind+eng':'ID+EN', ara:'Arab' }[code] || code; }
+
+  /** Muat skrip eksternal secara dinamis (Promise) */
+  function _loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+      const s   = document.createElement('script');
+      s.src     = src;
+      s.onload  = resolve;
+      s.onerror = () => reject(new Error('Gagal muat skrip: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  /**
+   * Post-processing OCR text:
+   * - Hapus baris kosong berlebihan
+   * - Trim tiap baris
+   * - Normalisasi spasi ganda
+   */
+  function _cleanOcrText(raw) {
+    if (!raw) return '';
+    return raw
+      .split('\n')
+      .map(l => l.trim())
+      .filter((l, i, arr) => l || (arr[i-1] && arr[i+1])) // hapus baris kosong di awal/akhir
+      .join('\n')
+      .replace(/[ \t]{2,}/g, ' ')  // spasi ganda → satu
+      .trim();
+  }
 
   function _download(filename, content, mime) {
     const blob = new Blob([content], { type: mime });
@@ -2242,12 +2632,23 @@
      ════════════════════════════════════════ */
   (function init() {
     SettingsManager.init();
-    Logger.info('OCR Multi Engine v' + APP_VERSION + ' siap.');
-    Logger.info('Mode: ' + AppState.ocrMode + ' | Tesseract akan dimuat saat diperlukan.');
-    // Simulasi Tesseract offline load check
-    setTimeout(() => {
-      UIManager.setEngineLed('tess', 'ok', 'Offline — siap');
-    }, 800);
+
+    // Pulihkan GAS URL dari storage jika ada
+    const saved = StorageManager.load();
+    if (saved.gasUrl) {
+      document.getElementById('gasUrl').value = saved.gasUrl;
+      Logger.info('GAS URL dipulihkan dari storage.');
+    }
+
+    Logger.info(`OCR Multi Engine v${APP_VERSION} siap.`);
+    Logger.info('Tahap aktif: SpreadsheetManager (GAS) + TesseractEngine (Tesseract.js v5)');
+    Logger.info('GPT Vision & Google Vision: menunggu implementasi Tahap 4–5.');
+    Logger.info('Langkah: (1) Isi GAS URL → (2) Klik ↻ → (3) Pilih sheet → (4) Hubungkan.');
+
+    // Set LED Tesseract ke "belum dimuat" (dimuat lazy saat Start ditekan)
+    UIManager.setEngineLed('tess', 'off', 'Dimuat saat dibutuhkan');
+    UIManager.setEngineLed('gpt',  'off', 'Stub — Tahap 5');
+    UIManager.setEngineLed('gcv',  'off', 'Stub — Tahap 4');
   })();
 </script>
 </body>
