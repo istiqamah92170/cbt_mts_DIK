@@ -700,8 +700,10 @@ h1,h2,h3,h4 { color: var(--text-primary); }
       Guru<span>AI</span> Builder
     </div>
     <div class="header-spacer"></div>
+    <button class="btn btn-secondary btn-sm" onclick="PROJECT.open()" title="Buka Project" style="gap:5px;">📂 Buka</button>
+    <button class="btn btn-secondary btn-sm" onclick="PROJECT.save()" title="Simpan Project" style="gap:5px;margin-left:4px;">💾 Simpan</button>
     <button class="btn-icon" onclick="toggleDark()" title="Ganti Tema" id="themeBtn">🌙</button>
-    <button class="btn-icon" onclick="showToast('Versi 1.0.0 — Stabil', 'info')" title="Tentang">ℹ️</button>
+    <button class="btn-icon" onclick="showToast('GuruAI Builder v'+CONFIG.VERSION, 'info')" title="Tentang">ℹ️</button>
   </header>
 
   <!-- SIDEBAR -->
@@ -769,6 +771,20 @@ h1,h2,h3,h4 { color: var(--text-primary); }
             <div class="stat-icon">🎯</div>
             <div class="stat-num" id="stat-asesmen">0</div>
             <div class="stat-label">Asesmen Dibuat</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏁</div>
+            <div class="stat-num" id="stat-tp">0</div>
+            <div class="stat-label">Tujuan Pembelajaran</div>
+          </div>
+        </div>
+
+        <!-- Progress Tahun Ajaran -->
+        <div class="section-title" style="margin-bottom:8px;">📈 Progress Tahun Ajaran</div>
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;margin-bottom:24px;box-shadow:var(--shadow-sm);">
+          <p id="progLabel" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">0 dari ±32 pertemuan (estimasi tahun ajaran)</p>
+          <div style="background:var(--border);border-radius:20px;height:18px;overflow:hidden;">
+            <div id="progBar" style="background:linear-gradient(90deg,var(--accent),var(--accent-dark));height:100%;border-radius:20px;width:0%;transition:width .5s ease;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;min-width:0px;">0%</div>
           </div>
         </div>
         <div class="section-title">📂 Riwayat Terakhir</div>
@@ -1211,6 +1227,24 @@ h1,h2,h3,h4 { color: var(--text-primary); }
         </div>
 
         <div class="settings-group">
+          <div class="settings-group-title">📁 Project</div>
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <h4>Simpan Project</h4>
+              <p>Unduh file <strong>.gaib</strong> berisi semua data, riwayat, dan RPPM</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="PROJECT.save()">💾 Simpan</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <h4>Buka Project</h4>
+              <p>Muat file <strong>.gaib</strong> — semua data dan status kembali</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="PROJECT.open()">📂 Buka</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
           <div class="settings-group-title">💾 Data</div>
           <div class="settings-row">
             <div class="settings-row-info">
@@ -1224,7 +1258,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
               <h4>Versi Aplikasi</h4>
               <p>GuruAI Builder</p>
             </div>
-            <span class="badge badge-teal">v1.0.0</span>
+            <span class="badge badge-teal">v1.1.0</span>
           </div>
         </div>
       </div>
@@ -1242,9 +1276,16 @@ h1,h2,h3,h4 { color: var(--text-primary); }
    ============================================================ */
 const CONFIG = {
   APP_NAME: 'GuruAI Builder',
-  VERSION: '1.0.0',
-  LS_KEY: 'guruai_data',
+  VERSION: '1.1.0',
+  /* IndexedDB — penyimpanan utama */
+  DB_NAME:    'guruai_idb',
+  DB_VERSION: 1,
+  DB_STORE:   'data',
+  /* localStorage — fallback */
+  LS_KEY:      'guruai_data',
   LS_SETTINGS: 'guruai_settings',
+  /* File project */
+  PROJECT_EXT: '.gaib',
   TOAST_DURATION: 3000,
 };
 
@@ -1340,7 +1381,7 @@ const DATABASE = {
   history: [],
 
   /* Statistik */
-  stats: { modul: 0, lkpd: 0, soal: 0, asesmen: 0 },
+  stats: { modul: 0, lkpd: 0, soal: 0, asesmen: 0, tp: 0 },
 
   /* Pengaturan */
   settings: { dark: false, sekolah: '', guru: '', nip: '' },
@@ -1465,7 +1506,80 @@ const UTIL = {
 };
 
 /* ============================================================
-   STORAGE — Baca/tulis localStorage
+   IDB — IndexedDB wrapper async (penyimpanan utama)
+   localStorage tetap tersedia sebagai fallback offline.
+   ============================================================ */
+const IDB = {
+  _db: null,
+
+  /** Buka / inisialisasi database */
+  open() {
+    return new Promise((res, rej) => {
+      if (this._db) return res(this._db);
+      const req = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(CONFIG.DB_STORE)) {
+          db.createObjectStore(CONFIG.DB_STORE);
+        }
+      };
+      req.onsuccess = e => { this._db = e.target.result; res(this._db); };
+      req.onerror   = e => rej(e.target.error);
+    });
+  },
+
+  /** Simpan nilai dengan key */
+  async set(key, val) {
+    try {
+      const db = await this.open();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(CONFIG.DB_STORE, 'readwrite');
+        tx.objectStore(CONFIG.DB_STORE).put(val, key);
+        tx.oncomplete = () => res(true);
+        tx.onerror    = e => rej(e.target.error);
+      });
+    } catch(e) {
+      /* Fallback ke localStorage */
+      try { localStorage.setItem('idb_' + key, JSON.stringify(val)); } catch(_) {}
+    }
+  },
+
+  /** Ambil nilai dengan key */
+  async get(key, def = null) {
+    try {
+      const db = await this.open();
+      return new Promise((res, rej) => {
+        const tx  = db.transaction(CONFIG.DB_STORE, 'readonly');
+        const req = tx.objectStore(CONFIG.DB_STORE).get(key);
+        req.onsuccess = e => res(e.target.result ?? def);
+        req.onerror   = e => rej(e.target.error);
+      });
+    } catch(e) {
+      /* Fallback ke localStorage */
+      try {
+        const s = localStorage.getItem('idb_' + key);
+        return s ? JSON.parse(s) : def;
+      } catch(_) { return def; }
+    }
+  },
+
+  /** Hapus key */
+  async del(key) {
+    try {
+      const db = await this.open();
+      return new Promise((res) => {
+        const tx = db.transaction(CONFIG.DB_STORE, 'readwrite');
+        tx.objectStore(CONFIG.DB_STORE).delete(key);
+        tx.oncomplete = () => res(true);
+      });
+    } catch(e) {
+      try { localStorage.removeItem('idb_' + key); } catch(_) {}
+    }
+  },
+};
+
+/* ============================================================
+   STORAGE — localStorage helper (tetap untuk settings & fallback)
    ============================================================ */
 const STORAGE = {
   save(key, val) {
@@ -1479,6 +1593,110 @@ const STORAGE = {
   },
   clear(key) {
     try { localStorage.removeItem(key); } catch(e) {}
+  },
+};
+
+/* ============================================================
+   PROJECT — Simpan / buka file .gaib (JSON)
+   ============================================================ */
+const PROJECT = {
+  /** Kumpulkan semua data jadi satu objek project */
+  collect() {
+    return {
+      version:  CONFIG.VERSION,
+      savedAt:  Date.now(),
+      project:  { nama: DATABASE.settings.guru || 'GuruAI', versi: CONFIG.VERSION },
+      settings: DATABASE.settings,
+      stats:    DATABASE.stats,
+      history:  DATABASE.history,
+      form:     UTIL.getFormData(),
+      rppm:     getRPPMData?.() ?? {},
+    };
+  },
+
+  /** Unduh file .gaib */
+  save() {
+    const data    = this.collect();
+    const mapel   = data.form.mapel   || 'Proyek';
+    const kelas   = data.form.kelas   || '';
+    const tahun   = data.form.tahun   || new Date().getFullYear();
+    const name    = `${mapel}_${kelas}_${tahun}`.replace(/\s+/g,'_');
+    const json    = JSON.stringify(data, null, 2);
+    const blob    = new Blob([json], { type: 'application/json' });
+    const a       = document.createElement('a');
+    a.href        = URL.createObjectURL(blob);
+    a.download    = name + CONFIG.PROJECT_EXT;
+    a.click();
+    showToast(`💾 Project disimpan: ${name}${CONFIG.PROJECT_EXT}`);
+  },
+
+  /** Buka file .gaib dan restore semua state */
+  open() {
+    const input    = document.createElement('input');
+    input.type     = 'file';
+    input.accept   = CONFIG.PROJECT_EXT + ',.json';
+    input.onchange = e => {
+      const file   = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          this._restore(data);
+        } catch(_) {
+          showToast('❌ File tidak valid atau rusak', 'error');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  },
+
+  /** Restore semua state dari data project */
+  _restore(data) {
+    /* Settings */
+    if (data.settings) {
+      Object.assign(DATABASE.settings, data.settings);
+      STORAGE.save(CONFIG.LS_SETTINGS, DATABASE.settings);
+    }
+    /* Stats & history */
+    if (data.stats)   Object.assign(DATABASE.stats, data.stats);
+    if (data.history) DATABASE.history = data.history;
+
+    /* Simpan ke IDB */
+    IDB.set('main', { stats: DATABASE.stats, history: DATABASE.history });
+
+    /* Restore form Modul Ajar */
+    if (data.form) {
+      const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','tp','materi','model'];
+      fields.forEach(f => {
+        const el = document.getElementById('f-' + f);
+        if (el && data.form[f]) el.value = data.form[f];
+      });
+    }
+
+    /* Restore form Pengaturan */
+    if (data.settings) {
+      if (data.settings.sekolah) document.getElementById('set-sekolah').value = data.settings.sekolah;
+      if (data.settings.guru)    document.getElementById('set-guru').value    = data.settings.guru;
+      if (data.settings.nip)     document.getElementById('set-nip').value     = data.settings.nip;
+      if (data.settings.dark) {
+        document.documentElement.setAttribute('data-theme','dark');
+        document.getElementById('themeBtn').textContent  = '☀️';
+        document.getElementById('settingDark').checked   = true;
+      }
+    }
+
+    /* Restore RPPM jika ada */
+    if (data.rppm && Object.keys(data.rppm).length) {
+      STORAGE.save(CONFIG.LS_KEY + '_rppm', data.rppm);
+      restoreRPPM?.();
+    }
+
+    updateUserChip();
+    RENDER.renderHistory();
+    RENDER.updateStats();
+    showToast('📂 Project berhasil dibuka!');
   },
 };
 
@@ -1868,6 +2086,20 @@ const RENDER = {
     document.getElementById('stat-lkpd').textContent     = DATABASE.stats.lkpd;
     document.getElementById('stat-soal').textContent     = DATABASE.stats.soal;
     document.getElementById('stat-asesmen').textContent  = DATABASE.stats.asesmen;
+    /* Stat TP — elemen mungkin belum ada di versi lama, guard dengan ?. */
+    const elTp = document.getElementById('stat-tp');
+    if (elTp) elTp.textContent = DATABASE.stats.tp || 0;
+    /* Progress bar */
+    const prog = document.getElementById('progBar');
+    if (prog) {
+      const pct = DATABASE.stats.modul > 0
+        ? Math.min(100, Math.round((DATABASE.stats.modul / 32) * 100))
+        : 0;
+      prog.style.width    = pct + '%';
+      prog.textContent    = pct + '%';
+      const lbl = document.getElementById('progLabel');
+      if (lbl) lbl.textContent = `${DATABASE.stats.modul} dari ±32 pertemuan (estimasi tahun ajaran)`;
+    }
   },
 };
 
@@ -1990,6 +2222,9 @@ function generate() {
     DATABASE.stats.lkpd++;
     DATABASE.stats.soal += 5;
     DATABASE.stats.asesmen++;
+    /* Hitung jumlah TP dari baris teks */
+    const tpLines = data.tp.split('\n').filter(l => l.trim());
+    DATABASE.stats.tp += tpLines.length || 1;
 
     /* Simpan ke riwayat */
     DATABASE.history.push({
@@ -1998,12 +2233,10 @@ function generate() {
       ...data,
     });
 
-    /* Simpan ke storage */
-    STORAGE.save(CONFIG.LS_KEY, {
-      form: data,
-      stats: DATABASE.stats,
-      history: DATABASE.history,
-    });
+    /* Simpan ke IDB (utama) dan localStorage (fallback) */
+    const payload = { stats: DATABASE.stats, history: DATABASE.history };
+    IDB.set('main', payload);
+    STORAGE.save(CONFIG.LS_KEY, payload);
 
     /* Reset tombol */
     btn.innerHTML = '✨ GENERATE PERANGKAT PEMBELAJARAN';
@@ -2045,6 +2278,7 @@ function loadHistory(id) {
 function autoSave() {
   const data = UTIL.getFormData();
   STORAGE.save(CONFIG.LS_KEY + '_form', data);
+  IDB.set('form', data); /* IDB utama */
 }
 
 /* ============================================================
@@ -2083,11 +2317,17 @@ function applyDefaultIdentity() {
 
 function resetData() {
   if (!confirm('Reset semua data riwayat dan statistik? Data tidak dapat dipulihkan.')) return;
+  /* Hapus dari IDB */
+  IDB.del('main');
+  IDB.del('form');
+  IDB.del('rppm');
+  /* Hapus dari localStorage */
   STORAGE.clear(CONFIG.LS_KEY);
   STORAGE.clear(CONFIG.LS_KEY + '_form');
   STORAGE.clear(CONFIG.LS_KEY + '_rppm');
+  /* Reset state */
   DATABASE.history = [];
-  DATABASE.stats = { modul: 0, lkpd: 0, soal: 0, asesmen: 0 };
+  DATABASE.stats = { modul: 0, lkpd: 0, soal: 0, asesmen: 0, tp: 0 };
   RENDER.updateStats();
   RENDER.renderHistory();
   showToast('🗑️ Data berhasil direset', 'warning');
@@ -2305,7 +2545,8 @@ function buildRPPMHTML(d) {
 function previewRPPM() {
   const d = getRPPMData();
   document.getElementById('rppmPreviewContent').innerHTML = buildRPPMHTML(d);
-  /* Simpan ke localStorage */
+  /* Simpan ke IDB (utama) dan localStorage (fallback) */
+  IDB.set('rppm', d);
   STORAGE.save(CONFIG.LS_KEY + '_rppm', d);
 }
 
@@ -2452,8 +2693,10 @@ function salinDariModul() {
 }
 
 /** Restore data RPPM dari localStorage saat halaman dibuka */
-function restoreRPPM() {
-  const saved = STORAGE.load(CONFIG.LS_KEY + '_rppm', null);
+async function restoreRPPM() {
+  /* IDB dulu, fallback ke localStorage */
+  let saved = await IDB.get('rppm', null);
+  if (!saved) saved = STORAGE.load(CONFIG.LS_KEY + '_rppm', null);
   if (!saved) return;
   const textFields = ['sekolah','mapel','fase','waktu','tahun','guru','peserta','materi',
     'cp','lintas','tp','topik','integrasi','model','mitra','lingkungan','digital',
@@ -2492,30 +2735,32 @@ function showToast(msg, type = 'info') {
 /* ============================================================
    INIT — Inisialisasi saat halaman dimuat
    ============================================================ */
-function init() {
-  /* Muat settings */
+async function init() {
+  /* 1. Muat settings dari localStorage (cepat, sinkron) */
   const settings = STORAGE.load(CONFIG.LS_SETTINGS, {});
   Object.assign(DATABASE.settings, settings);
 
-  /* Terapkan dark mode */
+  /* 2. Terapkan dark mode segera */
   if (DATABASE.settings.dark) {
     document.documentElement.setAttribute('data-theme', 'dark');
     document.getElementById('themeBtn').textContent = '☀️';
     document.getElementById('settingDark').checked = true;
   }
 
-  /* Terapkan settings ke form pengaturan */
+  /* 3. Terapkan settings ke form pengaturan */
   if (DATABASE.settings.sekolah) document.getElementById('set-sekolah').value = DATABASE.settings.sekolah;
   if (DATABASE.settings.guru)    document.getElementById('set-guru').value    = DATABASE.settings.guru;
   if (DATABASE.settings.nip)     document.getElementById('set-nip').value     = DATABASE.settings.nip;
 
-  /* Muat data tersimpan (history, stats) */
-  const saved = STORAGE.load(CONFIG.LS_KEY, {});
-  if (saved.stats)   Object.assign(DATABASE.stats, saved.stats);
-  if (saved.history) DATABASE.history = saved.history;
+  /* 4. Muat data utama dari IDB — fallback ke localStorage */
+  let saved = await IDB.get('main', null);
+  if (!saved) saved = STORAGE.load(CONFIG.LS_KEY, {});   /* fallback */
+  if (saved?.stats)   Object.assign(DATABASE.stats,   saved.stats);
+  if (saved?.history) DATABASE.history = saved.history;
 
-  /* Restore form terakhir */
-  const lastForm = STORAGE.load(CONFIG.LS_KEY + '_form', null);
+  /* 5. Restore form terakhir dari IDB — fallback ke localStorage */
+  let lastForm = await IDB.get('form', null);
+  if (!lastForm) lastForm = STORAGE.load(CONFIG.LS_KEY + '_form', null);
   if (lastForm) {
     const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','tp','materi','model'];
     fields.forEach(f => {
@@ -2524,17 +2769,17 @@ function init() {
     });
   }
 
-  /* Update chip user */
+  /* 6. Update chip user */
   updateUserChip();
 
-  /* Render dashboard */
+  /* 7. Render dashboard */
   RENDER.renderHistory();
   RENDER.updateStats();
 
-  /* Restore data RPPM dari sesi terakhir */
+  /* 8. Restore data RPPM dari sesi terakhir */
   restoreRPPM();
 
-  /* Pesan selamat datang */
+  /* 9. Pesan selamat datang */
   const guru = DATABASE.settings.guru || 'Guru';
   showToast(`Selamat datang, ${guru}! 👋`);
 }
