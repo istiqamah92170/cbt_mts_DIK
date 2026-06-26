@@ -1493,13 +1493,14 @@
 
     /**
      * Jalankan OCR pada satu URL gambar.
-     * URL GDrive format: drive.google.com/thumbnail?id=...&sz=s4000
-     * Tesseract bisa fetch URL langsung jika CORS diizinkan,
-     * atau kita fetch dulu sebagai blob.
+     *
+     * Strategi fetch 3 lapis (menangani CORS GDrive):
+     * 1. Fetch langsung sebagai blob (berhasil jika URL publik non-GDrive)
+     * 2. Fetch lewat GAS proxy → base64 dataUri (untuk GDrive thumbnail)
+     * 3. Kirim URL langsung ke Tesseract (fallback terakhir)
      */
     async processImage(url) {
       if (!this.ready || !this.worker) {
-        // Coba inisialisasi otomatis
         const ok = await this.initialize();
         if (!ok) return this._error('Tesseract tidak berhasil dimuat');
       }
@@ -1509,50 +1510,79 @@
         this.abortCtrl = new AbortController();
         const timeout  = SettingsManager.get('timeout', 15000);
 
-        // Fetch gambar sebagai blob — menghindari masalah CORS GDrive
-        let imageSource = url;
-        try {
-          const resp = await fetch(url, {
-            signal: this.abortCtrl.signal,
-            // Tambahkan mode no-cors tidak akan membantu; biarkan default
-          });
-          if (resp.ok) {
-            const blob   = await resp.blob();
-            imageSource  = URL.createObjectURL(blob);
+        // ── Lapis 1: fetch langsung sebagai blob ──────────────
+        let imageSource = null;
+        const isGDrive  = url.includes('drive.google.com') ||
+                          url.includes('googleusercontent.com');
+
+        if (!isGDrive) {
+          // URL publik biasa — coba fetch langsung
+          try {
+            const resp = await fetch(url, { signal: this.abortCtrl.signal });
+            if (resp.ok) {
+              const blob  = await resp.blob();
+              imageSource = URL.createObjectURL(blob);
+              Logger.info(`Tesseract: gambar difetch langsung (${(blob.size/1024).toFixed(0)} KB)`);
+            }
+          } catch (e) {
+            Logger.warn('Tesseract: fetch langsung gagal — ' + e.message);
           }
-        } catch (fetchErr) {
-          // Jika fetch gagal (CORS), coba langsung ke Tesseract dengan URL
-          Logger.warn(`Tesseract: fetch blob gagal (${fetchErr.message}), coba URL langsung.`);
+        }
+
+        // ── Lapis 2: proxy lewat GAS (wajib untuk GDrive) ────
+        if (!imageSource && SpreadsheetManager.isConnected()) {
+          try {
+            Logger.info('Tesseract: fetch gambar lewat GAS proxy…');
+            const gasUrl    = SpreadsheetManager.getGasUrl();
+            const proxyUrl  = gasUrl + '?action=fetchImage&url=' + encodeURIComponent(url);
+            const resp      = await fetch(proxyUrl, { signal: this.abortCtrl.signal });
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.ok && data.dataUri) {
+                imageSource = data.dataUri; // data:image/jpeg;base64,...
+                Logger.info(`Tesseract: gambar diterima via GAS proxy (${(data.size/1024).toFixed(0)} KB)`);
+              } else {
+                Logger.warn('GAS proxy error: ' + (data.error || 'tidak ada dataUri'));
+              }
+            }
+          } catch (e) {
+            Logger.warn('Tesseract: GAS proxy gagal — ' + e.message);
+          }
+        }
+
+        // ── Lapis 3: kirim URL langsung ke Tesseract ─────────
+        if (!imageSource) {
+          Logger.warn('Tesseract: menggunakan URL langsung (mungkin gagal jika CORS block)');
           imageSource = url;
         }
 
-        // Set timer timeout
+        if (this.cancelled) {
+          if (imageSource !== url) URL.revokeObjectURL(imageSource);
+          return this._error('Dibatalkan');
+        }
+
+        // ── Jalankan OCR dengan timeout ───────────────────────
         const timeoutPromise = new Promise((_, rej) =>
           setTimeout(() => rej(new Error('Timeout OCR')), timeout)
         );
 
-        const ocrPromise = this.worker.recognize(imageSource);
-        const { data }   = await Promise.race([ocrPromise, timeoutPromise]);
+        const ocrPromise   = this.worker.recognize(imageSource);
+        const { data }     = await Promise.race([ocrPromise, timeoutPromise]);
 
-        // Bersihkan blob URL
-        if (imageSource !== url) URL.revokeObjectURL(imageSource);
+        // Bersihkan blob URL (bukan dataUri — tidak perlu revoke)
+        if (imageSource !== url && imageSource.startsWith('blob:')) {
+          URL.revokeObjectURL(imageSource);
+        }
 
-        // Post-processing: bersihkan karakter noise umum
         const cleaned = _cleanOcrText(data.text);
-
         return this._result(cleaned, data.confidence / 100, {
-          rawText  : data.text,
-          words    : data.words?.length || 0,
-          hocr     : null, // tersedia via data.hocr jika diperlukan
+          rawText : data.text,
+          words   : data.words?.length || 0,
         });
 
       } catch (err) {
-        if (err.message === 'Timeout OCR') {
-          return this._error('Timeout — gambar terlalu besar atau lambat');
-        }
-        if (err.name === 'AbortError') {
-          return this._error('Dibatalkan oleh pengguna');
-        }
+        if (err.message === 'Timeout OCR')  return this._error('Timeout — gambar terlalu besar');
+        if (err.name   === 'AbortError')    return this._error('Dibatalkan oleh pengguna');
         return this._error('Tesseract error: ' + err.message);
       }
     }
