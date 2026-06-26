@@ -595,6 +595,90 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+/* ---- ANALISIS CP ---- */
+.btn-analyze {
+  width: 100%; padding: 10px;
+  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  color: white;
+  border-radius: var(--r-md);
+  font-size: 14px; font-weight: 700;
+  letter-spacing: .3px;
+  box-shadow: 0 4px 14px rgba(99,102,241,.35);
+  transition: all var(--t);
+  margin-top: 6px;
+}
+.btn-analyze:hover { box-shadow: 0 6px 20px rgba(99,102,241,.5); transform: translateY(-1px); }
+.btn-analyze:active { transform: translateY(0); }
+.btn-analyze:disabled { opacity: .6; transform: none; cursor: not-allowed; }
+
+.analisis-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg, var(--bg-sidebar), #1a2d45);
+  color: var(--accent); font-weight: 700; font-size: 12.5px;
+  padding: 10px 14px; border-radius: var(--r-md) var(--r-md) 0 0;
+  margin-top: 14px; letter-spacing: .4px;
+}
+.analisis-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 12px 14px;
+}
+.analisis-section:last-child { border-radius: 0 0 var(--r-md) var(--r-md); }
+.analisis-section-title {
+  font-size: 11.5px; font-weight: 700;
+  color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+/* Chips topik (read-only dengan centang) */
+.analisis-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-topik {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(45,212,191,.1);
+  border: 1px solid rgba(45,212,191,.3);
+  color: var(--accent-dark);
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+/* Chip materi — editable */
+.analisis-chips-edit .chip-materi {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,158,11,.1);
+  border: 1px solid rgba(245,158,11,.3);
+  color: #92400E;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background var(--t);
+}
+[data-theme="dark"] .analisis-chips-edit .chip-materi { color: var(--amber); }
+.analisis-chips-edit .chip-materi:hover { background: rgba(245,158,11,.2); }
+.chip-del {
+  font-size: 13px; line-height: 1; color: inherit;
+  opacity: .6; cursor: pointer; transition: opacity var(--t);
+}
+.chip-del:hover { opacity: 1; }
+/* TP list */
+.analisis-tp-list { display: flex; flex-direction: column; gap: 6px; }
+.tp-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  cursor: pointer; transition: border-color var(--t);
+}
+.tp-item:hover { border-color: var(--accent); }
+.tp-item.editing { border-color: #6366F1; background: var(--bg-surface); }
+.tp-num { font-size: 11px; font-weight: 800; color: var(--accent); min-width: 18px; margin-top: 2px; }
+.tp-text { flex: 1; font-size: 12.5px; line-height: 1.5; }
+.tp-text[contenteditable="true"] { outline: none; }
+.btn-chip-add {
+  font-size: 11px; font-weight: 700; color: var(--accent);
+  padding: 2px 8px; border: 1px solid var(--accent);
+  border-radius: 12px; transition: all var(--t);
+}
+.btn-chip-add:hover { background: var(--accent); color: white; }
+
 /* ---- UTILITY ---- */
 .flex { display: flex; }
 .gap-8 { gap: 8px; }
@@ -803,7 +887,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
       <div class="page-topbar">
         <div>
           <h2>Modul Ajar</h2>
-          <p>Isi data minimal, tekan Generate — semua perangkat otomatis tersedia</p>
+          <p>Isi identitas → Tempel CP → Analisis → Tinjau → Generate</p>
         </div>
       </div>
       <div class="modul-body">
@@ -882,19 +966,52 @@ h1,h2,h3,h4 { color: var(--text-primary); }
             </div>
           </div>
 
-          <div class="divider-label"><span>Capaian & Tujuan</span></div>
+          <div class="divider-label"><span>Capaian Pembelajaran</span></div>
           <div class="form-group">
-            <label>Capaian Pembelajaran (CP)</label>
-            <textarea id="f-cp" placeholder="Tuliskan CP yang ingin dicapai..." oninput="autoSave()"></textarea>
+            <label>Capaian Pembelajaran (CP) — Tempel teks resmi</label>
+            <textarea id="f-cp" rows="5" placeholder="Tempel CP resmi di sini. Contoh: Pada akhir fase D, peserta didik mampu memahami..." oninput="autoSave();cpReset()"></textarea>
           </div>
-          <div class="form-group">
-            <label>Tujuan Pembelajaran (TP)</label>
-            <textarea id="f-tp" placeholder="Tuliskan 1–3 TP spesifik..." oninput="autoSave()"></textarea>
+          <button class="btn-analyze" onclick="analisisCP()" id="btnAnalisis">
+            🔍 ANALISIS CP
+          </button>
+
+          <!-- PANEL HASIL ANALISIS — tersembunyi sampai Analisis dijalankan -->
+          <div id="panelAnalisis" style="display:none;">
+            <div class="analisis-header">
+              <span>✨ Hasil Analisis CP</span>
+              <button class="btn btn-secondary btn-sm" onclick="cpReset()" style="font-size:11px;">↺ Ulangi</button>
+            </div>
+
+            <!-- Topik -->
+            <div class="analisis-section">
+              <div class="analisis-section-title">📌 Topik yang Ditemukan</div>
+              <div id="analisisTopik" class="analisis-chips"></div>
+            </div>
+
+            <!-- Tujuan Pembelajaran — editable -->
+            <div class="analisis-section">
+              <div class="analisis-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🎯 Usulan Tujuan Pembelajaran</span>
+                <button class="btn-chip-add" onclick="tambahTP()">+ Tambah</button>
+              </div>
+              <div id="analisisTP" class="analisis-tp-list"></div>
+              <p class="text-muted" style="margin-top:4px;">Klik TP untuk mengedit. Tekan ✕ untuk menghapus.</p>
+            </div>
+
+            <!-- Materi Pokok — editable -->
+            <div class="analisis-section">
+              <div class="analisis-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>📚 Materi Pokok</span>
+                <button class="btn-chip-add" onclick="tambahMateri()">+ Tambah</button>
+              </div>
+              <div id="analisisMateri" class="analisis-chips analisis-chips-edit"></div>
+              <p class="text-muted" style="margin-top:4px;">Klik chip untuk mengedit. Tekan ✕ untuk menghapus.</p>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Materi Pokok</label>
-            <input type="text" id="f-materi" placeholder="Contoh: Bilangan Bulat" oninput="autoSave()">
-          </div>
+
+          <!-- field hidden — diisi otomatis dari hasil analisis, dipakai oleh generate() -->
+          <input type="hidden" id="f-tp">
+          <input type="hidden" id="f-materi">
 
           <div class="divider-label"><span>Model & Strategi</span></div>
           <div class="form-group">
@@ -913,7 +1030,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
           <button class="btn-generate" onclick="generate()" id="btnGenerate">
             ✨ GENERATE PERANGKAT PEMBELAJARAN
           </button>
-          <p class="text-muted" style="text-align:center;margin-top:8px;">Semua perangkat dibuat otomatis dari data di atas</p>
+          <p class="text-muted" style="text-align:center;margin-top:8px;">Analisis CP dulu → tinjau hasil → baru Generate</p>
         </div>
 
         <!-- PREVIEW PANEL -->
@@ -1497,10 +1614,12 @@ const UTIL = {
     };
   },
 
-  /** Validasi form minimal */
+  /** Validasi form minimal — TP & Materi kini dari hasil Analisis CP */
   validateForm(data) {
-    const required = ['sekolah','guru','mapel','kelas','cp','tp','materi'];
-    const missing = required.filter(k => !data[k]);
+    const required = ['sekolah','guru','mapel','kelas','cp'];
+    const missing  = required.filter(k => !data[k]);
+    /* Wajib sudah Analisis CP sebelum Generate */
+    if (!STATE_ANALISIS.sudahAnalisis) missing.push('Analisis CP');
     return missing;
   },
 };
@@ -1609,7 +1728,7 @@ const PROJECT = {
       settings: DATABASE.settings,
       stats:    DATABASE.stats,
       history:  DATABASE.history,
-      form:     UTIL.getFormData(),
+      form:     { ...UTIL.getFormData(), analisis: STATE_ANALISIS.sudahAnalisis ? STATE_ANALISIS : null },
       rppm:     getRPPMData?.() ?? {},
     };
   },
@@ -1668,11 +1787,27 @@ const PROJECT = {
 
     /* Restore form Modul Ajar */
     if (data.form) {
-      const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','tp','materi','model'];
+      const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','model'];
       fields.forEach(f => {
         const el = document.getElementById('f-' + f);
         if (el && data.form[f]) el.value = data.form[f];
       });
+      /* Restore STATE_ANALISIS jika ada */
+      if (data.form.analisis) {
+        STATE_ANALISIS = { ...data.form.analisis, sudahAnalisis: true };
+      } else if (data.form.tp || data.form.materi) {
+        STATE_ANALISIS = {
+          topik:  data.form.materi ? data.form.materi.split(',').map(s=>s.trim()) : [],
+          tp:     data.form.tp     ? data.form.tp.split('\n').filter(Boolean) : [],
+          materi: data.form.materi ? data.form.materi.split(',').map(s=>s.trim()) : [],
+          sudahAnalisis: true,
+        };
+      }
+      if (STATE_ANALISIS.sudahAnalisis) {
+        syncHiddenFields();
+        renderHasilAnalisis();
+        document.getElementById('panelAnalisis').style.display = 'block';
+      }
     }
 
     /* Restore form Pengaturan */
@@ -1701,8 +1836,267 @@ const PROJECT = {
 };
 
 /* ============================================================
-   GENERATOR — Buat konten setiap tab perangkat
+   CP_ANALYZER — Analisis teks CP → topik, TP, materi otomatis
+   Tidak menggunakan AI eksternal. Berbasis pola kata kunci
+   yang dapat dikembangkan bertahap.
    ============================================================ */
+const CP_ANALYZER = {
+
+  /**
+   * Daftar kata kerja operasional Bloom per level.
+   * Digunakan untuk mengenali kompetensi dalam teks CP.
+   */
+  BLOOM: {
+    C1: ['menyebutkan','mengidentifikasi','mengenali','mendaftar','mengingat','menjelaskan'],
+    C2: ['memahami','menjelaskan','mengklasifikasi','membandingkan','merangkum','menafsirkan'],
+    C3: ['menerapkan','menggunakan','mendemonstrasikan','menghitung','memecahkan','menyelesaikan'],
+    C4: ['menganalisis','membedakan','menguraikan','memeriksa','menguji','membandingkan'],
+    C5: ['mengevaluasi','menilai','mempertimbangkan','mengkritisi','memvalidasi'],
+    C6: ['mencipta','merancang','membuat','mengembangkan','membangun','menyusun'],
+  },
+
+  /**
+   * Analisis utama: terima teks CP, kembalikan { topik, tp, materi }
+   */
+  analisis(cpTeks, konteks = {}) {
+    const { mapel = '', kelas = '', fase = '' } = konteks;
+    const teks  = cpTeks.trim();
+    const lower = teks.toLowerCase();
+
+    /* 1. Ekstrak topik dari klausa "mampu ..." dan "dapat ..." */
+    const topik = this._ekstrakTopik(lower, mapel);
+
+    /* 2. Susun usulan TP berdasarkan topik & kata kerja Bloom */
+    const tp    = this._susunTP(topik, lower, mapel, kelas);
+
+    /* 3. Susun materi pokok dari topik */
+    const materi = this._susunMateri(topik, mapel);
+
+    return { topik, tp, materi };
+  },
+
+  /** Ekstrak topik dari teks CP */
+  _ekstrakTopik(lower, mapel) {
+    /* Pisahkan per klausa (titik koma, koma bersambung, "dan") */
+    const klausa = lower
+      .replace(/pada akhir fase [a-f],?/g, '')
+      .replace(/peserta didik (mampu|dapat|diharapkan mampu|diharapkan dapat)/g, '|')
+      .replace(/siswa (mampu|dapat)/g, '|')
+      .split(/[|;]/)
+      .map(s => s.replace(/^\s*(dan|serta|,)\s*/,'').trim())
+      .filter(s => s.length > 10);
+
+    /* Ambil frasa bermakna: kata benda utama setelah kata kerja */
+    const topik = [];
+    klausa.forEach(k => {
+      /* Hapus kata kerja di awal klausa */
+      const bersih = k
+        .replace(/^(memahami|menjelaskan|menganalisis|menerapkan|menyajikan|mengidentifikasi|membuat|merancang|menggunakan|menghitung|menyelesaikan|menyebutkan|mengklasifikasikan|membandingkan|mengevaluasi|mencipta|mengembangkan|membangun|berkomunikasi|berpikir|berkolaborasi|mendeskripsikan|menelaah|mengkaji|menggambarkan|mempresentasikan|mengeksplorasi|menginterpretasi|menghubungkan)\s*/,'')
+        .replace(/\s+(dengan|secara|dalam|melalui|menggunakan|berdasarkan).+$/,'')
+        .trim();
+      if (bersih.length > 5 && bersih.length < 80) {
+        /* Kapitalisasi awal kata */
+        topik.push(bersih.charAt(0).toUpperCase() + bersih.slice(1));
+      }
+    });
+
+    /* Jika tidak ada topik terdeteksi, fallback generik per mapel */
+    if (!topik.length) return this._topikFallback(mapel);
+
+    /* Deduplikasi sederhana */
+    return [...new Set(topik)].slice(0, 6);
+  },
+
+  /** Susun usulan Tujuan Pembelajaran dari topik */
+  _susunTP(topik, lower, mapel, kelas) {
+    /* Tentukan level Bloom dominan dari teks CP */
+    let levelDom = 'C2';
+    const bloom  = this.BLOOM;
+    const allC   = Object.entries(bloom);
+    for (const [lvl, kata] of allC.reverse()) {
+      if (kata.some(k => lower.includes(k))) { levelDom = lvl; break; }
+    }
+
+    /* Kata kerja per level untuk TP */
+    const kk = {
+      C1: 'Menyebutkan', C2: 'Menjelaskan', C3: 'Menerapkan',
+      C4: 'Menganalisis', C5: 'Mengevaluasi', C6: 'Merancang',
+    };
+    const kk2 = {
+      C1: 'Mengidentifikasi', C2: 'Membandingkan', C3: 'Menyelesaikan',
+      C4: 'Membedakan',       C5: 'Menilai',       C6: 'Membuat',
+    };
+
+    const tp = [];
+    topik.slice(0, 4).forEach((t, i) => {
+      const kataKerja = i % 2 === 0 ? (kk[levelDom] || 'Memahami') : (kk2[levelDom] || 'Menjelaskan');
+      tp.push(`Peserta didik dapat ${kataKerja.toLowerCase()} ${t.toLowerCase()} dengan tepat dan percaya diri.`);
+    });
+
+    /* Minimal 2 TP */
+    if (tp.length < 2) {
+      tp.push(`Peserta didik dapat menerapkan konsep yang dipelajari dalam kehidupan sehari-hari.`);
+    }
+    return tp;
+  },
+
+  /** Susun materi pokok dari topik */
+  _susunMateri(topik, mapel) {
+    if (!topik.length) return this._topikFallback(mapel);
+    /* Setiap topik menjadi satu materi pokok */
+    return topik.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+  },
+
+  /** Fallback topik generik berdasarkan mata pelajaran */
+  _topikFallback(mapel) {
+    const map = {
+      'Matematika':       ['Bilangan dan Operasinya','Aljabar','Geometri','Statistika dan Peluang'],
+      'IPA':              ['Makhluk Hidup dan Lingkungan','Zat dan Perubahannya','Energi dan Perubahannya'],
+      'IPS':              ['Kondisi Geografis','Kehidupan Sosial Budaya','Kegiatan Ekonomi','Sejarah dan Peradaban'],
+      'Bahasa Indonesia': ['Teks Informasional','Teks Sastra','Keterampilan Berbahasa','Kebahasaan'],
+      'Bahasa Inggris':   ['Listening','Speaking','Reading','Writing'],
+      'Bahasa Arab':      ['Mufradat','Qiroah','Kitabah','Istima'],
+      'Fiqih':            ['Thaharah','Ibadah','Muamalah','Akhlak'],
+      'Akidah Akhlak':    ['Akidah Islam','Asmaul Husna','Akhlak Terpuji','Menghindari Akhlak Tercela'],
+      'Al-Qur\'an Hadis': ['Membaca Al-Qur\'an','Tajwid','Hafalan','Memahami Hadis'],
+      'PPKn':             ['Pancasila','UUD 1945','NKRI','Bhinneka Tunggal Ika'],
+    };
+    return map[mapel] || ['Konsep Dasar','Penerapan','Analisis','Evaluasi'];
+  },
+};
+
+/* State analisis — menyimpan hasil yang bisa diedit guru */
+let STATE_ANALISIS = { topik: [], tp: [], materi: [], sudahAnalisis: false };
+
+/** Tombol Analisis CP ditekan */
+function analisisCP() {
+  const cp    = document.getElementById('f-cp').value.trim();
+  if (!cp) { showToast('Tempelkan teks CP terlebih dahulu', 'error'); return; }
+
+  const btn   = document.getElementById('btnAnalisis');
+  btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:white;"></div> Menganalisis...';
+  btn.disabled  = true;
+
+  /* Ambil konteks dari form identitas */
+  const konteks = {
+    mapel: document.getElementById('f-mapel').value,
+    kelas: document.getElementById('f-kelas').value,
+    fase:  document.getElementById('f-fase').value,
+  };
+
+  setTimeout(() => {
+    const hasil = CP_ANALYZER.analisis(cp, konteks);
+    STATE_ANALISIS = { ...hasil, sudahAnalisis: true };
+
+    renderHasilAnalisis();
+    document.getElementById('panelAnalisis').style.display = 'block';
+    document.getElementById('panelAnalisis').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    /* Sinkronkan ke hidden fields agar generate() bisa membaca */
+    syncHiddenFields();
+
+    btn.innerHTML = '🔍 ANALISIS CP';
+    btn.disabled  = false;
+    showToast(`✅ Ditemukan ${hasil.topik.length} topik dan ${hasil.tp.length} Tujuan Pembelajaran`);
+  }, 700);
+}
+
+/** Render panel hasil analisis ke DOM */
+function renderHasilAnalisis() {
+  /* Topik chips */
+  document.getElementById('analisisTopik').innerHTML =
+    STATE_ANALISIS.topik.map(t => `<span class="chip-topik">✓ ${t}</span>`).join('');
+
+  /* TP list — editable */
+  renderTPList();
+
+  /* Materi chips — editable */
+  renderMateriChips();
+}
+
+/** Render daftar TP yang bisa diedit/hapus */
+function renderTPList() {
+  document.getElementById('analisisTP').innerHTML =
+    STATE_ANALISIS.tp.map((tp, i) => `
+      <div class="tp-item" id="tp-item-${i}">
+        <span class="tp-num">TP${i+1}</span>
+        <span class="tp-text" contenteditable="true"
+          onblur="updateTP(${i}, this.textContent.trim())"
+          onfocus="this.parentElement.classList.add('editing')"
+        >${tp}</span>
+        <span class="chip-del" onclick="hapusTP(${i})" title="Hapus TP ini">✕</span>
+      </div>
+    `).join('') || '<p class="text-muted">Belum ada TP. Klik "+ Tambah".</p>';
+}
+
+/** Render chip materi yang bisa diedit/hapus */
+function renderMateriChips() {
+  document.getElementById('analisisMateri').innerHTML =
+    STATE_ANALISIS.materi.map((m, i) => `
+      <span class="chip-materi" onclick="editMateri(${i})" title="Klik untuk edit">
+        ${m} <span class="chip-del" onclick="event.stopPropagation();hapusMateri(${i})">✕</span>
+      </span>
+    `).join('') || '<p class="text-muted">Belum ada materi. Klik "+ Tambah".</p>';
+}
+
+/** Sinkronkan STATE_ANALISIS ke hidden input agar generate() terbaca */
+function syncHiddenFields() {
+  document.getElementById('f-tp').value     = STATE_ANALISIS.tp.join('\n');
+  document.getElementById('f-materi').value = STATE_ANALISIS.materi.join(', ');
+}
+
+/* ---- Fungsi edit TP ---- */
+function updateTP(i, val) {
+  if (val) STATE_ANALISIS.tp[i] = val;
+  document.getElementById(`tp-item-${i}`)?.classList.remove('editing');
+  syncHiddenFields();
+}
+function hapusTP(i) {
+  STATE_ANALISIS.tp.splice(i, 1);
+  renderTPList();
+  syncHiddenFields();
+}
+function tambahTP() {
+  const teks = prompt('Tujuan Pembelajaran baru:');
+  if (teks?.trim()) {
+    STATE_ANALISIS.tp.push(teks.trim());
+    renderTPList();
+    syncHiddenFields();
+  }
+}
+
+/* ---- Fungsi edit Materi ---- */
+function editMateri(i) {
+  const teks = prompt('Edit materi:', STATE_ANALISIS.materi[i]);
+  if (teks?.trim()) {
+    STATE_ANALISIS.materi[i] = teks.trim();
+    renderMateriChips();
+    syncHiddenFields();
+  }
+}
+function hapusMateri(i) {
+  STATE_ANALISIS.materi.splice(i, 1);
+  renderMateriChips();
+  syncHiddenFields();
+}
+function tambahMateri() {
+  const teks = prompt('Materi baru:');
+  if (teks?.trim()) {
+    STATE_ANALISIS.materi.push(teks.trim());
+    renderMateriChips();
+    syncHiddenFields();
+  }
+}
+
+/** Reset panel analisis (misal CP diganti) */
+function cpReset() {
+  STATE_ANALISIS = { topik: [], tp: [], materi: [], sudahAnalisis: false };
+  document.getElementById('panelAnalisis').style.display = 'none';
+  document.getElementById('f-tp').value     = '';
+  document.getElementById('f-materi').value = '';
+}
+
+
 const GENERATOR = {
   /** Semua tab yang dihasilkan */
   tabs: [
@@ -2198,6 +2592,11 @@ function generate() {
     return;
   }
 
+  /* Ambil TP dan Materi dari hasil analisis (bukan input manual) */
+  data.tp     = STATE_ANALISIS.tp.join('\n');
+  data.materi = STATE_ANALISIS.materi.join(', ');
+  data.topik  = STATE_ANALISIS.topik;  /* tambahan konteks */
+
   /* Tunjukkan loading */
   const btn = document.getElementById('btnGenerate');
   btn.innerHTML = '<div class="spinner"></div> Memproses...';
@@ -2222,15 +2621,15 @@ function generate() {
     DATABASE.stats.lkpd++;
     DATABASE.stats.soal += 5;
     DATABASE.stats.asesmen++;
-    /* Hitung jumlah TP dari baris teks */
-    const tpLines = data.tp.split('\n').filter(l => l.trim());
-    DATABASE.stats.tp += tpLines.length || 1;
+    /* Hitung jumlah TP dari array STATE_ANALISIS */
+    DATABASE.stats.tp += STATE_ANALISIS.tp.length || 1;
 
     /* Simpan ke riwayat */
     DATABASE.history.push({
       id: UTIL.uid(),
       ts: Date.now(),
       ...data,
+      analisis: { topik: STATE_ANALISIS.topik, tp: STATE_ANALISIS.tp, materi: STATE_ANALISIS.materi },
     });
 
     /* Simpan ke IDB (utama) dan localStorage (fallback) */
@@ -2261,24 +2660,44 @@ function loadHistory(id) {
   const h = DATABASE.history.find(x => x.id === id);
   if (!h) return;
 
-  /* Isi ulang form */
-  const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','tp','materi','model'];
+  /* Isi ulang field form identitas */
+  const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','model'];
   fields.forEach(f => {
     const el = document.getElementById('f-' + f);
     if (el && h[f]) el.value = h[f];
   });
 
+  /* Restore STATE_ANALISIS dari riwayat agar Generate bisa langsung jalan */
+  if (h.analisis) {
+    STATE_ANALISIS = { ...h.analisis, sudahAnalisis: true };
+  } else if (h.tp || h.materi) {
+    /* Kompatibilitas riwayat lama (sebelum workflow baru) */
+    STATE_ANALISIS = {
+      topik:  h.materi ? h.materi.split(',').map(s=>s.trim()) : [],
+      tp:     h.tp     ? h.tp.split('\n').filter(Boolean) : [],
+      materi: h.materi ? h.materi.split(',').map(s=>s.trim()) : [],
+      sudahAnalisis: true,
+    };
+  }
+
+  /* Tampilkan panel analisis jika ada data */
+  if (STATE_ANALISIS.sudahAnalisis && STATE_ANALISIS.tp.length) {
+    syncHiddenFields();
+    renderHasilAnalisis();
+    document.getElementById('panelAnalisis').style.display = 'block';
+  }
+
   goPage('modul');
-  showToast('📂 Riwayat dimuat — tekan Generate untuk memperbarui');
+  showToast('📂 Riwayat dimuat — tinjau TP & Materi lalu Generate');
 }
 
 /* ============================================================
    AUTO SAVE — Simpan form saat ada perubahan
    ============================================================ */
 function autoSave() {
-  const data = UTIL.getFormData();
+  const data = { ...UTIL.getFormData(), analisis: STATE_ANALISIS.sudahAnalisis ? STATE_ANALISIS : null };
   STORAGE.save(CONFIG.LS_KEY + '_form', data);
-  IDB.set('form', data); /* IDB utama */
+  IDB.set('form', data);
 }
 
 /* ============================================================
@@ -2762,11 +3181,18 @@ async function init() {
   let lastForm = await IDB.get('form', null);
   if (!lastForm) lastForm = STORAGE.load(CONFIG.LS_KEY + '_form', null);
   if (lastForm) {
-    const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','tp','materi','model'];
+    const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','model'];
     fields.forEach(f => {
       const el = document.getElementById('f-' + f);
       if (el && lastForm[f]) el.value = lastForm[f];
     });
+    /* Restore STATE_ANALISIS jika ada */
+    if (lastForm.analisis?.sudahAnalisis) {
+      STATE_ANALISIS = lastForm.analisis;
+      syncHiddenFields();
+      renderHasilAnalisis();
+      document.getElementById('panelAnalisis').style.display = 'block';
+    }
   }
 
   /* 6. Update chip user */
