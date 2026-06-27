@@ -2579,18 +2579,20 @@ function cpReset() {
 const GENERATOR = {
   /** Semua tab yang dihasilkan */
   tabs: [
-    { id: 'modul',   label: '📚 Modul Ajar' },
-    { id: 'lkpd',    label: '📋 LKPD' },
-    { id: 'rubrik',  label: '📏 Rubrik' },
-    { id: 'asesmen', label: '🎯 Asesmen' },
-    { id: 'soal',    label: '❓ Soal & Kunci' },
-    { id: 'pengayaan', label: '🚀 Pengayaan' },
-    { id: 'remedial', label: '🔄 Remedial' },
+    { id: 'rppm',      label: '📅 RPPM'         },
+    { id: 'modul',     label: '📚 Modul Ajar'   },
+    { id: 'lkpd',      label: '📋 LKPD'         },
+    { id: 'rubrik',    label: '📏 Rubrik'        },
+    { id: 'asesmen',   label: '🎯 Asesmen'       },
+    { id: 'soal',      label: '❓ Soal & Kunci'  },
+    { id: 'pengayaan', label: '🚀 Pengayaan'     },
+    { id: 'remedial',  label: '🔄 Remedial'      },
   ],
 
   /** Generate semua konten berdasarkan data form */
   generate(data) {
     return {
+      rppm:      this.buatRPPM(data),
       modul:     this.buatModul(data),
       lkpd:      this.buatLKPD(data),
       rubrik:    this.buatRubrik(data),
@@ -2599,6 +2601,145 @@ const GENERATOR = {
       pengayaan: this.buatPengayaan(data),
       remedial:  this.buatRemedial(data),
     };
+  },
+
+  /** RPPM — Rencana Pelaksanaan KBC DAN PM
+   *  Diisi otomatis dari data form + hasil analisis CP.
+   *  Panca Cinta dipilih otomatis berdasarkan mapel.
+   *  DPL dipilih otomatis berdasarkan model pembelajaran.
+   */
+  buatRPPM(d) {
+    const modelNames = {
+      PBL:'Problem Based Learning', PjBL:'Project Based Learning',
+      DL:'Discovery Learning', IL:'Inquiry Learning',
+      CL:'Cooperative Learning', TGT:'Teams Games Tournament',
+    };
+    const modelLabel = modelNames[d.model] || d.model;
+    const langkah    = TEMPLATE.getLangkah(d.model);
+
+    /* Panca Cinta otomatis berdasarkan mapel */
+    const pancaCintaMap = {
+      'Matematika':       ['Cinta Ilmu','Cinta Diri dan Sesama'],
+      'IPA':              ['Cinta Ilmu','Cinta Lingkungan'],
+      'IPS':              ['Cinta Tanah Air','Cinta Ilmu','Cinta Diri dan Sesama'],
+      'Bahasa Indonesia': ['Cinta Ilmu','Cinta Diri dan Sesama'],
+      'Bahasa Inggris':   ['Cinta Ilmu','Cinta Diri dan Sesama'],
+      'Bahasa Arab':      ['Cinta Allah dan Rasulnya','Cinta Ilmu'],
+      'Fiqih':            ['Cinta Allah dan Rasulnya','Cinta Diri dan Sesama'],
+      'Akidah Akhlak':    ['Cinta Allah dan Rasulnya','Cinta Diri dan Sesama'],
+      "Al-Qur'an Hadis":  ['Cinta Allah dan Rasulnya','Cinta Ilmu'],
+      'SKI':              ['Cinta Allah dan Rasulnya','Cinta Tanah Air'],
+      'PPKn':             ['Cinta Tanah Air','Cinta Diri dan Sesama'],
+    };
+    const kbc = pancaCintaMap[d.mapel] || ['Cinta Ilmu','Cinta Diri dan Sesama'];
+
+    /* DPL otomatis berdasarkan model */
+    const dplMap = {
+      PBL:  ['DPL3 Penalaran Kritis','DPL5 Kolaborasi','DPL6 Kemandirian'],
+      PjBL: ['DPL4 Kreativitas','DPL5 Kolaborasi','DPL3 Penalaran Kritis'],
+      DL:   ['DPL3 Penalaran Kritis','DPL6 Kemandirian','DPL4 Kreativitas'],
+      IL:   ['DPL3 Penalaran Kritis','DPL6 Kemandirian','DPL8 Komunikasi'],
+      CL:   ['DPL5 Kolaborasi','DPL8 Komunikasi','DPL6 Kemandirian'],
+      TGT:  ['DPL5 Kolaborasi','DPL8 Komunikasi','DPL3 Penalaran Kritis'],
+    };
+    const dpl = dplMap[d.model] || ['DPL3 Penalaran Kritis','DPL5 Kolaborasi'];
+
+    /* TP list dari hasil analisis */
+    const tpList = d.tp
+      ? d.tp.split('\n').filter(Boolean)
+      : ['Peserta didik dapat memahami materi yang dipelajari.'];
+
+    /* Materi pokok dari hasil analisis */
+    const materiList = d.materi
+      ? d.materi.split(',').map(m => m.trim()).filter(Boolean)
+      : [d.materi || 'Materi Pokok'];
+
+    /* Langkah pembelajaran — ambil fase INTI dari model */
+    const awal        = `Orientasi: Guru membuka pembelajaran dengan salam, doa, dan apersepsi tentang ${materiList[0] || d.materi}.\nMotivasi: Guru menyampaikan tujuan pembelajaran dan manfaat materi dalam kehidupan sehari-hari.\nPenyampaian garis besar kegiatan.`;
+    const memahami    = langkah[0] ? `${langkah[0].fase}: ${langkah[0].desc}${langkah[1] ? '\n\n' + langkah[1].fase + ': ' + langkah[1].desc : ''}` : '';
+    const mengaplikasi= langkah[2] ? `${langkah[2].fase}: ${langkah[2].desc}${langkah[3] ? '\n\n' + langkah[3].fase + ': ' + langkah[3].desc : ''}` : '';
+    const merefleksi  = langkah[4] ? `${langkah[4].fase}: ${langkah[4].desc}` : 'Siswa merefleksi proses belajar dan menuliskan catatan penting dari pembelajaran hari ini.';
+    const penutup     = `Guru bersama siswa menyimpulkan pembelajaran.\nUmpan balik: guru memberikan umpan balik atas hasil kerja siswa.\nGuru menyampaikan rencana pembelajaran berikutnya.\nDoa penutup dan salam.`;
+
+    /* Asesmen otomatis */
+    const asAwal   = `Pertanyaan diagnostik lisan: "Apa yang sudah kalian ketahui tentang ${materiList[0] || d.materi}?"`;
+    const asProses = 'Observasi keterlibatan siswa selama diskusi dan kerja kelompok.\nPertanyaan formatif di sela pembelajaran (Exit Ticket).';
+    const asAkhir  = ['Tes Tertulis','Observasi','Self Assessment'];
+
+    /* Helper render */
+    const ceklis = arr => arr.map(v => `<span style="display:inline-block;margin:2px 4px 2px 0;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:var(--accent-dark);padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;">☑ ${v}</span>`).join('');
+    const val    = v  => (v||'').replace(/\n/g,'<br>');
+    const tbl    = (r) => `<table class="rppm-table">${r}</table>`;
+    const tr     = (h,v,cs='') => `<tr><th${cs}>${h}</th><td>${v}</td></tr>`;
+    const thead  = (txt) => `<tr><td colspan="2" class="section-head">${txt}</td></tr>`;
+    const stepHtml = (icon,title,body) =>
+      `<div class="rppm-tahap" style="margin-bottom:6px;"><strong>${icon} ${title}</strong>${val(body)}</div>`;
+
+    /* Juga isi field RPPM di halaman RPPM agar export Word tetap bisa */
+    setTimeout(() => _syncRPPMFields({
+      sekolah: d.sekolah, mapel: d.mapel, fase: `${d.fase} / ${d.kelas}`,
+      waktu: d.waktu, tahun: d.tahun, guru: d.guru,
+      peserta: `Peserta didik kelas ${d.kelas} ${d.sekolah}`,
+      materi: materiList.join(', '), cp: d.cp, lintas: '',
+      tp: tpList.join('\n'), topik: materiList[0] || '',
+      integrasi: `Nilai ${kbc.join(' dan ')} diintegrasikan dalam setiap aktivitas pembelajaran.`,
+      model: modelLabel, mitra: 'Guru mapel, wali kelas', lingkungan: 'Kelas, buku teks, media digital',
+      digital: 'LMS / Google Classroom, video pembelajaran',
+      dalil: '', dalilSumber: '',
+      awal, memahami, mengaplikasi, merefleksi, penutup,
+      asAwal, asProses, asAkhir,
+      kbc, dpl,
+    }), 100);
+
+    return tbl(`
+      <tr><td colspan="2" style="text-align:center;font-weight:800;font-size:14px;padding:12px;background:var(--bg-base);">
+        RENCANA PELAKSANAAN KBC DAN PM
+      </td></tr>
+      ${tr('Sekolah',         d.sekolah || '—')}
+      ${tr('Mata Pelajaran',  d.mapel   || '—')}
+      ${tr('Fase / Kelas',    `${d.fase || '—'} / ${d.kelas || '—'}`)}
+      ${tr('Alokasi Waktu',   d.waktu   || '—')}
+      ${tr('Tahun Pelajaran', d.tahun   || '—')}
+      ${tr('Nama Penyusun',   `${d.guru}${d.nip ? ' / ' + d.nip : ''}`)}
+
+      ${thead('B. IDENTIFIKASI')}
+      ${tr('Peserta Didik',   `Peserta didik kelas ${d.kelas} ${d.sekolah}`)}
+      ${tr('Materi Pelajaran', materiList.join(', '))}
+      <tr><th>Tema KBC<br><small style="font-weight:400">(Panca Cinta)</small></th><td>${ceklis(kbc)}</td></tr>
+      <tr><th>Dimensi Profil Lulusan</th><td>${ceklis(dpl)}</td></tr>
+
+      ${thead('C. DESAIN PEMBELAJARAN')}
+      ${tr('Capaian Pembelajaran', val(d.cp))}
+      ${tr('Lintas Disiplin Ilmu', '—')}
+      <tr><th>Tujuan Pembelajaran</th><td>${tpList.map((t,i)=>`<div style="margin-bottom:5px;"><strong style="color:var(--accent);font-size:11px;">TP${i+1}</strong> ${t}</div>`).join('')}</td></tr>
+      ${tr('Topik Pembelajaran',   materiList[0] || '—')}
+      ${tr('Materi Integrasi KBC', `Nilai ${kbc.join(' dan ')} diintegrasikan dalam setiap aktivitas pembelajaran.`)}
+      ${tr('Praktik Pedagogis',    modelLabel)}
+      ${tr('Kemitraan Pembelajaran','Guru mapel, wali kelas')}
+      ${tr('Lingkungan Pembelajaran','Kelas, buku teks, media digital')}
+      ${tr('Pemanfaatan Digital',  'LMS / Google Classroom, video pembelajaran')}
+
+      ${thead('D. PENGALAMAN BELAJAR — LANGKAH PEMBELAJARAN')}
+      <tr><td colspan="2" style="padding:12px;">
+        ${stepHtml('🌅','AWAL', awal)}
+        <div style="font-size:11.5px;font-weight:700;color:var(--accent-dark);margin:10px 0 4px;">🔷 INTI</div>
+        ${stepHtml('💡','Memahami', memahami)}
+        ${stepHtml('🛠️','Mengaplikasi', mengaplikasi)}
+        ${stepHtml('🪞','Merefleksi', merefleksi)}
+        ${stepHtml('🌆','PENUTUP', penutup)}
+      </td></tr>
+
+      ${thead('E. ASESMEN PEMBELAJARAN')}
+      ${tr('Asesmen Awal',    val(asAwal))}
+      ${tr('Asesmen Proses',  val(asProses))}
+      <tr><th>Asesmen Akhir</th><td>${ceklis(asAkhir)}</td></tr>
+
+      <tr><td colspan="2" style="padding:14px;text-align:right;font-size:12px;">
+        ${d.sekolah || '...........'}, ${UTIL.formatDate()}<br><br>
+        Guru Mata Pelajaran<br><br><br>
+        <strong>${d.guru || '__________________'}</strong>
+      </td></tr>
+    `);
   },
 
   /** Modul Ajar utama */
@@ -2922,14 +3063,28 @@ const RENDER = {
 
   /** Tampil konten satu tab */
   showTab(id, content) {
-    const el = document.getElementById('tabContent');
+    const el    = document.getElementById('tabContent');
+    const label = GENERATOR.tabs.find(t => t.id === id)?.label || id;
+    const date  = UTIL.formatDate();
+
+    /* Tab RPPM: tabel sudah include styling sendiri, body tanpa padding extra */
+    const bodyStyle = id === 'rppm' ? 'padding:0;' : '';
+    const exportBtn = id === 'rppm'
+      ? `<button class="btn btn-secondary btn-sm"
+           onclick="exportRPPMFromTab()"
+           style="font-size:11px;">📄 Export Word</button>`
+      : '';
+
     el.innerHTML = `
       <div class="preview-card">
         <div class="preview-card-header">
-          <span>${GENERATOR.tabs.find(t=>t.id===id)?.label || id}</span>
-          <span style="font-size:10px;color:#64748B;">${UTIL.formatDate()}</span>
+          <span>${label}</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${exportBtn}
+            <span style="font-size:10px;color:#64748B;">${date}</span>
+          </div>
         </div>
-        <div class="preview-card-body">${content}</div>
+        <div class="preview-card-body" style="${bodyStyle}">${content}</div>
       </div>
     `;
   },
@@ -3059,7 +3214,7 @@ function goPage(page) {
    GENERATE — Proses utama pembuatan perangkat
    ============================================================ */
 let currentGenerated = null; /* Simpan hasil generate terakhir */
-let currentTab = 'modul';
+let currentTab = 'rppm';
 
 function generate() {
   const data = UTIL.getFormData();
@@ -3084,7 +3239,7 @@ function generate() {
     /* Generate semua konten */
     const result = GENERATOR.generate(data);
     currentGenerated = { data, result };
-    currentTab = 'modul';
+    currentTab = 'rppm';
 
     /* Tampilkan preview */
     document.getElementById('previewPlaceholder').style.display = 'none';
@@ -3559,6 +3714,77 @@ function exportRPPMWord() {
   a.download = `RPPM_${d.mapel||'dokumen'}_${d.fase||''}.doc`;
   a.click();
   showToast('📄 RPPM berhasil diexport ke Word!');
+}
+
+/**
+ * _syncRPPMFields — Isi semua field di halaman RPPM dari data generate.
+ * Dipanggil setelah buatRPPM() agar export Word di halaman RPPM tetap bisa dipakai.
+ * @param {Object} d — objek berisi semua nilai field RPPM
+ */
+function _syncRPPMFields(d) {
+  /* Map: field id → nilai */
+  const textMap = {
+    'r-sekolah':      d.sekolah,
+    'r-mapel':        d.mapel,
+    'r-fase':         d.fase,
+    'r-waktu':        d.waktu,
+    'r-tahun':        d.tahun,
+    'r-guru':         d.guru,
+    'r-peserta':      d.peserta,
+    'r-materi':       d.materi,
+    'r-cp':           d.cp,
+    'r-lintas':       d.lintas,
+    'r-tp':           d.tp,
+    'r-topik':        d.topik,
+    'r-integrasi':    d.integrasi,
+    'r-model':        d.model,
+    'r-mitra':        d.mitra,
+    'r-lingkungan':   d.lingkungan,
+    'r-digital':      d.digital,
+    'r-dalil':        d.dalil,
+    'r-dalil-sumber': d.dalilSumber,
+    'r-awal':         d.awal,
+    'r-memahami':     d.memahami,
+    'r-mengaplikasi': d.mengaplikasi,
+    'r-merefleksi':   d.merefleksi,
+    'r-penutup':      d.penutup,
+    'r-as-awal':      d.asAwal,
+    'r-as-proses':    d.asProses,
+  };
+
+  /* Isi field text / textarea */
+  Object.entries(textMap).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && val != null) el.value = val;
+  });
+
+  /* Checkbox Panca Cinta */
+  document.querySelectorAll('input[name="kbc"]').forEach(el => {
+    el.checked = Array.isArray(d.kbc) && d.kbc.includes(el.value);
+  });
+
+  /* Checkbox DPL */
+  document.querySelectorAll('input[name="dpl"]').forEach(el => {
+    el.checked = Array.isArray(d.dpl) && d.dpl.includes(el.value);
+  });
+
+  /* Checkbox Asesmen Akhir */
+  document.querySelectorAll('input[name="asakhir"]').forEach(el => {
+    el.checked = Array.isArray(d.asAkhir) && d.asAkhir.includes(el.value);
+  });
+
+  /* Simpan ke IDB agar export Word bisa langsung dari halaman RPPM */
+  const rppmData = getRPPMData?.();
+  if (rppmData) {
+    IDB.set('rppm', rppmData);
+    STORAGE.save(CONFIG.LS_KEY + '_rppm', rppmData);
+  }
+}
+
+/** Export Word RPPM langsung dari tab preview */
+function exportRPPMFromTab() {
+  if (typeof exportRPPMWord === 'function') exportRPPMWord();
+  else showToast('Buka halaman RPPM untuk export Word', 'warning');
 }
 
 /** Salin data identitas dari form Modul Ajar ke form RPPM */
