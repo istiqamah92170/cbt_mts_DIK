@@ -1361,13 +1361,19 @@
 
             <!-- Model selector -->
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:11px;color:var(--text2)">Model:</span>
+              <span style="font-size:11px;color:var(--text2);flex-shrink:0">Model:</span>
               <select class="filter-select" id="geminiModel" style="flex:1;font-size:11px">
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Rekomendasi)</option>
+                <option value="auto">🔄 Auto Fallback (Coba semua)</option>
+                <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash Preview</option>
+                <option value="gemini-2.5-flash-lite-preview-06-17">Gemini 2.5 Flash Lite ⚡</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro (lebih akurat)</option>
+                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (paling hemat)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (paling akurat)</option>
               </select>
             </div>
+            <div id="geminiModelStatus" style="font-size:10px;color:var(--text3);display:none;padding:4px 8px;background:var(--glass2);border-radius:5px;border:1px solid var(--border)"></div>
 
             <!-- Cart list -->
             <div style="font-size:10px;color:var(--text3);font-weight:700;display:flex;align-items:center;justify-content:space-between">
@@ -2413,60 +2419,82 @@
         document.getElementById('geminiKey').focus();
         return;
       }
-      const model = document.getElementById('geminiModel').value;
-      const btn   = document.getElementById('btnGeminiProcess');
-      const prog  = document.getElementById('geminiProgress');
+
+      const selectedModel = document.getElementById('geminiModel').value;
+      const btn     = document.getElementById('btnGeminiProcess');
+      const prog    = document.getElementById('geminiProgress');
       const progTxt = document.getElementById('geminiProgressText');
+      const statusEl= document.getElementById('geminiModelStatus');
+
+      // Urutan fallback — model tercepat/gratis duluan
+      const FALLBACK_ORDER = [
+        'gemini-2.5-flash-lite-preview-06-17',
+        'gemini-2.5-flash-preview-05-20',
+        'gemini-2.0-flash-lite',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+      ];
+
+      const modelsToTry = selectedModel === 'auto'
+        ? FALLBACK_ORDER
+        : [selectedModel, ...FALLBACK_ORDER.filter(m => m !== selectedModel)];
 
       btn.disabled = true;
       prog.classList.add('active');
-      progTxt.textContent = `Mengirim ${items.size} item ke Gemini...`;
-      Logger.info(`Gemini: mengirim ${items.size} item ke ${model}...`);
+      statusEl.style.display = '';
 
       try {
         const itemList = [...items.values()];
+        const prompt   = _buildPrompt(itemList);
+        let corrections = null;
+        let usedModel   = null;
 
-        // Bangun satu prompt dengan semua teks sekaligus
-        const prompt = _buildPrompt(itemList);
+        for (const model of modelsToTry) {
+          progTxt.textContent  = `Mencoba ${_modelLabel(model)}...`;
+          statusEl.textContent = `🔄 Mencoba: ${_modelLabel(model)}`;
+          Logger.info(`Gemini: mencoba model "${model}"...`);
 
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method : 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body   : JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                temperature    : 0.1,   // rendah = lebih konsisten/akurat
-                maxOutputTokens: 8192,
-                responseMimeType: 'application/json',
-              },
-            }),
+          const result = await _callGemini(apiKey, model, prompt);
+
+          if (result.ok) {
+            corrections = result.corrections;
+            usedModel   = model;
+            statusEl.textContent = `✅ Berhasil: ${_modelLabel(model)}`;
+            statusEl.style.color = 'var(--green)';
+            Logger.ok(`Gemini: model "${model}" berhasil! ${corrections.length} koreksi diterima.`);
+            break;
+          } else {
+            const isQuota = result.error?.includes('quota') || result.error?.includes('429')
+                         || result.error?.includes('RESOURCE_EXHAUSTED');
+            Logger.warn(`Gemini "${model}": ${isQuota ? 'quota habis' : result.error}`);
+            statusEl.textContent = `⚠️ ${_modelLabel(model)}: ${isQuota ? 'quota habis, coba berikutnya...' : result.error}`;
+            statusEl.style.color = 'var(--yellow)';
+
+            if (!isQuota) {
+              // Error bukan quota (misal: key salah, jaringan) — jangan lanjut fallback
+              throw new Error(result.error);
+            }
+            // Tunggu sebentar sebelum coba model berikutnya
+            await _simulateDelay(400);
           }
-        );
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData?.error?.message || `HTTP ${res.status}`);
         }
 
-        const data       = await res.json();
-        const rawText    = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const corrections = _parseGeminiResponse(rawText, itemList);
+        if (!corrections) {
+          throw new Error('Semua model Gemini quota habis. Coba lagi besok atau gunakan API key lain.');
+        }
 
-        progTxt.textContent = `Menyimpan ${corrections.length} koreksi...`;
-        Logger.ok(`Gemini: menerima ${corrections.length} koreksi.`);
-
-        // Terapkan koreksi
+        // Terapkan koreksi ke tabel + spreadsheet
+        progTxt.textContent = `Menyimpan ${corrections.length} koreksi (via ${_modelLabel(usedModel)})...`;
         let saved = 0;
         for (const corr of corrections) {
           const item = items.get(corr.no);
           if (!item) continue;
           item.corrected = corr.text;
 
-          // Update tabel
-          const rows = document.querySelectorAll('#tableBody tr[data-idx]');
-          rows.forEach(row => {
+          // Update baris tabel
+          document.querySelectorAll('#tableBody tr[data-idx]').forEach(row => {
             if (+row.dataset.no === corr.no) {
               row.dataset.text = corr.text;
               row.cells[4].textContent = corr.text.slice(0, 80) + (corr.text.length > 80 ? '…' : '');
@@ -2484,16 +2512,67 @@
 
         _updateUI();
         UIManager.updateStats();
-        showToast(`✨ ${saved} item berhasil dikoreksi Gemini!`, 'ok');
-        Logger.ok(`Gemini selesai: ${saved}/${items.size} item dikoreksi dan disimpan.`);
+        showToast(`✨ ${saved} item dikoreksi oleh ${_modelLabel(usedModel)}!`, 'ok');
+        Logger.ok(`Gemini selesai: ${saved} item dikoreksi menggunakan "${usedModel}".`);
 
       } catch (err) {
+        statusEl.textContent = '❌ ' + err.message;
+        statusEl.style.color = 'var(--red)';
         showToast('Gemini error: ' + err.message, 'err');
         Logger.err('Gemini error: ' + err.message);
       } finally {
         btn.disabled = false;
         prog.classList.remove('active');
       }
+    }
+
+    /* ── Panggil satu model Gemini, return { ok, corrections, error } ── */
+    async function _callGemini(apiKey, model, prompt) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body   : JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature      : 0.1,
+                maxOutputTokens  : 8192,
+                responseMimeType : 'application/json',
+              },
+            }),
+          }
+        );
+
+        const data = await res.json();
+
+        // Cek error dari API
+        if (!res.ok || data.error) {
+          const msg = data?.error?.message || `HTTP ${res.status}`;
+          return { ok: false, error: msg };
+        }
+
+        const rawText    = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const corrections = _parseGeminiResponse(rawText, [...items.values()]);
+        return { ok: true, corrections };
+
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    /* ── Label singkat untuk nama model ── */
+    function _modelLabel(m) {
+      return {
+        'gemini-2.5-flash-lite-preview-06-17' : '2.5 Flash Lite',
+        'gemini-2.5-flash-preview-05-20'      : '2.5 Flash',
+        'gemini-2.0-flash'                    : '2.0 Flash',
+        'gemini-2.0-flash-lite'               : '2.0 Flash Lite',
+        'gemini-1.5-flash'                    : '1.5 Flash',
+        'gemini-1.5-flash-8b'                 : '1.5 Flash 8B',
+        'gemini-1.5-pro'                      : '1.5 Pro',
+      }[m] || m;
     }
 
     /* ── Build prompt untuk semua item ── */
