@@ -2538,9 +2538,9 @@
               body   : JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
-                  temperature      : 0.1,
-                  maxOutputTokens  : 8192,
-                  responseMimeType : 'application/json',
+                  temperature    : 0.1,
+                  maxOutputTokens: 8192,
+                  // responseMimeType dihapus — tidak didukung Gemini 3.x
                 },
               }),
             }
@@ -2620,14 +2620,31 @@ ${numbered}`;
     /* ── Parse response JSON dari Gemini ── */
     function _parseGeminiResponse(raw, itemList) {
       try {
-        // Bersihkan markdown fence jika ada
-        const clean   = raw.replace(/```json|```/g, '').trim();
-        const parsed  = JSON.parse(clean);
-        const corrs   = parsed.corrections || parsed.results || [];
-        return corrs.filter(c => c.no && c.text);
+        // Bersihkan markdown fence jika ada (```json ... ``` atau ``` ... ```)
+        let clean = raw
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim();
+
+        // Cari blok JSON jika ada teks sebelum/sesudahnya
+        const jsonMatch = clean.match(/\{[\s\S]*\}/);
+        if (jsonMatch) clean = jsonMatch[0];
+
+        const parsed = JSON.parse(clean);
+        const corrs  = parsed.corrections || parsed.results || parsed.items || [];
+        const valid  = corrs.filter(c => c.no != null && c.text != null);
+        if (valid.length > 0) return valid;
+
+        // Jika array langsung (tanpa wrapper)
+        if (Array.isArray(parsed)) {
+          return parsed.filter(c => c.no != null && c.text != null);
+        }
+
+        throw new Error('Format tidak dikenali');
       } catch (e) {
-        Logger.warn('Gemini: gagal parse JSON, mencoba ekstrak manual...');
-        // Fallback: kembalikan teks asli jika parse gagal
+        Logger.warn(`Gemini: gagal parse JSON (${e.message}), kembalikan teks asli.`);
+        // Fallback — kembalikan teks asli tanpa perubahan
         return itemList.map(it => ({ no: it.rowNo, text: it.ocrText }));
       }
     }
