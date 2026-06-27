@@ -2587,27 +2587,40 @@
 
     /* ── Build prompt untuk semua item ── */
     function _buildPrompt(itemList) {
-      const numbered = itemList.map((it, i) =>
+      const numbered = itemList.map(it =>
         `### Item ${it.rowNo}\n${it.ocrText}`
       ).join('\n\n');
 
       return `Kamu adalah asisten koreksi teks OCR untuk soal ujian sekolah (SMP/SMA) di Indonesia.
-Teks berikut adalah hasil OCR yang mungkin mengandung kesalahan pada simbol matematika, fisika, kimia, dan biologi.
+Teks berikut adalah hasil OCR yang mungkin mengandung kesalahan pengenalan karakter.
 
-TUGAS:
-- Perbaiki simbol yang salah dibaca (contoh: — → =, £ → ≤, > → ≥, x → ×, / → ÷, V → √, dll)
-- Perbaiki angka yang terbaca salah karena mirip huruf (0→O, 1→I, 5→S, dll) jika konteksnya matematika
-- Perbaiki nama ilmiah/latin dalam biologi (huruf kapital, italic tidak perlu)
-- Perbaiki notasi kimia (H2O, CO2, dll — angka subscript yang terbaca sebagai teks biasa)
-- JANGAN mengubah konten soal, hanya perbaiki kesalahan OCR
-- JANGAN menambah atau menghapus soal
-- Pertahankan struktur paragraf dan penomoran soal
-- Jika teks sudah benar, kembalikan apa adanya
+ATURAN WAJIB — BACA DENGAN SEKSAMA:
+1. JANGAN PERNAH menghapus, memotong, atau meringkas isi soal
+2. WAJIB pertahankan SEMUA pilihan jawaban (A, B, C, D, E) persis seperti aslinya
+3. WAJIB pertahankan penomoran soal (1., 2., 3., dst)
+4. WAJIB pertahankan struktur paragraf — jangan gabungkan baris yang terpisah
+5. Output harus SELENGKAP input — jumlah karakter tidak boleh berkurang signifikan
+6. Hanya perbaiki kesalahan OCR, BUKAN menyunting atau merangkum soal
 
-PENTING: Balas HANYA dalam format JSON berikut, tanpa teks lain:
+YANG BOLEH DIPERBAIKI (kesalahan OCR saja):
+- Simbol matematika: — → =, £ → ≤, > salah konteks → ≥, x → ×, / → ÷, V → √
+- Angka mirip huruf dalam konteks math: 0↔O, 1↔I, 5↔S
+- Notasi kimia: H2O, CO2, H2SO4 (subscript yang terbaca sebagai teks biasa)
+- Nama ilmiah biologi (ejaan latin)
+- Spasi atau baris baru yang hilang akibat OCR
+
+CONTOH BENAR:
+Input:  "1. Jika x £ 5, nilai x adalah...\n(A) -4\n(B) -2\n(C) 0\n(D) 4"
+Output: "1. Jika x ≤ 5, nilai x adalah...\n(A) -4\n(B) -2\n(C) 0\n(D) 4"
+
+CONTOH SALAH (jangan lakukan ini):
+Input:  "1. Jika x £ 5, nilai x adalah...\n(A) -4\n(B) -2\n(C) 0\n(D) 4"
+Output: "1. Jika x ≤ 5, nilai x adalah..." ← SALAH! Pilihan A B C D dihapus
+
+PENTING: Balas HANYA dalam format JSON berikut, tanpa teks tambahan:
 {
   "corrections": [
-    {"no": <nomor_item>, "text": "<teks_yang_sudah_dikoreksi>"},
+    {"no": <nomor_item_integer>, "text": "<seluruh_teks_lengkap_dengan_pilihan_ganda>"},
     ...
   ]
 }
