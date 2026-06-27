@@ -1396,10 +1396,20 @@
             <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--border)">
               <button class="btn btn-sm" id="btnGeminiProcess"
                 style="flex:1;background:linear-gradient(135deg,#8B5CF6,#6366F1);color:#fff;font-weight:700"
-                onclick="GeminiCart.process()">
-                ✨ Koreksi dengan Gemini (<span id="cartCountBtn">0</span>)
+                onclick="GeminiCart.process('koreksi')">
+                ✨ Koreksi (<span id="cartCountBtn">0</span>)
+              </button>
+              <button class="btn btn-sm" id="btnGeminiSplit"
+                style="flex:1;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-weight:700"
+                onclick="GeminiCart.process('pisah')">
+                ✂️ Pisah Kolom (<span id="cartCountBtn2">0</span>)
               </button>
               <button class="btn btn-ghost btn-sm" onclick="GeminiCart.clear()" title="Kosongkan keranjang">🗑</button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);line-height:1.5;padding:5px 7px;background:var(--glass2);border-radius:5px;border:1px solid var(--border)">
+              ✂️ <b>Pisah Kolom</b>: isi kolom <b>Soal, A, B, C, D</b> di spreadsheet
+              (tanpa prefix A./B.). Kolom OCR tetap sebagai backup.
+              Pastikan header kolom sudah ada di sheet.
             </div>
 
           </div>
@@ -2406,111 +2416,64 @@
     }
 
     /* ── Proses semua item dengan 1 API call Gemini ── */
-    async function process() {
-      if (items.size === 0) {
-        showToast('Keranjang kosong! Tambahkan item dulu.', 'warn');
-        return;
-      }
+    /* ── Proses semua item dengan 1 API call Gemini ── */
+    async function process(mode = 'koreksi') {
+      if (items.size === 0) { showToast('Keranjang kosong! Tambahkan item dulu.', 'warn'); return; }
       const apiKey = document.getElementById('geminiKey').value.trim();
-      if (!apiKey) {
-        showToast('Isi Gemini API Key dulu!', 'warn');
-        document.getElementById('geminiKey').focus();
-        return;
-      }
+      if (!apiKey) { showToast('Isi Gemini API Key dulu!', 'warn'); document.getElementById('geminiKey').focus(); return; }
 
       const selectedModel = document.getElementById('geminiModel').value;
-      const btn     = document.getElementById('btnGeminiProcess');
-      const prog    = document.getElementById('geminiProgress');
-      const progTxt = document.getElementById('geminiProgressText');
-      const statusEl= document.getElementById('geminiModelStatus');
+      const isPisah  = mode === 'pisah';
+      const prog     = document.getElementById('geminiProgress');
+      const progTxt  = document.getElementById('geminiProgressText');
+      const statusEl = document.getElementById('geminiModelStatus');
 
-      // Urutan fallback — model tercepat/gratis duluan, ID sesuai API terbaru Juni 2026
       const FALLBACK_ORDER = [
-        'gemini-3.1-flash-lite',   // RPD 500/hari — paling hemat quota ✅
-        'gemini-3.1-flash-lite-preview-05-20', // alias preview
-        'gemini-3-flash-preview',  // Gemini 3 Flash preview
-        'gemini-3.5-flash',        // Gemini 3.5 Flash (terbaru, GA)
-        'gemini-3-flash',          // Gemini 3 Flash
-        'gemini-3.5-flash-preview-05-20', // preview alias
+        'gemini-3.1-flash-lite','gemini-3.1-flash-lite-preview-05-20',
+        'gemini-3-flash-preview','gemini-3.5-flash','gemini-3-flash',
       ];
-
       const modelsToTry = selectedModel === 'auto'
         ? FALLBACK_ORDER
         : [selectedModel, ...FALLBACK_ORDER.filter(m => m !== selectedModel)];
 
-      btn.disabled = true;
+      document.getElementById('btnGeminiProcess').disabled = true;
+      document.getElementById('btnGeminiSplit').disabled   = true;
       prog.classList.add('active');
       statusEl.style.display = '';
+      statusEl.style.color   = 'var(--text2)';
 
       try {
         const itemList = [...items.values()];
-        const prompt   = _buildPrompt(itemList);
-        let corrections = null;
-        let usedModel   = null;
+        const prompt   = isPisah ? _buildPromptPisah(itemList) : _buildPrompt(itemList);
+        let result = null, usedModel = null;
 
         for (const model of modelsToTry) {
           progTxt.textContent  = `Mencoba ${_modelLabel(model)}...`;
           statusEl.textContent = `🔄 Mencoba: ${_modelLabel(model)}`;
-          Logger.info(`Gemini: mencoba model "${model}"...`);
-
-          const result = await _callGemini(apiKey, model, prompt);
-
-          if (result.ok) {
-            corrections = result.corrections;
-            usedModel   = model;
+          Logger.info(`Gemini [${isPisah ? 'pisah' : 'koreksi'}]: mencoba "${model}"...`);
+          const res = await _callGemini(apiKey, model, prompt);
+          if (res.ok) {
+            result = res.corrections; usedModel = model;
             statusEl.textContent = `✅ Berhasil: ${_modelLabel(model)}`;
             statusEl.style.color = 'var(--green)';
-            Logger.ok(`Gemini: model "${model}" berhasil! ${corrections.length} koreksi diterima.`);
+            Logger.ok(`Gemini "${model}" berhasil! ${result.length} item.`);
             break;
           } else {
-            const isQuota = result.error?.includes('quota') || result.error?.includes('429')
-                         || result.error?.includes('RESOURCE_EXHAUSTED');
-            Logger.warn(`Gemini "${model}": ${isQuota ? 'quota habis' : result.error}`);
-            statusEl.textContent = `⚠️ ${_modelLabel(model)}: ${isQuota ? 'quota habis, coba berikutnya...' : result.error}`;
+            const isQuota = res.error?.includes('quota') || res.error?.includes('429') || res.error?.includes('RESOURCE_EXHAUSTED');
+            Logger.warn(`Gemini "${model}": ${isQuota ? 'quota habis' : res.error}`);
+            statusEl.textContent = `⚠️ ${_modelLabel(model)}: ${isQuota ? 'quota habis...' : res.error}`;
             statusEl.style.color = 'var(--yellow)';
-
-            if (!isQuota) {
-              // Error bukan quota (misal: key salah, jaringan) — jangan lanjut fallback
-              throw new Error(result.error);
-            }
-            // Tunggu sebentar sebelum coba model berikutnya
+            if (!isQuota) throw new Error(res.error);
             await _simulateDelay(400);
           }
         }
 
-        if (!corrections) {
-          throw new Error('Semua model Gemini quota habis. Coba lagi besok atau gunakan API key lain.');
-        }
-
-        // Terapkan koreksi ke tabel + spreadsheet
-        progTxt.textContent = `Menyimpan ${corrections.length} koreksi (via ${_modelLabel(usedModel)})...`;
-        let saved = 0;
-        for (const corr of corrections) {
-          const item = items.get(corr.no);
-          if (!item) continue;
-          item.corrected = corr.text;
-
-          // Update baris tabel
-          document.querySelectorAll('#tableBody tr[data-idx]').forEach(row => {
-            if (+row.dataset.no === corr.no) {
-              row.dataset.text = corr.text;
-              row.cells[4].textContent = corr.text.slice(0, 80) + (corr.text.length > 80 ? '…' : '');
-              row.cells[4].style.color = 'var(--green)';
-              row.cells[5].textContent = 'Tesseract+Gemini';
-            }
-          });
-
-          // Simpan ke spreadsheet
-          if (SpreadsheetManager.isConnected() && item.rowIndex) {
-            await SpreadsheetManager.saveResult(item.rowIndex, corr.text, 'Tesseract+Gemini', null);
-          }
-          saved++;
-        }
-
+        if (!result) throw new Error('Semua model Gemini quota habis. Coba lagi besok.');
+        progTxt.textContent = `Menyimpan ke spreadsheet...`;
+        if (isPisah) await _applySplit(result, usedModel);
+        else         await _applyKoreksi(result, usedModel);
         _updateUI();
         UIManager.updateStats();
-        showToast(`✨ ${saved} item dikoreksi oleh ${_modelLabel(usedModel)}!`, 'ok');
-        Logger.ok(`Gemini selesai: ${saved} item dikoreksi menggunakan "${usedModel}".`);
 
       } catch (err) {
         statusEl.textContent = '❌ ' + err.message;
@@ -2518,10 +2481,74 @@
         showToast('Gemini error: ' + err.message, 'err');
         Logger.err('Gemini error: ' + err.message);
       } finally {
-        btn.disabled = false;
+        document.getElementById('btnGeminiProcess').disabled = false;
+        document.getElementById('btnGeminiSplit').disabled   = false;
         prog.classList.remove('active');
       }
     }
+
+    /* ── Terapkan koreksi biasa ── */
+    async function _applyKoreksi(corrections, usedModel) {
+      let saved = 0;
+      for (const corr of corrections) {
+        const item = items.get(corr.no);
+        if (!item || !corr.text) continue;
+        item.corrected = corr.text;
+        document.querySelectorAll('#tableBody tr[data-idx]').forEach(row => {
+          if (+row.dataset.no === corr.no) {
+            row.dataset.text = corr.text;
+            row.cells[4].textContent = corr.text.slice(0, 80) + (corr.text.length > 80 ? '…' : '');
+            row.cells[4].style.color = 'var(--green)';
+            row.cells[5].textContent = 'Tesseract+Gemini';
+          }
+        });
+        if (SpreadsheetManager.isConnected() && item.rowIndex) {
+          await SpreadsheetManager.saveResult(item.rowIndex, corr.text, 'Tesseract+Gemini', null);
+        }
+        saved++;
+      }
+      showToast(`✨ ${saved} item dikoreksi oleh ${_modelLabel(usedModel)}!`, 'ok');
+      Logger.ok(`Koreksi selesai: ${saved} item via "${usedModel}".`);
+    }
+
+    /* ── Terapkan pisah kolom ── */
+    async function _applySplit(corrections, usedModel) {
+      if (!SpreadsheetManager.isConnected()) { showToast('Tidak terhubung ke spreadsheet!', 'err'); return; }
+      const splitResults = corrections.map(corr => {
+        const item = items.get(corr.no);
+        if (!item) return null;
+        item.corrected = corr.soal || '';
+        document.querySelectorAll('#tableBody tr[data-idx]').forEach(row => {
+          if (+row.dataset.no === corr.no) {
+            const preview = [corr.soal, corr.a, corr.b, corr.c, corr.d].filter(Boolean).join(' | ');
+            row.dataset.text = corr.ocrLengkap || corr.soal || '';
+            row.cells[4].textContent = preview.slice(0, 80) + (preview.length > 80 ? '…' : '');
+            row.cells[4].style.color = 'var(--blue2)';
+            row.cells[5].textContent = 'Tesseract+Gemini✂️';
+          }
+        });
+        return { rowIndex: item.rowIndex, ocrLengkap: corr.ocrLengkap || item.ocrText,
+                 soal: corr.soal||'', a: corr.a||'', b: corr.b||'', c: corr.c||'', d: corr.d||'' };
+      }).filter(Boolean);
+
+      const gasUrl = SpreadsheetManager.getGasUrl();
+      const sheet  = SpreadsheetManager.getSheet();
+      try {
+        const res  = await fetch(gasUrl, {
+          method:'POST', headers:{'Content-Type':'text/plain'},
+          body: JSON.stringify({ action:'saveSplit', sheet, results: splitResults }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'saveSplit gagal');
+        showToast(`✂️ ${data.saved} soal dipecah ke kolom Soal/A/B/C/D!`, 'ok');
+        Logger.ok(`Pisah kolom selesai: ${data.saved}/${splitResults.length} baris via "${usedModel}".`);
+        if (data.errors?.length) data.errors.forEach(e => Logger.warn('saveSplit: ' + e));
+      } catch (e) {
+        showToast('Gagal simpan split: ' + e.message, 'err');
+        Logger.err('saveSplit error: ' + e.message);
+      }
+    }
+
 
     /* ── Panggil satu model Gemini, return { ok, corrections, error } ── */
     async function _callGemini(apiKey, model, prompt) {
@@ -2630,7 +2657,60 @@ TEKS OCR YANG PERLU DIKOREKSI:
 ${numbered}`;
     }
 
-    /* ── Parse response JSON dari Gemini ── */
+    /* ── Build prompt mode Pisah Kolom ── */
+    function _buildPromptPisah(itemList) {
+      const numbered = itemList.map(it =>
+        `### Item ${it.rowNo}\n${it.ocrText}`
+      ).join('\n\n');
+
+      return `Kamu adalah asisten pemroses soal ujian pilihan ganda (SMP/SMA) Indonesia.
+Teks berikut adalah hasil OCR gambar soal ujian. Setiap item berisi SATU soal dengan 4 pilihan jawaban (A, B, C, D).
+
+TUGAS:
+1. Koreksi kesalahan OCR pada simbol matematika/sains (— → =, £ → ≤, V → √, H2O, CO2, dll)
+2. Pisahkan teks soal dari pilihan jawaban
+3. Kembalikan isi pilihan TANPA prefix huruf (jangan tulis "A." atau "(A)" — hanya isinya saja)
+
+ATURAN WAJIB:
+- JANGAN menghapus atau meringkas isi soal maupun pilihan
+- Pertahankan penomoran soal jika ada
+- Jika teks pilihan mengandung formula math, koreksi simbolnya
+- Field "ocr_lengkap" = seluruh teks asli yang sudah dikoreksi (soal + semua pilihan, untuk backup)
+- Field "soal" = hanya teks pertanyaan (tanpa pilihan A B C D)
+- Field "a","b","c","d" = isi pilihan SAJA tanpa prefix apapun
+
+CONTOH:
+Input OCR: "3. Nilai dari 2 £ x + 1 adalah...\n(A) -4\n(B) -2\n(C) 0\n(D) 4"
+Output:
+{
+  "no": 3,
+  "ocr_lengkap": "3. Nilai dari 2 ≤ x + 1 adalah...\n(A) -4\n(B) -2\n(C) 0\n(D) 4",
+  "soal": "3. Nilai dari 2 ≤ x + 1 adalah...",
+  "a": "-4",
+  "b": "-2",
+  "c": "0",
+  "d": "4"
+}
+
+PENTING: Balas HANYA dalam format JSON berikut, tanpa teks lain:
+{
+  "corrections": [
+    {
+      "no": <nomor_item_integer>,
+      "ocr_lengkap": "<seluruh_teks_dikoreksi>",
+      "soal": "<teks_soal_saja>",
+      "a": "<isi_pilihan_A_tanpa_prefix>",
+      "b": "<isi_pilihan_B_tanpa_prefix>",
+      "c": "<isi_pilihan_C_tanpa_prefix>",
+      "d": "<isi_pilihan_D_tanpa_prefix>"
+    }
+  ]
+}
+
+TEKS OCR YANG PERLU DIPROSES:
+
+${numbered}`;
+    }
     function _parseGeminiResponse(raw, itemList) {
       try {
         // Bersihkan markdown fence jika ada (```json ... ``` atau ``` ... ```)
@@ -2665,10 +2745,11 @@ ${numbered}`;
     /* ── Update semua elemen UI keranjang ── */
     function _updateUI() {
       const count = items.size;
-      // Counter badges
       document.getElementById('cartCountBadge').textContent = count;
       document.getElementById('cartCountLabel').textContent = count + ' item';
       document.getElementById('cartCountBtn').textContent   = count;
+      const btn2 = document.getElementById('cartCountBtn2');
+      if (btn2) btn2.textContent = count;
 
       // Render daftar keranjang
       const list = document.getElementById('geminiCartList');
