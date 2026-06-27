@@ -694,6 +694,68 @@
     .export-name { font-size: 12px; font-weight: 700; }
     .export-desc { font-size: 10px; color: var(--text3); }
 
+    /* ── Gemini Cart ── */
+    .cart-fab {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg,#8B5CF6,#6366F1);
+      color: #fff; border: none; border-radius: 30px;
+      font-size: 13px; font-weight: 700; font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(139,92,246,.5);
+      z-index: 500;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .cart-fab:hover { transform: translateX(-50%) translateY(-2px); box-shadow: 0 10px 32px rgba(139,92,246,.6); }
+    .cart-fab:disabled { opacity: .5; cursor: not-allowed; transform: translateX(-50%); }
+    .cart-fab-count {
+      background: #fff; color: #6366F1;
+      border-radius: 20px; padding: 1px 8px;
+      font-size: 12px; font-weight: 800;
+    }
+
+    .cart-btn {
+      padding: 2px 7px; font-size: 10px; font-weight: 700;
+      border-radius: 5px; border: 1px solid var(--border2);
+      cursor: pointer; font-family: inherit;
+      transition: all var(--transition);
+    }
+    .cart-btn-add  { background: rgba(139,92,246,.12); color: #A78BFA; }
+    .cart-btn-add:hover  { background: rgba(139,92,246,.25); }
+    .cart-btn-rm   { background: rgba(247,95,79,.1); color: var(--red); }
+    .cart-btn-rm:hover   { background: rgba(247,95,79,.22); }
+    .cart-btn-done { background: rgba(16,212,142,.12); color: var(--green); border-color: var(--green); }
+
+    /* Gemini panel di right pane */
+    .gemini-panel { display: flex; flex-direction: column; gap: 8px; padding: 12px; overflow-y: auto; flex: 1; }
+    .gemini-api-row { display: flex; gap: 6px; align-items: center; }
+    .gemini-cart-list { display: flex; flex-direction: column; gap: 5px; flex: 1; overflow-y: auto; }
+    .gemini-cart-item {
+      display: flex; align-items: flex-start; gap: 7px;
+      padding: 7px 9px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius2); font-size: 11px;
+    }
+    .gemini-cart-item.corrected { border-color: var(--green); background: rgba(16,212,142,.06); }
+    .gemini-item-no   { color: var(--text3); font-weight: 700; width: 22px; flex-shrink: 0; }
+    .gemini-item-text { flex: 1; color: var(--text2); font-family: var(--font-mono); font-size: 10px;
+                        max-height: 48px; overflow: hidden; line-height: 1.5; }
+    .gemini-item-text.corrected-text { color: var(--green); }
+
+    /* Gemini progress */
+    .gemini-progress {
+      padding: 8px 10px;
+      background: rgba(139,92,246,.08);
+      border: 1px solid rgba(139,92,246,.2);
+      border-radius: var(--radius2);
+      font-size: 11px; color: #A78BFA;
+      display: none;
+      align-items: center; gap: 8px;
+    }
+    .gemini-progress.active { display: flex; }
+
     /* ── Toast ── */
     .toast-container {
       position: fixed; bottom: 20px; right: 20px;
@@ -1011,7 +1073,7 @@
             </select>
             <button class="btn btn-ghost btn-sm" onclick="loadDummyData()">🗃 Muat Demo</button>
             <button class="btn btn-ghost btn-sm" onclick="selectAll()">☑ Semua</button>
-            <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Batal Pilih</button>
+            <button class="btn btn-ghost btn-sm" onclick="cartAddSelected()">🛒 Keranjang</button>
           </div>
 
           <div class="table-wrap">
@@ -1025,7 +1087,7 @@
                   <th onclick="sortTable('ocr')">Hasil OCR ↕</th>
                   <th style="width:70px">Engine</th>
                   <th style="width:60px">Waktu</th>
-                  <th style="width:60px">Aksi</th>
+                  <th style="width:80px">Aksi</th>
                 </tr>
               </thead>
               <tbody id="tableBody">
@@ -1183,10 +1245,21 @@
       </div>
       <!-- /left-pane -->
 
-      <!-- Right Pane: Preview -->
+      <!-- Right Pane: Preview + Gemini Cart -->
       <div class="right-pane">
-        <div class="pane-header">🖼 Preview & Hasil</div>
+        <!-- Pane tabs -->
+        <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
+          <button class="tab-btn active" data-rtab="rPreview" onclick="switchRTab(this)"
+            style="flex:1;border-radius:0;margin-bottom:-1px;font-size:11px">🖼 Preview</button>
+          <button class="tab-btn" data-rtab="rGemini" onclick="switchRTab(this)"
+            style="flex:1;border-radius:0;margin-bottom:-1px;font-size:11px">
+            ✨ Gemini <span class="cart-fab-count" id="cartCountBadge"
+              style="background:rgba(139,92,246,.2);color:#A78BFA;font-size:9px;padding:1px 5px">0</span>
+          </button>
+        </div>
 
+        <!-- RTAB: Preview -->
+        <div id="rPreview" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
         <div class="preview-area" id="previewArea">
           <div class="preview-img-wrap">
             <div class="preview-placeholder" id="previewPlaceholder">
@@ -1226,9 +1299,12 @@
           <div id="previewNormalResult" style="display:none">
             <div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:700;">HASIL OCR</div>
             <div class="ocr-result-box" id="pvOcrText"></div>
-            <div style="display:flex;gap:6px;margin-top:8px">
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
               <button class="btn btn-ghost btn-sm" onclick="copyOcr()">📋 Salin</button>
               <button class="btn btn-ghost btn-sm" onclick="editOcr()">✏ Edit</button>
+              <button class="btn btn-sm" id="pvCartBtn"
+                style="background:rgba(139,92,246,.15);color:#A78BFA;border:1px solid rgba(139,92,246,.3)"
+                onclick="cartAddFromPreview()">🛒 + Keranjang</button>
             </div>
           </div>
 
@@ -1261,6 +1337,70 @@
           </div>
 
         </div>
+        </div><!-- /rPreview -->
+
+        <!-- RTAB: Gemini Cart -->
+        <div id="rGemini" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div class="gemini-panel">
+
+            <!-- API Key input -->
+            <div>
+              <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:5px">GEMINI API KEY</div>
+              <div class="gemini-api-row">
+                <div class="form-input-icon" style="flex:1">
+                  <input class="form-input" id="geminiKey" type="password"
+                    placeholder="AIza... (Google AI Studio)" style="font-size:11px" />
+                  <span class="input-icon" onclick="togglePass('geminiKey')">👁</span>
+                </div>
+              </div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">
+                Gratis di <a href="https://aistudio.google.com/apikey" target="_blank"
+                  style="color:var(--blue)">aistudio.google.com</a> · 1500 req/hari
+              </div>
+            </div>
+
+            <!-- Model selector -->
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--text2)">Model:</span>
+              <select class="filter-select" id="geminiModel" style="flex:1;font-size:11px">
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Rekomendasi)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (lebih akurat)</option>
+              </select>
+            </div>
+
+            <!-- Cart list -->
+            <div style="font-size:10px;color:var(--text3);font-weight:700;display:flex;align-items:center;justify-content:space-between">
+              <span>🛒 KERANJANG KOREKSI</span>
+              <span id="cartCountLabel" style="color:var(--blue)">0 item</span>
+            </div>
+
+            <div class="gemini-progress" id="geminiProgress">
+              <div class="spinner" style="border-color:rgba(139,92,246,.3);border-top-color:#A78BFA"></div>
+              <span id="geminiProgressText">Memproses...</span>
+            </div>
+
+            <div class="gemini-cart-list" id="geminiCartList">
+              <div class="empty-state" style="padding:20px">
+                <div class="empty-icon" style="font-size:24px">🛒</div>
+                <div class="empty-title">Keranjang kosong</div>
+                <div class="empty-desc">Pilih baris di tab Data lalu klik "+ Keranjang", atau centang beberapa baris lalu klik tombol 🛒 Keranjang di toolbar.</div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--border)">
+              <button class="btn btn-sm" id="btnGeminiProcess"
+                style="flex:1;background:linear-gradient(135deg,#8B5CF6,#6366F1);color:#fff;font-weight:700"
+                onclick="GeminiCart.process()">
+                ✨ Koreksi dengan Gemini (<span id="cartCountBtn">0</span>)
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="GeminiCart.clear()" title="Kosongkan keranjang">🗑</button>
+            </div>
+
+          </div>
+        </div><!-- /rGemini -->
+
       </div>
       <!-- /right-pane -->
 
@@ -2223,8 +2363,269 @@
   })();
 
   /* ════════════════════════════════════════
-     APP STATE
+     GeminiCart — Batch koreksi math/sains
      ════════════════════════════════════════ */
+  const GeminiCart = (() => {
+    // item: { rowNo, rowIndex, ocrText, corrected, rowEl }
+    const items = new Map(); // key: rowNo
+
+    /* ── Tambah item ke keranjang ── */
+    function add(rowNo, rowIndex, ocrText, rowEl) {
+      if (!ocrText || ocrText.trim() === '' || ocrText === '(belum diproses)') {
+        showToast('Baris ini belum memiliki hasil OCR.', 'warn');
+        return;
+      }
+      if (items.has(rowNo)) {
+        showToast(`Baris #${rowNo} sudah ada di keranjang.`, 'info');
+        return;
+      }
+      items.set(rowNo, { rowNo, rowIndex, ocrText, corrected: null, rowEl });
+      _updateUI();
+      showToast(`Baris #${rowNo} ditambahkan ke keranjang.`, 'ok');
+      Logger.info(`Keranjang: +baris #${rowNo} (${items.size} total)`);
+      // Otomatis pindah ke tab Gemini
+      const geminiTab = document.querySelector('[data-rtab="rGemini"]');
+      if (geminiTab) switchRTab(geminiTab);
+    }
+
+    /* ── Hapus satu item ── */
+    function remove(rowNo) {
+      items.delete(rowNo);
+      _updateUI();
+    }
+
+    /* ── Kosongkan semua ── */
+    function clear() {
+      items.clear();
+      _updateUI();
+      showToast('Keranjang dikosongkan.', 'info');
+    }
+
+    /* ── Proses semua item dengan 1 API call Gemini ── */
+    async function process() {
+      if (items.size === 0) {
+        showToast('Keranjang kosong! Tambahkan item dulu.', 'warn');
+        return;
+      }
+      const apiKey = document.getElementById('geminiKey').value.trim();
+      if (!apiKey) {
+        showToast('Isi Gemini API Key dulu!', 'warn');
+        document.getElementById('geminiKey').focus();
+        return;
+      }
+      const model = document.getElementById('geminiModel').value;
+      const btn   = document.getElementById('btnGeminiProcess');
+      const prog  = document.getElementById('geminiProgress');
+      const progTxt = document.getElementById('geminiProgressText');
+
+      btn.disabled = true;
+      prog.classList.add('active');
+      progTxt.textContent = `Mengirim ${items.size} item ke Gemini...`;
+      Logger.info(`Gemini: mengirim ${items.size} item ke ${model}...`);
+
+      try {
+        const itemList = [...items.values()];
+
+        // Bangun satu prompt dengan semua teks sekaligus
+        const prompt = _buildPrompt(itemList);
+
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body   : JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature    : 0.1,   // rendah = lebih konsisten/akurat
+                maxOutputTokens: 8192,
+                responseMimeType: 'application/json',
+              },
+            }),
+          }
+        );
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+        }
+
+        const data       = await res.json();
+        const rawText    = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const corrections = _parseGeminiResponse(rawText, itemList);
+
+        progTxt.textContent = `Menyimpan ${corrections.length} koreksi...`;
+        Logger.ok(`Gemini: menerima ${corrections.length} koreksi.`);
+
+        // Terapkan koreksi
+        let saved = 0;
+        for (const corr of corrections) {
+          const item = items.get(corr.no);
+          if (!item) continue;
+          item.corrected = corr.text;
+
+          // Update tabel
+          const rows = document.querySelectorAll('#tableBody tr[data-idx]');
+          rows.forEach(row => {
+            if (+row.dataset.no === corr.no) {
+              row.dataset.text = corr.text;
+              row.cells[4].textContent = corr.text.slice(0, 80) + (corr.text.length > 80 ? '…' : '');
+              row.cells[4].style.color = 'var(--green)';
+              row.cells[5].textContent = 'Tesseract+Gemini';
+            }
+          });
+
+          // Simpan ke spreadsheet
+          if (SpreadsheetManager.isConnected() && item.rowIndex) {
+            await SpreadsheetManager.saveResult(item.rowIndex, corr.text, 'Tesseract+Gemini', null);
+          }
+          saved++;
+        }
+
+        _updateUI();
+        UIManager.updateStats();
+        showToast(`✨ ${saved} item berhasil dikoreksi Gemini!`, 'ok');
+        Logger.ok(`Gemini selesai: ${saved}/${items.size} item dikoreksi dan disimpan.`);
+
+      } catch (err) {
+        showToast('Gemini error: ' + err.message, 'err');
+        Logger.err('Gemini error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        prog.classList.remove('active');
+      }
+    }
+
+    /* ── Build prompt untuk semua item ── */
+    function _buildPrompt(itemList) {
+      const numbered = itemList.map((it, i) =>
+        `### Item ${it.rowNo}\n${it.ocrText}`
+      ).join('\n\n');
+
+      return `Kamu adalah asisten koreksi teks OCR untuk soal ujian sekolah (SMP/SMA) di Indonesia.
+Teks berikut adalah hasil OCR yang mungkin mengandung kesalahan pada simbol matematika, fisika, kimia, dan biologi.
+
+TUGAS:
+- Perbaiki simbol yang salah dibaca (contoh: — → =, £ → ≤, > → ≥, x → ×, / → ÷, V → √, dll)
+- Perbaiki angka yang terbaca salah karena mirip huruf (0→O, 1→I, 5→S, dll) jika konteksnya matematika
+- Perbaiki nama ilmiah/latin dalam biologi (huruf kapital, italic tidak perlu)
+- Perbaiki notasi kimia (H2O, CO2, dll — angka subscript yang terbaca sebagai teks biasa)
+- JANGAN mengubah konten soal, hanya perbaiki kesalahan OCR
+- JANGAN menambah atau menghapus soal
+- Pertahankan struktur paragraf dan penomoran soal
+- Jika teks sudah benar, kembalikan apa adanya
+
+PENTING: Balas HANYA dalam format JSON berikut, tanpa teks lain:
+{
+  "corrections": [
+    {"no": <nomor_item>, "text": "<teks_yang_sudah_dikoreksi>"},
+    ...
+  ]
+}
+
+TEKS OCR YANG PERLU DIKOREKSI:
+
+${numbered}`;
+    }
+
+    /* ── Parse response JSON dari Gemini ── */
+    function _parseGeminiResponse(raw, itemList) {
+      try {
+        // Bersihkan markdown fence jika ada
+        const clean   = raw.replace(/```json|```/g, '').trim();
+        const parsed  = JSON.parse(clean);
+        const corrs   = parsed.corrections || parsed.results || [];
+        return corrs.filter(c => c.no && c.text);
+      } catch (e) {
+        Logger.warn('Gemini: gagal parse JSON, mencoba ekstrak manual...');
+        // Fallback: kembalikan teks asli jika parse gagal
+        return itemList.map(it => ({ no: it.rowNo, text: it.ocrText }));
+      }
+    }
+
+    /* ── Update semua elemen UI keranjang ── */
+    function _updateUI() {
+      const count = items.size;
+      // Counter badges
+      document.getElementById('cartCountBadge').textContent = count;
+      document.getElementById('cartCountLabel').textContent = count + ' item';
+      document.getElementById('cartCountBtn').textContent   = count;
+
+      // Render daftar keranjang
+      const list = document.getElementById('geminiCartList');
+      if (count === 0) {
+        list.innerHTML = `<div class="empty-state" style="padding:20px">
+          <div class="empty-icon" style="font-size:24px">🛒</div>
+          <div class="empty-title">Keranjang kosong</div>
+          <div class="empty-desc">Pilih baris di tab Data lalu klik "+ Keranjang".</div>
+        </div>`;
+        return;
+      }
+      list.innerHTML = [...items.values()].map(it => `
+        <div class="gemini-cart-item ${it.corrected ? 'corrected' : ''}">
+          <div class="gemini-item-no">#${it.rowNo}</div>
+          <div class="gemini-item-text ${it.corrected ? 'corrected-text' : ''}">
+            ${it.corrected
+              ? '✅ ' + _esc(it.corrected.slice(0, 120))
+              : _esc(it.ocrText.slice(0, 120)) + (it.ocrText.length > 120 ? '…' : '')
+            }
+          </div>
+          <button class="cart-btn cart-btn-rm" onclick="GeminiCart.remove(${it.rowNo})" title="Hapus dari keranjang">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function getCount() { return items.size; }
+    function hasItem(rowNo) { return items.has(rowNo); }
+
+    return { add, remove, clear, process, getCount, hasItem };
+  })();
+
+  /* ── Right pane tab switch ── */
+  function switchRTab(btn) {
+    document.querySelectorAll('[data-rtab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.rtab;
+    document.getElementById('rPreview').style.display  = target === 'rPreview' ? 'flex' : 'none';
+    document.getElementById('rGemini').style.display   = target === 'rGemini'  ? 'flex' : 'none';
+  }
+
+  /* ── Tambah dari preview panel (baris yang sedang dipilih) ── */
+  function cartAddFromPreview() {
+    const selRow = document.querySelector('#tableBody tr.selected');
+    if (!selRow) { showToast('Pilih baris dulu.', 'warn'); return; }
+    const no       = +selRow.dataset.no;
+    const rowIndex = +selRow.dataset.rowindex || null;
+    const text     = selRow.dataset.text || '';
+    GeminiCart.add(no, rowIndex, text, selRow);
+  }
+
+  /* ── Tambah baris yang dicentang ke keranjang ── */
+  function cartAddSelected() {
+    const checked = [...document.querySelectorAll('#tableBody input[type=checkbox]:checked')]
+      .map(cb => cb.closest('tr')).filter(Boolean);
+    if (!checked.length) { showToast('Centang baris dulu.', 'warn'); return; }
+    let added = 0;
+    checked.forEach(row => {
+      const no       = +row.dataset.no;
+      const rowIndex = +row.dataset.rowindex || null;
+      const text     = row.dataset.text || '';
+      if (text && !GeminiCart.hasItem(no)) {
+        GeminiCart.add(no, rowIndex, text, row);
+        added++;
+      }
+    });
+    if (added) showToast(`${added} baris ditambahkan ke keranjang.`, 'ok');
+    else showToast('Item sudah ada di keranjang atau belum ada hasil OCR.', 'warn');
+  }
+
+  /* ── Tambah dari tombol di baris tabel ── */
+  function cartAddRow(idx) {
+    const rows = document.querySelectorAll('#tableBody tr[data-idx]');
+    const row  = rows[idx];
+    if (!row) return;
+    GeminiCart.add(+row.dataset.no, +row.dataset.rowindex || null, row.dataset.text || '', row);
+  }
   const AppState = {
     rows: [],
     selectedRows: [],
@@ -2284,7 +2685,11 @@
         <td style="color:var(--text3)">${r.engine || '—'}</td>
         <td style="color:var(--text3)">${r.dur || '—'}</td>
         <td>
-          <button class="btn btn-icon" title="Proses ulang" onclick="event.stopPropagation();reprocessRow(${i})">🔁</button>
+          <div style="display:flex;gap:3px">
+            <button class="btn btn-icon" title="Proses ulang" onclick="event.stopPropagation();reprocessRow(${i})">🔁</button>
+            <button class="btn btn-icon" title="+ Keranjang Gemini"
+              style="font-size:11px" onclick="event.stopPropagation();cartAddRow(${i})">🛒</button>
+          </div>
         </td>
       </tr>
     `).join('');
