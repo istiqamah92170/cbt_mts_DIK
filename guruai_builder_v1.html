@@ -686,6 +686,40 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 }
 .btn-chip-add:hover { background: var(--accent); color: white; }
 
+/* ---- MODEL PICKER ---- */
+.model-option {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer; transition: background var(--t);
+}
+.model-option:last-child { border-bottom: none; }
+.model-option:hover { background: var(--bg-base); }
+.model-option.selected { background: rgba(45,212,191,.06); }
+.model-option input[type=radio] {
+  width: 16px; height: 16px; accent-color: var(--accent);
+  flex-shrink: 0; cursor: pointer;
+}
+.model-option-info { flex: 1; }
+.model-option-label {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+}
+.model-option-note {
+  font-size: 11.5px; color: var(--text-muted); margin-top: 1px;
+}
+.model-option-id {
+  font-size: 10.5px; color: var(--text-muted);
+  font-family: monospace; white-space: nowrap;
+}
+.model-auto-note {
+  padding: 8px 16px 12px;
+  font-size: 11.5px; color: var(--text-muted);
+  background: rgba(45,212,191,.04);
+  border-top: 1px solid var(--border-light);
+  line-height: 1.5;
+}
+
 /* ---- UTILITY ---- */
 .flex { display: flex; }
 .gap-8 { gap: 8px; }
@@ -1435,12 +1469,11 @@ h1,h2,h3,h4 { color: var(--text-primary); }
           </div>
         </div>
 
-        <!-- Fallback Chain -->
+        <!-- Pilih Model -->
         <div class="settings-group">
-          <div class="settings-group-title">🔄 Urutan Model Fallback Otomatis</div>
-          <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px;padding-bottom:14px;">
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Aplikasi mencoba model dari atas ke bawah. Jika quota habis (429), otomatis lanjut ke model berikutnya.</p>
-            <div id="modelChainList"></div>
+          <div class="settings-group-title">🎛️ Pilih Model Gemini</div>
+          <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:0;padding:0;">
+            <div id="modelPickerList"></div>
           </div>
         </div>
 
@@ -1527,18 +1560,22 @@ const CONFIG = {
   LS_KEY:      'guruai_data',
   LS_SETTINGS: 'guruai_settings',
   LS_AI_KEY:   'guruai_ai_key',
+  LS_AI_MODEL: 'guruai_ai_model',  /* pilihan model manual — 'auto' atau model id */
   /* File project */
   PROJECT_EXT: '.gaib',
   TOAST_DURATION: 3000,
-  /* Gemini — fallback chain: coba urut dari atas, skip jika quota habis (429) */
+  /* Gemini — model valid di API v1beta.
+     Mode Otomatis: coba urut dari atas, skip jika HTTP 429/503.
+     Mode Manual: langsung pakai model yang dipilih guru. */
   GEMINI_BASE: 'https://generativelanguage.googleapis.com/v1beta/models/',
   GEMINI_MODELS: [
-    { id: 'gemini-2.5-flash-lite-preview-06-17', label: 'Gemini 2.5 Flash Lite' },
-    { id: 'gemini-2.5-flash',                    label: 'Gemini 2.5 Flash'      },
-    { id: 'gemini-2.0-flash-lite',               label: 'Gemini 2.0 Flash Lite' },
-    { id: 'gemini-2.0-flash',                    label: 'Gemini 2.0 Flash'      },
-    { id: 'gemini-1.5-flash',                    label: 'Gemini 1.5 Flash'      },
-    { id: 'gemini-1.5-flash-8b',                 label: 'Gemini 1.5 Flash 8B'   },
+    { id: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash',       note: 'Terbaru, cepat, akurat'        },
+    { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite',  note: 'Hemat quota, tetap akurat'     },
+    { id: 'gemini-2.5-pro',        label: 'Gemini 2.5 Pro',         note: 'Paling canggih, quota terbatas'},
+    { id: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash',       note: 'Stabil, quota memadai'         },
+    { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite',  note: 'Paling hemat quota'            },
+    { id: 'gemini-1.5-flash',      label: 'Gemini 1.5 Flash',       note: 'Fallback andalan'              },
+    { id: 'gemini-1.5-flash-8b',   label: 'Gemini 1.5 Flash 8B',    note: 'Ringan, fallback terakhir'     },
   ],
 };
 
@@ -2032,7 +2069,7 @@ Hasilkan HANYA JSON. Jangan menggunakan Markdown. Jangan memberikan penjelasan. 
 Format output WAJIB:
 {"elemen":[{"nama":"string","topik":[{"judul":"string","tujuanPembelajaran":"string","materiPokok":["string"],"estimasiJP":4}]}]}`,
 
-  /** Model yang berhasil dipakai terakhir — disimpan agar sesi berikutnya mulai dari sini */
+  /** Model yang terakhir berhasil (sesi ini) */
   _activeModel: null,
 
   /** Ambil API Key */
@@ -2040,18 +2077,19 @@ Format output WAJIB:
   saveKey(k){ k ? localStorage.setItem(CONFIG.LS_AI_KEY, k) : localStorage.removeItem(CONFIG.LS_AI_KEY); },
   hasKey()  { return !!this.getKey(); },
 
+  /** Pilihan model: 'auto' atau model id tertentu */
+  getPinned() { return localStorage.getItem(CONFIG.LS_AI_MODEL) || 'auto'; },
+  setPinned(v){ localStorage.setItem(CONFIG.LS_AI_MODEL, v); },
+
   /** Buat URL endpoint untuk model tertentu */
   _url(modelId) {
     return `${CONFIG.GEMINI_BASE}${modelId}:generateContent?key=${this.getKey()}`;
   },
 
-  /**
-   * Kirim request ke SATU model.
-   * Return: { ok, data, status, modelId }
-   */
+  /** Kirim request ke SATU model */
   async _call(modelId, body) {
     try {
-      const res = await fetch(this._url(modelId), {
+      const res  = await fetch(this._url(modelId), {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(body),
@@ -2059,58 +2097,61 @@ Format output WAJIB:
       const data = await res.json().catch(() => ({}));
       return { ok: res.ok, status: res.status, data, modelId };
     } catch(e) {
-      /* Network error */
       return { ok: false, status: 0, data: { _netErr: e.message }, modelId };
     }
   },
 
   /**
-   * Coba semua model secara berurutan.
-   * Skip model jika HTTP 429 (quota) atau 503 (overloaded).
-   * Throw jika semua gagal.
-   * Return: { data, modelId, modelLabel }
+   * Coba model sesuai mode:
+   * - Manual (pinned != 'auto'): langsung pakai model itu, tidak fallback.
+   * - Otomatis: coba urut, skip 429/503, throw jika semua gagal.
    */
   async _callWithFallback(body, onProgress) {
-    const models = CONFIG.GEMINI_MODELS;
+    const pinned = this.getPinned();
 
-    /* Mulai dari model yang terakhir berhasil agar lebih cepat */
+    /* MODE MANUAL */
+    if (pinned !== 'auto') {
+      const m = CONFIG.GEMINI_MODELS.find(x => x.id === pinned);
+      const label = m?.label || pinned;
+      if (onProgress) onProgress(`Menggunakan ${label}...`);
+      const result = await this._call(pinned, body);
+      if (result.ok) {
+        this._activeModel = pinned;
+        updateModelStatus(m || { id: pinned, label });
+        return { data: result.data, modelId: pinned, modelLabel: label };
+      }
+      const msg = result.data?.error?.message || result.data?._netErr || `HTTP ${result.status}`;
+      throw new Error(`${label}: ${msg}`);
+    }
+
+    /* MODE OTOMATIS — fallback chain */
+    const models = CONFIG.GEMINI_MODELS;
     const lastIdx = this._activeModel
       ? models.findIndex(m => m.id === this._activeModel)
       : -1;
+    /* Mulai dari model terakhir berhasil */
     const sorted = lastIdx > 0
       ? [...models.slice(lastIdx), ...models.slice(0, lastIdx)]
       : models;
 
-    const errors = [];
-
     for (const model of sorted) {
       if (onProgress) onProgress(`Mencoba ${model.label}...`);
-
       const result = await this._call(model.id, body);
-
       if (result.ok) {
-        /* Sukses — catat model aktif */
         this._activeModel = model.id;
-        updateModelStatus(model);   /* update UI */
+        updateModelStatus(model);
         return { data: result.data, modelId: model.id, modelLabel: model.label };
       }
-
-      /* 429 quota / 503 overloaded → skip ke model berikutnya */
-      if (result.status === 429 || result.status === 503) {
-        const msg = result.data?.error?.message || `HTTP ${result.status}`;
-        errors.push(`${model.label}: quota/overloaded`);
-        continue;
-      }
-
-      /* Error lain (401 key salah, 400 bad request) → langsung throw */
+      /* 429/503 → skip */
+      if (result.status === 429 || result.status === 503) continue;
+      /* Error lain → langsung throw */
       const msg = result.data?.error?.message || result.data?._netErr || `HTTP ${result.status}`;
       throw new Error(msg);
     }
 
-    /* Semua model gagal karena quota */
     throw new Error(
       'Semua model Gemini sedang mencapai batas quota.\n' +
-      'Coba lagi beberapa saat atau gunakan Analisis Lokal.'
+      'Coba pilih model tertentu secara manual, atau gunakan Analisis Lokal.'
     );
   },
 
@@ -3578,7 +3619,7 @@ async function restoreRPPM() {
    AI SETTINGS — Fungsi halaman AI Settings
    ============================================================ */
 
-/** Update tampilan status API Key dan model chain di halaman AI Settings */
+/** Update tampilan status API Key + render model picker */
 function updateAIKeyStatus() {
   const hasKey = AI_ENGINE.hasKey();
   const status = document.getElementById('aiKeyStatus');
@@ -3601,28 +3642,71 @@ function updateAIKeyStatus() {
     }
   }
 
-  /* Render daftar model fallback chain */
-  const listEl = document.getElementById('modelChainList');
-  if (listEl) {
-    listEl.innerHTML = CONFIG.GEMINI_MODELS.map((m, i) => {
-      const isActive = AI_ENGINE._activeModel === m.id;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-light);">
-        <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:18px;">${i+1}</span>
-        <span style="flex:1;font-size:12.5px;font-weight:${isActive?700:400};color:${isActive?'var(--accent-dark)':'var(--text-primary)'};">${m.label}</span>
-        <span style="font-size:10.5px;color:var(--text-muted);font-family:monospace;">${m.id}</span>
-        ${isActive ? '<span class="badge badge-teal" style="font-size:10px;">Aktif ✓</span>' : ''}
-      </div>`;
-    }).join('');
-  }
+  /* Render model picker */
+  _renderModelPicker();
 
   /* Update badge model aktif */
   const activeLbl  = document.getElementById('activeModelLabel');
   const activeDesc = document.getElementById('activeModelDesc');
-  if (AI_ENGINE._activeModel) {
+  const pinned     = AI_ENGINE.getPinned();
+  if (pinned !== 'auto') {
+    const m = CONFIG.GEMINI_MODELS.find(x => x.id === pinned);
+    if (activeLbl)  { activeLbl.textContent = m?.label || pinned; activeLbl.className = 'badge badge-amber'; }
+    if (activeDesc)   activeDesc.textContent = `Manual: ${pinned}`;
+  } else if (AI_ENGINE._activeModel) {
     const m = CONFIG.GEMINI_MODELS.find(x => x.id === AI_ENGINE._activeModel);
     if (activeLbl)  { activeLbl.textContent = m?.label || AI_ENGINE._activeModel; activeLbl.className = 'badge badge-teal'; }
-    if (activeDesc)   activeDesc.textContent = `Model: ${AI_ENGINE._activeModel}`;
+    if (activeDesc)   activeDesc.textContent = `Otomatis: ${AI_ENGINE._activeModel}`;
+  } else {
+    if (activeLbl)  { activeLbl.textContent = '—'; activeLbl.className = 'badge'; activeLbl.style.cssText = 'background:var(--border-light);color:var(--text-muted);'; }
+    if (activeDesc)   activeDesc.textContent = 'Akan ditentukan otomatis saat Analisis AI dijalankan';
   }
+}
+
+/** Render daftar pilihan model sebagai radio button */
+function _renderModelPicker() {
+  const el = document.getElementById('modelPickerList');
+  if (!el) return;
+
+  const pinned = AI_ENGINE.getPinned();
+
+  const otoRow = `
+    <label class="model-option ${pinned==='auto'?'selected':''}" onclick="_pilihModel('auto')">
+      <input type="radio" name="modelPick" value="auto" ${pinned==='auto'?'checked':''} onchange="_pilihModel('auto')">
+      <div class="model-option-info">
+        <div class="model-option-label">🔄 Otomatis (Rekomendasi)</div>
+        <div class="model-option-note">Coba model satu per satu, skip jika quota habis</div>
+      </div>
+    </label>`;
+
+  const modelRows = CONFIG.GEMINI_MODELS.map(m => `
+    <label class="model-option ${pinned===m.id?'selected':''}" onclick="_pilihModel('${m.id}')">
+      <input type="radio" name="modelPick" value="${m.id}" ${pinned===m.id?'checked':''} onchange="_pilihModel('${m.id}')">
+      <div class="model-option-info">
+        <div class="model-option-label">${m.label}</div>
+        <div class="model-option-note">${m.note}</div>
+      </div>
+      <div class="model-option-id">${m.id}</div>
+    </label>`).join('');
+
+  el.innerHTML = otoRow + modelRows +
+    `<div class="model-auto-note">
+      💡 <strong>Mode Otomatis</strong> disarankan. Jika satu model quota habis, langsung lanjut ke model berikutnya tanpa error.<br>
+      <strong>Mode Manual</strong> berguna jika Anda tahu model mana yang masih tersedia.
+    </div>`;
+}
+
+/** Simpan pilihan model guru */
+function _pilihModel(val) {
+  AI_ENGINE.setPinned(val);
+  /* Re-render agar highlight berubah */
+  _renderModelPicker();
+  /* Update badge model aktif */
+  updateAIKeyStatus();
+  const label = val === 'auto'
+    ? 'Otomatis'
+    : (CONFIG.GEMINI_MODELS.find(m => m.id === val)?.label || val);
+  showToast(`✅ Model dipilih: ${label}`);
 }
 
 /** Simpan API Key */
