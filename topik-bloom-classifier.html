@@ -2774,36 +2774,35 @@ async function startAnalysis(){
   $id('btnRun').disabled=true;$id('aProgress').classList.add('show');$id('aResults').classList.remove('show');clearLog();
   let ok=0,err=0,skip=0;const total=resultData.length;let i=0;
   while(i<total){
-    if(abortFlag){addLog('warn','⏹ Dihentikan.');break;}
+    if(abortFlag){addLog('warn','\u23F9 Dihentikan.');break;}
     const batch=[];let j=i;
     while(j<total&&batch.length<batchSize){
       const row=resultData[j];
-      if(skipFilled&&row['Topik']&&row['Bloom']&&row['Kunci_AI']){skip++;addLog('info','⟶ Soal #'+(row['no']||j+1)+': dilewati');updateProg(j+1,total);j++;continue;}
+      if(skipFilled&&row['Topik']&&row['Bloom']&&row['Kunci_AI']){skip++;addLog('info','\u27B6 Soal #'+(row['no']||j+1)+': dilewati');updateProg(j+1,total);j++;continue;}
       batch.push({idx:j,row});j++;
     }
     i=j;if(!batch.length)continue;
     const labels=batch.map(function(b){return b.row['no']||(b.idx+1);});
-    setProgLabel('Menganalisis soal #'+labels[0]+(labels.length>1?'–#'+labels[labels.length-1]:'')+' ...');
+    setProgLabel('Menganalisis soal #'+labels[0]+(labels.length>1?'\u2013#'+labels[labels.length-1]:'')+' ...');
     try{
       let results;
       if(aMode==='local'){results=batch.map(function(b){return localAnalyze(b.row,mapel,kelas,materiList);});}
       else{results=await callGemini(apiKey,model,batch.map(function(b){return b.row;}),mapel,kelas,materiList);}
       results.forEach(function(res,ri){
         const b=batch[ri],noL=b.row['no']||(b.idx+1);
-        if(res.error){err++;addLog('err','✗ Soal #'+noL+': '+res.error);}
-        else{applyResult(b.row,res);ok++;var _tkbTag=res.tkb_result?('['+(res.tkb_result.source||'?')+' '+( res.tkb_confirms?'✓':res.tkb_override?'↻ '+res.bloom_original+'→'+res.bloom:res.tkb_result.level||'?')+']'):'';addLog('ok','✓ Soal #'+noL+': '+res.topik.split('|')[0].trim()+' · '+res.bloom+' '+_tkbTag+' · Kunci AI: '+res.kunci_ai);}
+        if(res.error){err++;addLog('err','\u2717 Soal #'+noL+': '+res.error);}
+        else{applyResult(b.row,res);ok++;var _t=res.tkb_result?('['+(res.tkb_result.source||'?')+' '+(res.tkb_confirms?'\u2713':res.tkb_override?'\u21BB '+res.bloom_original+'\u2192'+res.bloom:res.tkb_result.level||'?')+']'):'';addLog('ok','\u2713 Soal #'+noL+': '+res.topik.split('|')[0].trim()+' \u00B7 '+res.bloom+' '+_t+' \u00B7 Kunci: '+res.kunci_ai);}
         updateProg(b.idx+1,total);
       });
     }catch(e){
-      batch.forEach(function(b){err++;addLog('err','✗ Soal #'+(b.row['no']||b.idx+1)+': '+e.message);updateProg(b.idx+1,total);});
+      batch.forEach(function(b){err++;addLog('err','\u2717 Soal #'+(b.row['no']||b.idx+1)+': '+e.message);updateProg(b.idx+1,total);});
     }
     if(delay>0&&i<total&&!abortFlag)await sleep(delay);
   }
   $id('sTotal').textContent=total;$id('sOk').textContent=ok;$id('sErr').textContent=err;$id('sSkip').textContent=skip;
-  $id('aResults').classList.add('show');setProgLabel('Selesai — '+ok+' berhasil, '+err+' gagal, '+skip+' dilewati');
+  $id('aResults').classList.add('show');setProgLabel('Selesai \u2014 '+ok+' berhasil, '+err+' gagal, '+skip+' dilewati');
   renderPreview(materiList);
 }
-
 function applyResult(row,res){
   row['Topik']=res.topik||'';row['Bloom']=res.bloom||'';
   row['Kesulitan']=KD_MAP[res.kesulitan]||res.kesulitan||'';
@@ -7282,71 +7281,24 @@ async function _fetchImageAsBase64(url) {
   }
 }
 
+
 /**
- * Bangun array "parts" untuk Gemini API dari satu item soal.
- * Mengembalikan Promise<parts[]> karena mungkin perlu fetch gambar dulu.
+ * Kirim satu soal bergambar ke Gemini — gambar sudah di-fetch sebelumnya
+ * sebagai {base64, mimeType}. imgData bisa null jika gambar gagal dimuat.
+ * Dipisah dari callGemini biasa agar tidak ada buffer banyak gambar sekaligus.
  */
-async function _buildGeminiParts(promptText, items) {
-  // Kumpulkan semua URL gambar unik dari batch items ini
-  var imageMap = {}; // url -> {base64, mimeType} atau {error}
-  var urlsToFetch = [];
-  items.forEach(function(item) {
-    if (item.url_gambar && !imageMap[item.url_gambar]) {
-      urlsToFetch.push(item.url_gambar);
-      imageMap[item.url_gambar] = null; // placeholder
-    }
-  });
+async function callGeminiSingle(apiKey, model, row, mapel, kelas, materiList, imgData) {
+  const item = Object.assign({ no: row['no'] || 1 }, buildPayload(row, mapel, kelas));
+  const prompt = buildPrompt([item], materiList);
 
-  // Fetch semua gambar secara paralel
-  if (urlsToFetch.length > 0) {
-    var fetched = await Promise.all(urlsToFetch.map(function(url) {
-      return _fetchImageAsBase64(url).then(function(result) {
-        return { url: url, result: result };
-      });
-    }));
-    fetched.forEach(function(f) {
-      imageMap[f.url] = f.result;
-    });
+  // Susun parts: teks prompt + gambar (jika berhasil di-fetch)
+  const parts = [{ text: prompt }];
+  if (imgData && imgData.base64) {
+    parts.push({ text: '[GAMBAR SOAL:] Lihat gambar berikut untuk menentukan jawaban, topik, dan level Bloom yang tepat.' });
+    parts.push({ inline_data: { mime_type: imgData.mimeType, data: imgData.base64 } });
   }
 
-  // Susun parts: teks prompt + gambar-gambar yang berhasil di-fetch
-  var parts = [{ text: promptText }];
-  var imageErrors = [];
-  urlsToFetch.forEach(function(url) {
-    var img = imageMap[url];
-    if (img && img.base64) {
-      // Cari nomor soal yang pakai URL ini untuk label konteks
-      var soalNos = items.filter(function(it){ return it.url_gambar === url; }).map(function(it){ return it.no; });
-      parts.push({ text: '[GAMBAR SOAL NO ' + soalNos.join(', ') + ':]' });
-      parts.push({ inline_data: { mime_type: img.mimeType, data: img.base64 } });
-    } else if (img && img.error) {
-      imageErrors.push('Soal dengan url_gambar=' + url + ': ' + img.error);
-    }
-  });
-
-  if (imageErrors.length) {
-    parts.push({ text: '\n[CATATAN: Gambar berikut gagal dimuat — jawab berdasarkan konteks yang tersedia: ' + imageErrors.join('; ') + ']' });
-  }
-
-  return parts;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Override callGemini agar mengirim gambar sebagai inline_data
-// ─────────────────────────────────────────────────────────────────────────────
-var _origCallGemini = callGemini;
-callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
-  const items = rows.map(function(row, idx) {
-    return Object.assign({ no: idx + 1 }, buildPayload(row, mapel, kelas));
-  });
-  const prompt = buildPrompt(items, materiList);
-
-  // Cek apakah ada soal bergambar dalam batch ini
-  const hasImage = items.some(function(it) { return it.url_gambar; });
-
-  const order = [activeModel || model, ...FALLBACK_MODELS.filter(function(m) {
-    return m !== (activeModel || model);
-  })];
+  const order = [activeModel || model, ...FALLBACK_MODELS.filter(function(m) { return m !== (activeModel || model); })];
   let lastErr = 'Terjadi kesalahan.';
 
   for (const tryModel of order) {
@@ -7354,70 +7306,78 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
       try {
         const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tryModel +
                     ':generateContent?key=' + apiKey;
-
-        // Bangun parts dengan gambar jika ada, teks saja jika tidak ada gambar
-        let parts;
-        if (hasImage) {
-          parts = await _buildGeminiParts(prompt, items);
-        } else {
-          parts = [{ text: prompt }];
-        }
-
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: parts }],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: rows.length === 1 ? 600 : 3000
-            }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 600 }
           })
         });
-
         if (!res.ok) {
           const ed = await res.json().catch(function() { return {}; });
           lastErr = friendlyErr((ed.error && ed.error.message) || 'HTTP ' + res.status, res.status);
-          if (res.status === 429 || res.status === 404 || res.status === 403) {
-            addLog('retry', '⟳ ' + tryModel + ': ' + lastErr + ' — model lain...');
-            break;
-          }
+          if (res.status === 429 || res.status === 404 || res.status === 403) { break; }
           if (res.status === 401) throw new Error('API key tidak valid.');
-          if (attempt < MAX_RETRY) {
-            addLog('retry', '⟳ Percobaan ' + attempt + ': ' + lastErr);
-            await sleep(1500 * attempt);
-          }
+          if (attempt < MAX_RETRY) await sleep(1500 * attempt);
           continue;
         }
-
         const data = await res.json();
         const raw = (data.candidates && data.candidates[0] && data.candidates[0].content &&
                      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
                      data.candidates[0].content.parts[0].text) || '';
         const clean = raw.replace(/```json|```/g, '').trim();
         activeModel = tryModel;
-
-        if (rows.length === 1) {
-          const p = JSON.parse(clean);
-          return [normalizeItem(Array.isArray(p) ? p[0] : p, materiList, rows[0])];
-        }
-        const parsed = JSON.parse(clean);
-        if (!Array.isArray(parsed)) throw new Error('Response bukan array');
-        return parsed.map(function(item, ri) { return normalizeItem(item, materiList, rows[ri]); });
-
+        const p = JSON.parse(clean);
+        return [normalizeItem(Array.isArray(p) ? p[0] : p, materiList, row)];
       } catch (e) {
         lastErr = friendlyErr(e.message, 0);
-        if (attempt < MAX_RETRY) {
-          addLog('retry', '⟳ Percobaan ' + attempt + ': ' + lastErr);
-          await sleep(1500 * attempt);
-        }
+        if (attempt < MAX_RETRY) await sleep(1500 * attempt);
       }
     }
   }
-  return rows.map(function() { return { error: lastErr }; });
+  return [{ error: lastErr }];
+}
+
+// Override callGemini agar batch yang mengandung soal bergambar tetap
+// bisa diproses — gambar di-fetch dan dikirim sebagai inline_data base64.
+// Soal teks dalam batch yang sama tidak dipengaruhi.
+var _origCallGemini = callGemini;
+callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
+  // Trigger gambar berdasarkan ada/tidaknya vrl_gambar — bukan tipe soal.
+  // pg_teks/esai dengan vrl_gambar → gambar di-fetch dan dikirim ke Gemini.
+  // Soal tanpa vrl_gambar → batch teks biasa, tidak ada overhead apapun.
+  const hasImage = rows.some(function(r){ return String(r['vrl_gambar']||'').trim(); });
+
+  if (!hasImage) return _origCallGemini(apiKey, model, rows, mapel, kelas, materiList);
+
+  const results = new Array(rows.length);
+  const textBatch = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const imgUrl = String(row['vrl_gambar']||'').trim();
+    if (imgUrl) {
+      let imgData = null;
+      try {
+        imgData = await _fetchImageAsBase64(imgUrl);
+        if (imgData && imgData.error) imgData = null;
+      } catch(e) { imgData = null; }
+      const r = await callGeminiSingle(apiKey, model, row, mapel, kelas, materiList, imgData);
+      results[i] = r[0];
+    } else {
+      textBatch.push({ idx: i, row: row });
+    }
+  }
+
+  if (textBatch.length > 0) {
+    const textRows = textBatch.map(function(b){ return b.row; });
+    const textResults = await _origCallGemini(apiKey, model, textRows, mapel, kelas, materiList);
+    textBatch.forEach(function(b, ri) { results[b.idx] = textResults[ri]; });
+  }
+
+  return results;
 };
-
-
 
 // ─── PATCH aKelas change event binding ────────────────────────────────────────
 // The original aKelas listener in DOMContentLoaded binds to onAKelasChange
