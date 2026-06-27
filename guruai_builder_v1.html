@@ -1426,6 +1426,22 @@ h1,h2,h3,h4 { color: var(--text-primary); }
             </div>
             <span id="aiKeyBadge" class="badge" style="background:rgba(239,68,68,.12);color:#DC2626;">Tidak Ada</span>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <h4>Model Aktif</h4>
+              <p id="activeModelDesc">Akan ditentukan otomatis saat Analisis AI dijalankan</p>
+            </div>
+            <span id="activeModelLabel" class="badge" style="background:var(--border-light);color:var(--text-muted);">—</span>
+          </div>
+        </div>
+
+        <!-- Fallback Chain -->
+        <div class="settings-group">
+          <div class="settings-group-title">🔄 Urutan Model Fallback Otomatis</div>
+          <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px;padding-bottom:14px;">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Aplikasi mencoba model dari atas ke bawah. Jika quota habis (429), otomatis lanjut ke model berikutnya.</p>
+            <div id="modelChainList"></div>
+          </div>
         </div>
 
         <!-- API Key -->
@@ -1502,7 +1518,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
    ============================================================ */
 const CONFIG = {
   APP_NAME: 'GuruAI Builder',
-  VERSION: '1.2.0',
+  VERSION: '1.2.1',
   /* IndexedDB — penyimpanan utama */
   DB_NAME:    'guruai_idb',
   DB_VERSION: 1,
@@ -1510,12 +1526,20 @@ const CONFIG = {
   /* localStorage — fallback */
   LS_KEY:      'guruai_data',
   LS_SETTINGS: 'guruai_settings',
-  LS_AI_KEY:   'guruai_ai_key',   /* API Key Gemini */
+  LS_AI_KEY:   'guruai_ai_key',
   /* File project */
   PROJECT_EXT: '.gaib',
   TOAST_DURATION: 3000,
-  /* Gemini API */
-  GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  /* Gemini — fallback chain: coba urut dari atas, skip jika quota habis (429) */
+  GEMINI_BASE: 'https://generativelanguage.googleapis.com/v1beta/models/',
+  GEMINI_MODELS: [
+    { id: 'gemini-2.5-flash-lite-preview-06-17', label: 'Gemini 2.5 Flash Lite' },
+    { id: 'gemini-2.5-flash',                    label: 'Gemini 2.5 Flash'      },
+    { id: 'gemini-2.0-flash-lite',               label: 'Gemini 2.0 Flash Lite' },
+    { id: 'gemini-2.0-flash',                    label: 'Gemini 2.0 Flash'      },
+    { id: 'gemini-1.5-flash',                    label: 'Gemini 1.5 Flash'      },
+    { id: 'gemini-1.5-flash-8b',                 label: 'Gemini 1.5 Flash 8B'   },
+  ],
 };
 
 /* ============================================================
@@ -1993,7 +2017,7 @@ const AI_CACHE = {
 
 /* ============================================================
    AI_ENGINE — Semua komunikasi ke Gemini melalui modul ini.
-   Arsitektur terbuka: tinggal tambah provider lain di sini.
+   Otomatis mencoba model berikutnya jika quota habis (HTTP 429).
    ============================================================ */
 const AI_ENGINE = {
 
@@ -2008,116 +2032,157 @@ Hasilkan HANYA JSON. Jangan menggunakan Markdown. Jangan memberikan penjelasan. 
 Format output WAJIB:
 {"elemen":[{"nama":"string","topik":[{"judul":"string","tujuanPembelajaran":"string","materiPokok":["string"],"estimasiJP":4}]}]}`,
 
-  /** Ambil API Key dari localStorage */
-  getKey() {
-    return localStorage.getItem(CONFIG.LS_AI_KEY) || '';
-  },
+  /** Model yang berhasil dipakai terakhir — disimpan agar sesi berikutnya mulai dari sini */
+  _activeModel: null,
 
-  /** Simpan API Key */
-  saveKey(key) {
-    if (key) localStorage.setItem(CONFIG.LS_AI_KEY, key);
-    else      localStorage.removeItem(CONFIG.LS_AI_KEY);
-  },
+  /** Ambil API Key */
+  getKey()  { return localStorage.getItem(CONFIG.LS_AI_KEY) || ''; },
+  saveKey(k){ k ? localStorage.setItem(CONFIG.LS_AI_KEY, k) : localStorage.removeItem(CONFIG.LS_AI_KEY); },
+  hasKey()  { return !!this.getKey(); },
 
-  /** Cek apakah API Key tersedia */
-  hasKey() {
-    return !!this.getKey();
+  /** Buat URL endpoint untuk model tertentu */
+  _url(modelId) {
+    return `${CONFIG.GEMINI_BASE}${modelId}:generateContent?key=${this.getKey()}`;
   },
 
   /**
-   * Analisis CP menggunakan Gemini.
-   * Return: { topik[], tp[], materi[], elemen[], sumber:'gemini' }
-   * Throw: Error jika gagal
+   * Kirim request ke SATU model.
+   * Return: { ok, data, status, modelId }
    */
-  async analyzeCP(cpTeks, konteks = {}) {
-    const key = this.getKey();
-    if (!key) throw new Error('API Key Gemini belum diisi. Isi di menu AI Settings.');
+  async _call(modelId, body) {
+    try {
+      const res = await fetch(this._url(modelId), {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data, modelId };
+    } catch(e) {
+      /* Network error */
+      return { ok: false, status: 0, data: { _netErr: e.message }, modelId };
+    }
+  },
 
-    const userPrompt = `Mata Pelajaran: ${konteks.mapel || '—'}
-Fase: ${konteks.fase || '—'} | Kelas: ${konteks.kelas || '—'}
+  /**
+   * Coba semua model secara berurutan.
+   * Skip model jika HTTP 429 (quota) atau 503 (overloaded).
+   * Throw jika semua gagal.
+   * Return: { data, modelId, modelLabel }
+   */
+  async _callWithFallback(body, onProgress) {
+    const models = CONFIG.GEMINI_MODELS;
 
-CAPAIAN PEMBELAJARAN:
-${cpTeks}`;
+    /* Mulai dari model yang terakhir berhasil agar lebih cepat */
+    const lastIdx = this._activeModel
+      ? models.findIndex(m => m.id === this._activeModel)
+      : -1;
+    const sorted = lastIdx > 0
+      ? [...models.slice(lastIdx), ...models.slice(0, lastIdx)]
+      : models;
 
-    const body = {
-      contents: [
-        { role: 'user', parts: [{ text: this.SYSTEM_PROMPT + '\n\n' + userPrompt }] },
-      ],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
-    };
+    const errors = [];
 
-    const res = await fetch(`${CONFIG.GEMINI_URL}?key=${key}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    });
+    for (const model of sorted) {
+      if (onProgress) onProgress(`Mencoba ${model.label}...`);
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const msg = err?.error?.message || `HTTP ${res.status}`;
+      const result = await this._call(model.id, body);
+
+      if (result.ok) {
+        /* Sukses — catat model aktif */
+        this._activeModel = model.id;
+        updateModelStatus(model);   /* update UI */
+        return { data: result.data, modelId: model.id, modelLabel: model.label };
+      }
+
+      /* 429 quota / 503 overloaded → skip ke model berikutnya */
+      if (result.status === 429 || result.status === 503) {
+        const msg = result.data?.error?.message || `HTTP ${result.status}`;
+        errors.push(`${model.label}: quota/overloaded`);
+        continue;
+      }
+
+      /* Error lain (401 key salah, 400 bad request) → langsung throw */
+      const msg = result.data?.error?.message || result.data?._netErr || `HTTP ${result.status}`;
       throw new Error(msg);
     }
 
-    const data = await res.json();
-    const raw  = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    return this._parseGeminiJSON(raw, cpTeks);
+    /* Semua model gagal karena quota */
+    throw new Error(
+      'Semua model Gemini sedang mencapai batas quota.\n' +
+      'Coba lagi beberapa saat atau gunakan Analisis Lokal.'
+    );
   },
 
   /**
-   * Parse JSON output Gemini → format STATE_ANALISIS
+   * Analisis CP — otomatis fallback antar model.
    */
-  _parseGeminiJSON(raw, cpTeks) {
-    /* Bersihkan kemungkinan markdown fence */
+  async analyzeCP(cpTeks, konteks = {}, onProgress) {
+    if (!this.hasKey()) throw new Error('API Key Gemini belum diisi. Buka menu AI Settings.');
+
+    const userPrompt =
+      `Mata Pelajaran: ${konteks.mapel || '—'}\n` +
+      `Fase: ${konteks.fase || '—'} | Kelas: ${konteks.kelas || '—'}\n\n` +
+      `CAPAIAN PEMBELAJARAN:\n${cpTeks}`;
+
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: this.SYSTEM_PROMPT + '\n\n' + userPrompt }] }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+    };
+
+    const { data, modelId, modelLabel } = await this._callWithFallback(body, onProgress);
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const hasil = this._parseGeminiJSON(raw);
+    hasil.modelLabel = modelLabel;
+    return hasil;
+  },
+
+  /** Parse JSON output Gemini → format STATE_ANALISIS */
+  _parseGeminiJSON(raw) {
     const clean = raw.replace(/```json|```/gi, '').trim();
     let parsed;
-    try {
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      throw new Error('Output Gemini bukan JSON valid. Coba analisis ulang.');
-    }
+    try { parsed = JSON.parse(clean); }
+    catch(e) { throw new Error('Output Gemini bukan JSON valid. Coba analisis ulang.'); }
 
-    const elemen  = parsed.elemen ?? [];
-    const topik   = [];
-    const tp      = [];
-    const materi  = [];
-
+    const elemen = parsed.elemen ?? [];
+    const topik = [], tp = [], materi = [];
     elemen.forEach(el => {
       (el.topik || []).forEach(t => {
-        if (t.judul)               topik.push(t.judul);
-        if (t.tujuanPembelajaran)  tp.push(t.tujuanPembelajaran);
+        if (t.judul)              topik.push(t.judul);
+        if (t.tujuanPembelajaran) tp.push(t.tujuanPembelajaran);
         (t.materiPokok || []).forEach(m => { if (m) materi.push(m); });
       });
     });
-
     return { topik, tp, materi, elemen, sumber: 'gemini' };
   },
 
   /**
-   * Test koneksi ke Gemini — kirim prompt minimal
+   * Test koneksi — coba satu model saja (model pertama yang ada).
+   * Jika quota, coba model berikutnya.
    */
-  async testConnection() {
-    const key = this.getKey();
-    if (!key) throw new Error('API Key belum diisi.');
-
+  async testConnection(onProgress) {
+    if (!this.hasKey()) throw new Error('API Key belum diisi.');
     const body = {
       contents: [{ role: 'user', parts: [{ text: 'Balas hanya dengan: OK' }] }],
-      generationConfig: { maxOutputTokens: 10 },
+      generationConfig: { maxOutputTokens: 5 },
     };
-
-    const res = await fetch(`${CONFIG.GEMINI_URL}?key=${key}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${res.status}`);
-    }
-    return true;
+    const { modelLabel } = await this._callWithFallback(body, onProgress);
+    return modelLabel;
   },
 };
+
+/** Update tampilan model aktif di UI — dipanggil dari _callWithFallback */
+function updateModelStatus(model) {
+  const el = document.getElementById('activeModelLabel');
+  if (el) {
+    el.textContent = model.label;
+    el.className   = 'badge badge-teal';
+  }
+  const desc = document.getElementById('activeModelDesc');
+  if (desc) desc.textContent = `Model: ${model.id}`;
+}
+
+
 
 
 /* ============================================================
@@ -2303,7 +2368,7 @@ function analisisLokal() {
   }, 500);
 }
 
-/** Tombol Analisis AI (Gemini) */
+/** Tombol Analisis AI (Gemini) — otomatis fallback antar model */
 async function analisisAI() {
   const cp = document.getElementById('f-cp').value.trim();
   if (!cp) { showToast('Tempelkan teks CP terlebih dahulu', 'error'); return; }
@@ -2323,21 +2388,26 @@ async function analisisAI() {
   }
 
   _setAnalisisBusy(true);
-  document.getElementById('btnAnalisisAI').innerHTML =
-    '<div class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:white;display:inline-block;"></div> Menganalisis dengan Gemini...';
+  const btnAI = document.getElementById('btnAnalisisAI');
+
+  /* Callback progress — update teks tombol saat mencoba model */
+  const onProgress = (msg) => {
+    if (btnAI) btnAI.innerHTML =
+      '<div class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:white;width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div>' + msg;
+  };
+  onProgress('Menghubungi Gemini...');
 
   try {
-    const hasil = await AI_ENGINE.analyzeCP(cp, _getKonteks());
+    const hasil = await AI_ENGINE.analyzeCP(cp, _getKonteks(), onProgress);
     /* Simpan ke cache */
     AI_CACHE.set(cp, hasil);
     _terapkanHasilAnalisis(hasil);
-    showToast(`✨ Gemini: ${hasil.topik.length} topik, ${hasil.tp.length} TP ditemukan`);
+    showToast(`✨ ${hasil.modelLabel || 'Gemini'}: ${hasil.topik.length} topik, ${hasil.tp.length} TP`);
   } catch(e) {
     _setAnalisisBusy(false);
     showToast(`❌ ${e.message}`, 'error');
-    /* Tawarkan fallback lokal */
     setTimeout(() => {
-      if (confirm('Gagal menggunakan Gemini.\n\nGunakan Analisis Lokal sebagai pengganti?')) {
+      if (confirm('Semua model Gemini tidak tersedia.\n\nGunakan Analisis Lokal sebagai pengganti?')) {
         analisisLokal();
       }
     }, 300);
@@ -3508,26 +3578,50 @@ async function restoreRPPM() {
    AI SETTINGS — Fungsi halaman AI Settings
    ============================================================ */
 
-/** Update tampilan status API Key di halaman AI Settings */
+/** Update tampilan status API Key dan model chain di halaman AI Settings */
 function updateAIKeyStatus() {
   const hasKey = AI_ENGINE.hasKey();
   const status = document.getElementById('aiKeyStatus');
   const badge  = document.getElementById('aiKeyBadge');
-  if (!status || !badge) return;
-  if (hasKey) {
-    const key = AI_ENGINE.getKey();
-    const masked = key.slice(0, 8) + '••••••••' + key.slice(-4);
-    status.textContent  = `Terkonfigurasi: ${masked}`;
-    badge.textContent   = 'Aktif ✓';
-    badge.style.cssText = '';
-    badge.className     = 'badge badge-teal';
-    const inp = document.getElementById('inputApiKey');
-    if (inp) inp.value = key;
-  } else {
-    status.textContent  = 'Belum dikonfigurasi';
-    badge.textContent   = 'Tidak Ada';
-    badge.className     = 'badge';
-    badge.style.cssText = 'background:rgba(239,68,68,.12);color:#DC2626;';
+  if (status && badge) {
+    if (hasKey) {
+      const key    = AI_ENGINE.getKey();
+      const masked = key.slice(0, 8) + '••••••••' + key.slice(-4);
+      status.textContent  = `Terkonfigurasi: ${masked}`;
+      badge.textContent   = 'Aktif ✓';
+      badge.style.cssText = '';
+      badge.className     = 'badge badge-teal';
+      const inp = document.getElementById('inputApiKey');
+      if (inp) inp.value = key;
+    } else {
+      status.textContent  = 'Belum dikonfigurasi';
+      badge.textContent   = 'Tidak Ada';
+      badge.className     = 'badge';
+      badge.style.cssText = 'background:rgba(239,68,68,.12);color:#DC2626;';
+    }
+  }
+
+  /* Render daftar model fallback chain */
+  const listEl = document.getElementById('modelChainList');
+  if (listEl) {
+    listEl.innerHTML = CONFIG.GEMINI_MODELS.map((m, i) => {
+      const isActive = AI_ENGINE._activeModel === m.id;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-light);">
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:18px;">${i+1}</span>
+        <span style="flex:1;font-size:12.5px;font-weight:${isActive?700:400};color:${isActive?'var(--accent-dark)':'var(--text-primary)'};">${m.label}</span>
+        <span style="font-size:10.5px;color:var(--text-muted);font-family:monospace;">${m.id}</span>
+        ${isActive ? '<span class="badge badge-teal" style="font-size:10px;">Aktif ✓</span>' : ''}
+      </div>`;
+    }).join('');
+  }
+
+  /* Update badge model aktif */
+  const activeLbl  = document.getElementById('activeModelLabel');
+  const activeDesc = document.getElementById('activeModelDesc');
+  if (AI_ENGINE._activeModel) {
+    const m = CONFIG.GEMINI_MODELS.find(x => x.id === AI_ENGINE._activeModel);
+    if (activeLbl)  { activeLbl.textContent = m?.label || AI_ENGINE._activeModel; activeLbl.className = 'badge badge-teal'; }
+    if (activeDesc)   activeDesc.textContent = `Model: ${AI_ENGINE._activeModel}`;
   }
 }
 
@@ -3552,7 +3646,7 @@ function toggleApiKeyVisibility() {
   else                          { inp.type = 'password'; if (btn) btn.textContent = '👁️'; }
 }
 
-/** Test koneksi ke Gemini */
+/** Test koneksi ke Gemini — dengan fallback otomatis */
 async function testKoneksiAI() {
   const btn = document.getElementById('btnTestAI');
   const res = document.getElementById('testResult');
@@ -3560,13 +3654,16 @@ async function testKoneksiAI() {
   if (res)   res.style.display = 'none';
 
   try {
-    await AI_ENGINE.testConnection();
+    const modelLabel = await AI_ENGINE.testConnection(msg => {
+      if (btn) btn.textContent = '📡 ' + msg;
+    });
     if (res) {
       res.style.cssText = 'display:block;padding:10px 12px;border-radius:6px;font-size:12.5px;' +
         'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;margin-top:8px;';
-      res.textContent = '✅ Koneksi berhasil! API Key valid dan Gemini merespons.';
+      res.textContent = `✅ Koneksi berhasil! Model aktif: ${modelLabel}`;
     }
-    showToast('✅ Koneksi ke Gemini berhasil!');
+    showToast(`✅ Koneksi OK — ${modelLabel}`);
+    updateAIKeyStatus();
   } catch(e) {
     if (res) {
       res.style.cssText = 'display:block;padding:10px 12px;border-radius:6px;font-size:12.5px;' +
