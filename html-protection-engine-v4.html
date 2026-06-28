@@ -669,9 +669,79 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
       const enc=await aesEncrypt(bodyContent,pass);
       encPayload=JSON.stringify(enc);
 
-      decryptBlock=`\n<script id="_aes_dec" data-pid="${id}" data-enc="aes256">\n(function(){\nasync function _dec(){\ntry{\nvar _payload=${obfStr(encPayload)};\nvar _ep=JSON.parse(_payload);\nvar _pass=sessionStorage.getItem('_up_${id.replace(/-/g,'_')}');\nif(!_pass){_pass=prompt('\uD83D\uDD10 Masukkan password untuk membuka aplikasi:');}\nif(!_pass){document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>Akses Ditolak<\/h2><p>Password diperlukan.<\/p><\/div>';return;}\nsessionStorage.setItem('_up_${id.replace(/-/g,'_')}',_pass);\nvar _enc=new TextEncoder();var _dec2=new TextDecoder();\nvar _salt=Uint8Array.from(atob(_ep.salt),function(c){return c.charCodeAt(0)});\nvar _iv=Uint8Array.from(atob(_ep.iv),function(c){return c.charCodeAt(0)});\nvar _ct=Uint8Array.from(atob(_ep.ct),function(c){return c.charCodeAt(0)}).buffer;\nvar _km=await crypto.subtle.importKey('raw',_enc.encode(_pass),{name:'PBKDF2'},false,['deriveKey']);\nvar _key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:_salt,iterations:310000,hash:'SHA-256'},_km,{name:'AES-GCM',length:256},false,['decrypt']);\nvar _plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:_iv},_key,_ct);\nvar _b=document.getElementById('_aes_body');if(_b)_b.innerHTML=_dec2.decode(_plain);\n}catch(_e){sessionStorage.removeItem('_up_${id.replace(/-/g,'_')}');document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>Password Salah<\/h2><p>Muat ulang halaman dan coba lagi.<\/p><\/div>';}\n}\ndocument.addEventListener('DOMContentLoaded',_dec);\n})();\n<\/script>\n`;
+      // Siapkan hash lisensi jika aktif — terintegrasi di satu script runtime
+      const useLic=document.getElementById('o-license').checked && !!licKey;
+      const licHash=useLic ? await sha256(licKey+id) : '';
+      const sessId='_up_'+id.replace(/-/g,'_');
 
-      body.innerHTML=`<div id="_aes_body" style="display:contents"></div>`;
+      // Payload disimpan sebagai JSON.stringify — tidak pakai obfStr agar tidak ada batas ukuran
+      decryptBlock=`
+<script id="_aes_runtime" data-pid="${id}" data-enc="aes256">
+(function(){
+'use strict';
+var _EP=${JSON.stringify(encPayload)};
+var _LH=${JSON.stringify(licHash)};
+var _LID=${JSON.stringify(id)};
+var _SID=${JSON.stringify(sessId)};
+var _useLic=${useLic?'true':'false'};
+
+function _showErr(title,msg){
+  document.open();
+  document.write('<!DOCTYPE html><html><head><meta charset=UTF-8><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}div{text-align:center;padding:2rem}</style></head><body><div><h2>'+title+'<\/h2><p style="color:#666">'+msg+'<\/p><\/div><\/body><\/html>');
+  document.close();
+}
+
+async function _verifyLic(){
+  if(!_useLic||!_LH)return true;
+  var _saved=localStorage.getItem('_lic_'+_LID);
+  if(_saved===_LH)return true;
+  var _input=prompt('\uD83D\uDD11 Masukkan kunci lisensi untuk mengaktifkan aplikasi:');
+  if(!_input){_showErr('Lisensi Diperlukan','Hubungi pemilik untuk mendapatkan kunci lisensi.');return false;}
+  var _buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(_input+_LID));
+  var _h=Array.from(new Uint8Array(_buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  if(_h===_LH){localStorage.setItem('_lic_'+_LID,_LH);return true;}
+  _showErr('Lisensi Tidak Valid','Kunci yang dimasukkan salah. Hubungi pemilik.');
+  return false;
+}
+
+async function _doDecrypt(){
+  try{
+    var _ep=JSON.parse(_EP);
+    var _pass=sessionStorage.getItem(_SID);
+    if(!_pass){_pass=prompt('\uD83D\uDD10 Masukkan password untuk membuka aplikasi:');}
+    if(!_pass){_showErr('Akses Ditolak','Password diperlukan untuk membuka aplikasi ini.');return;}
+    sessionStorage.setItem(_SID,_pass);
+    var _salt=Uint8Array.from(atob(_ep.salt),function(c){return c.charCodeAt(0);});
+    var _iv=Uint8Array.from(atob(_ep.iv),function(c){return c.charCodeAt(0);});
+    var _ct=Uint8Array.from(atob(_ep.ct),function(c){return c.charCodeAt(0);}).buffer;
+    var _km=await crypto.subtle.importKey('raw',new TextEncoder().encode(_pass),{name:'PBKDF2'},false,['deriveKey']);
+    var _key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:_salt,iterations:310000,hash:'SHA-256'},_km,{name:'AES-GCM',length:256},false,['decrypt']);
+    var _plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:_iv},_key,_ct);
+    var _decoded=new TextDecoder().decode(_plain);
+    document.open();
+    document.write(_decoded);
+    document.close();
+  }catch(_e){
+    sessionStorage.removeItem(_SID);
+    _showErr('Password Salah','Muat ulang halaman dan coba lagi.');
+  }
+}
+
+async function _boot(){
+  var _ok=await _verifyLic();
+  if(!_ok)return;
+  await _doDecrypt();
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',_boot);
+}else{
+  _boot();
+}
+})();
+<\/script>
+`;
+      body.innerHTML='<noscript>Aktifkan JavaScript untuk menjalankan aplikasi ini.</noscript>';
       html=doc.documentElement.outerHTML;
     }
   }
@@ -680,21 +750,17 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
 
   let integrityBlock='';
   if(document.getElementById('o-integrity').checked){
-    // Hash dari konten penting (scripts + meta)
     const hashSource=scripts.join('')+encPayload+id+owner;
     const intHash=await sha256(hashSource);
-    integrityBlock=`\n<script data-integrity="${intHash.substring(0,16)}">\n(function(){\nvar _h=${obfStr(intHash)};\nvar _s=document.querySelector('script[data-pid]');\nif(!_s){return;}\n// Anti-tamper: verifikasi atribut pid masih ada\nif(!_s.getAttribute('data-pid')){document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>\u26a0 File Rusak<\/h2><p>Integritas file tidak valid. File mungkin telah dimodifikasi.<\/p><\/div>';}\n})();\n<\/script>\n`;
+    integrityBlock=`\n<script data-integrity="${intHash.substring(0,16)}">\n(function(){var _s=document.querySelector('script[data-pid]');if(!_s||!_s.getAttribute('data-pid')){document.open();document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:5rem"><h2>\u26a0 File Rusak<\/h2><p>Integritas file tidak valid.<\/p><\/body><\/html>');document.close();}})();\n<\/script>\n`;
   }
 
-  await sleep(100); setProgress('p',72,'Menyiapkan sistem lisensi...');
+  await sleep(100); setProgress('p',72,'Finalisasi sistem keamanan...');
 
+  // licenseBlock sudah terintegrasi ke dalam _aes_runtime di atas
   let licenseBlock='';
-  if(document.getElementById('o-license').checked && licKey){
-    const licHash=await sha256(licKey+id);
-    licenseBlock=`\n<script data-license="true">\n(function(){\nvar _lh=${obfStr(licHash)};\nvar _lid=${obfStr(id)};\nasync function _chkLic(){\nvar _saved=localStorage.getItem('_lic_'+_lid);\nif(_saved===_lh){return;}\nvar _input=prompt('\uD83D\uDD11 Masukkan kunci lisensi untuk mengaktifkan aplikasi:');\nif(!_input){document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>Lisensi Diperlukan<\/h2><p>Hubungi pemilik untuk mendapatkan kunci lisensi.<\/p><\/div>';return;}\nvar _enc=new TextEncoder();\nvar _hbuf=await crypto.subtle.digest('SHA-256',_enc.encode(_input+_lid));\nvar _h=Array.from(new Uint8Array(_hbuf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');\nif(_h===_lh){localStorage.setItem('_lic_'+_lid,_lh);}else{document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>Lisensi Tidak Valid<\/h2><p>Kunci yang dimasukkan salah. Hubungi pemilik.<\/p><\/div>';}\n}\ndocument.addEventListener('DOMContentLoaded',_chkLic);\n})();\n<\/script>\n`;
-  }
 
-  await sleep(80); setProgress('p',82,'Obfuskasi & finalisasi...');
+await sleep(80); setProgress('p',82,'Obfuskasi & finalisasi...');
 
   let allScript=scripts.join('\n');
   if(document.getElementById('o-obfuscate').checked){
@@ -752,8 +818,8 @@ async function runDecrypt(){
 
   await sleep(100); setProgress('d',20,'Menganalisis file...');
 
-  // Cari payload AES di file
-  const encMatch=fc.match(/var\s+_payload=(\[[\d,]+\]\.map[^;]+);/);
+  // Cari payload AES — format baru: var _EP="..." (JSON.stringify)
+  const encMatch=fc.match(/var\s+_EP=("(?:[^"\\]|\\.)*");/);
   const pidMatch=fc.match(/data-pid="([^"]+)"/);
 
   await sleep(150); setProgress('d',45,'Mencoba mendekripsi AES-256-GCM...');
@@ -765,34 +831,31 @@ async function runDecrypt(){
   }
 
   try{
-    const payloadStr=eval(encMatch[1]);
-    const encData=JSON.parse(payloadStr);
+    // Parse payload langsung dari JSON string
+    const encPayloadStr=JSON.parse(encMatch[1]);
+    const encData=JSON.parse(encPayloadStr);
     const result=await aesDecrypt(encData,pass);
 
     if(!result||result.trim().length<5)throw new Error('Password salah');
 
     await sleep(120); setProgress('d',68,'Memulihkan struktur HTML...');
 
+    // Rekonstruksi file asli: ambil head yang sudah bersih, gabung dengan konten terdekripsi
     const parser=new DOMParser();
     const doc=parser.parseFromString(fc,'text/html');
 
-    doc.querySelectorAll('script[data-pid],script[data-enc],script[data-license],script[data-integrity]').forEach(el=>el.remove());
+    // Hapus semua elemen proteksi dari head
+    doc.querySelectorAll('script[data-pid],script[id="_aes_runtime"],script[data-enc],script[data-license],script[data-integrity]').forEach(el=>el.remove());
     doc.querySelectorAll('span[data-wm]').forEach(el=>el.remove());
     doc.querySelectorAll('meta[name="protection-id"],meta[name="owner-id"],meta[name="contact"],meta[name="copyright"]').forEach(el=>el.remove());
 
-    const aesBody=doc.getElementById('_aes_body');
-    if(aesBody){
-      const temp=doc.createElement('div');
-      temp.innerHTML=result;
-      while(temp.firstChild)aesBody.parentNode.insertBefore(temp.firstChild,aesBody);
-      aesBody.remove();
-    }else if(doc.body){
-      doc.body.innerHTML=result;
-    }
+    // Rekonstruksi body dari konten terdekripsi
+    const headHtml=doc.head.outerHTML;
+    let finalHtml='<!DOCTYPE html>\n<html'+(doc.documentElement.lang?' lang="'+doc.documentElement.lang+'"':'')+'>\n'+headHtml+'\n<body>\n'+result+'\n</body>\n</html>';
 
-    let finalHtml='<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
+    // Bersihkan komentar watermark
     finalHtml=finalHtml.replace(/\n?<!--\s*={5,}[\s\S]*?={5,}\s*-->/g,'');
-    finalHtml=finalHtml.replace(/\n?<!--\s*\[PROTECTED:[\s\S]*?\][\s\S]*?-->/g,'');
+    finalHtml=finalHtml.replace(/\n?<!--\s*\[PROTECTED:[\s\S]*?\]\s*-->/g,'');
     finalHtml=finalHtml.replace(/\n?<!--\s*OWNER-PROOF:[\s\S]*?-->/g,'');
 
     await sleep(100); setProgress('d',100,'Dekripsi berhasil!');
