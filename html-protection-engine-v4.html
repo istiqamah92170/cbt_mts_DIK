@@ -160,21 +160,21 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
       </div>
     </div>
 
-    <p class="section-label">Password enkripsi AES-256 <span class="tag-secure">WAJIB</span></p>
+    <p class="section-label">Password enkripsi AES-256 <span class="tag-secure">UNTUK DEKRIPSI</span></p>
     <div class="input-grid">
       <div class="input-group input-full">
-        <label>Password (minimal 12 karakter — tidak tersimpan di file hasil)</label>
+        <label>Password dekripsi (untuk membuka file ini kembali via tab Dekripsi — tidak ditampilkan ke pengguna)</label>
         <div class="pass-wrap">
-          <input type="password" id="p-pass" placeholder="Buat password yang kuat..." oninput="checkStrength(this.value)" autocomplete="new-password">
+          <input type="password" id="p-pass" placeholder="Password untuk membuka kunci file nanti (min. 8 karakter)..." oninput="checkStrength(this.value)" autocomplete="new-password">
           <button class="pass-toggle" onclick="togglePass('p-pass',this)" title="Tampilkan password">👁</button>
         </div>
         <div class="strength-bar" id="strength-bar"></div>
         <div class="strength-label" id="strength-label" style="color:var(--muted);">Masukkan password untuk melihat kekuatannya</div>
       </div>
       <div class="input-group input-full">
-        <label>Konfirmasi password</label>
+        <label>Konfirmasi password dekripsi</label>
         <div class="pass-wrap">
-          <input type="password" id="p-pass2" placeholder="Ulangi password yang sama" autocomplete="new-password">
+          <input type="password" id="p-pass2" placeholder="Ulangi password dekripsi" autocomplete="new-password">
           <button class="pass-toggle" onclick="togglePass('p-pass2',this)" title="Tampilkan password">👁</button>
         </div>
       </div>
@@ -221,7 +221,7 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
         <input type="checkbox" id="o-encrypt" checked>
         <div class="opt-info">
           <div class="opt-header"><span class="opt-name">Enkripsi AES-256-GCM</span><span class="badge badge-pro">PRO</span><span class="badge badge-new">Baru</span></div>
-          <div class="opt-desc">Enkripsi militer via Web Crypto API. Password tidak tersimpan di file — hanya salt + IV + ciphertext. Jauh lebih kuat dari XOR.</div>
+          <div class="opt-desc">Enkripsi militer AES-256-GCM. Konten terdekripsi otomatis saat dibuka — pengguna tidak perlu memasukkan password apapun. Password hanya dipakai oleh kamu untuk membuka file kembali via tab Dekripsi.</div>
         </div>
       </label>
 
@@ -234,10 +234,10 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
       </label>
 
       <label class="opt-card">
-        <input type="checkbox" id="o-license" checked>
+        <input type="checkbox" id="o-license">
         <div class="opt-info">
           <div class="opt-header"><span class="opt-name">Verifikasi lisensi aktivasi</span><span class="badge badge-pro">PRO</span><span class="badge badge-new">Baru</span></div>
-          <div class="opt-desc">Aplikasi meminta kunci lisensi saat pertama dibuka. Tanpa kunci yang benar, konten tidak ditampilkan.</div>
+          <div class="opt-desc">Opsional: aplikasi meminta kunci lisensi saat pertama dibuka. Aktifkan hanya jika ingin membatasi distribusi ke sekolah/pengguna tertentu saja.</div>
         </div>
       </label>
 
@@ -562,11 +562,18 @@ async function runProtect(){
   const id=uid();
   const date=new Date().toISOString().split('T')[0];
 
-  // Validasi password WAJIB
+  // Password opsional — jika kosong, auto-generate agar konten tetap terenkripsi
+  // Pengguna akhir TIDAK pernah diminta password saat membuka aplikasi
   if(document.getElementById('o-encrypt').checked){
-    if(!pass){showAlert('p','err','Password wajib diisi untuk menggunakan enkripsi AES-256.');return;}
-    if(pass.length<12){showAlert('p','err','Password minimal 12 karakter untuk keamanan optimal.');return;}
-    if(pass!==pass2){showAlert('p','err','Konfirmasi password tidak cocok.');return;}
+    if(pass && pass!==pass2){showAlert('p','err','Konfirmasi password tidak cocok.');return;}
+    if(pass && pass.length<8){showAlert('p','err','Password minimal 8 karakter.');return;}
+    if(!pass){
+      // Auto-generate password dari uid + timestamp — disimpan di alert hasil agar kamu catat
+      pass=uid()+'-'+Date.now().toString(36).toUpperCase();
+      document.getElementById('p-pass').value=pass;
+      document.getElementById('p-pass2').value=pass;
+      checkStrength(pass);
+    }
   }
 
   const btn=document.getElementById('btn-protect');
@@ -674,20 +681,21 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
       const licHash=useLic ? await sha256(licKey+id) : '';
       const sessId='_up_'+id.replace(/-/g,'_');
 
-      // Payload disimpan sebagai JSON.stringify — tidak pakai obfStr agar tidak ada batas ukuran
+      // Password tertanam di file (bukan ditampilkan ke user) — dekripsi otomatis saat dibuka
+      // Pengguna akhir tidak perlu memasukkan apapun
       decryptBlock=`
 <script id="_aes_runtime" data-pid="${id}" data-enc="aes256">
 (function(){
 'use strict';
 var _EP=${JSON.stringify(encPayload)};
+var _PW=${JSON.stringify(pass)};
 var _LH=${JSON.stringify(licHash)};
 var _LID=${JSON.stringify(id)};
-var _SID=${JSON.stringify(sessId)};
 var _useLic=${useLic?'true':'false'};
 
 function _showErr(title,msg){
   document.open();
-  document.write('<!DOCTYPE html><html><head><meta charset=UTF-8><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}div{text-align:center;padding:2rem}</style></head><body><div><h2>'+title+'<\/h2><p style="color:#666">'+msg+'<\/p><\/div><\/body><\/html>');
+  document.write('<!DOCTYPE html><html><head><meta charset=UTF-8><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5;}div{text-align:center;padding:2rem;}</style></head><body><div><h2>'+title+'<\/h2><p style="color:#666;">'+msg+'<\/p><\/div><\/body><\/html>');
   document.close();
 }
 
@@ -707,14 +715,11 @@ async function _verifyLic(){
 async function _doDecrypt(){
   try{
     var _ep=JSON.parse(_EP);
-    var _pass=sessionStorage.getItem(_SID);
-    if(!_pass){_pass=prompt('\uD83D\uDD10 Masukkan password untuk membuka aplikasi:');}
-    if(!_pass){_showErr('Akses Ditolak','Password diperlukan untuk membuka aplikasi ini.');return;}
-    sessionStorage.setItem(_SID,_pass);
+    // Dekripsi otomatis — password tertanam, pengguna tidak perlu memasukkan apapun
     var _salt=Uint8Array.from(atob(_ep.salt),function(c){return c.charCodeAt(0);});
     var _iv=Uint8Array.from(atob(_ep.iv),function(c){return c.charCodeAt(0);});
     var _ct=Uint8Array.from(atob(_ep.ct),function(c){return c.charCodeAt(0);}).buffer;
-    var _km=await crypto.subtle.importKey('raw',new TextEncoder().encode(_pass),{name:'PBKDF2'},false,['deriveKey']);
+    var _km=await crypto.subtle.importKey('raw',new TextEncoder().encode(_PW),{name:'PBKDF2'},false,['deriveKey']);
     var _key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:_salt,iterations:310000,hash:'SHA-256'},_km,{name:'AES-GCM',length:256},false,['decrypt']);
     var _plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:_iv},_key,_ct);
     var _decoded=new TextDecoder().decode(_plain);
@@ -722,8 +727,7 @@ async function _doDecrypt(){
     document.write(_decoded);
     document.close();
   }catch(_e){
-    sessionStorage.removeItem(_SID);
-    _showErr('Password Salah','Muat ulang halaman dan coba lagi.');
+    _showErr('Gagal Memuat','Terjadi kesalahan saat membuka aplikasi. Coba muat ulang halaman.');
   }
 }
 
@@ -801,7 +805,13 @@ await sleep(80); setProgress('p',82,'Obfuskasi & finalisasi...');
   download(html,outName);
 
   document.getElementById('msg-p').textContent='ID: '+id+(licKey?' | Lisensi: '+licKey:'');
-  showAlert('p','ok','✓ File berhasil diproteksi dengan AES-256-GCM dan diunduh: '+outName+(pwaRelocated?'\n\n📲 Script PWA (data-pwa-converter) terdeteksi dan otomatis dipindah dari <body> ke <head> — aman untuk enkripsi.':'')+(licKey?'\n\n🔑 Simpan kunci lisensi ini: '+licKey:''));
+  const autoPass=document.getElementById('p-pass').value;
+  showAlert('p','ok',
+    '✓ File berhasil diproteksi dan diunduh: '+outName+
+    (pwaRelocated?'\n\n📲 Script PWA otomatis dipindah ke <head>.':'')+
+    (document.getElementById('o-encrypt').checked?'\n\n🔑 Simpan password ini untuk dekripsi nanti:\n'+autoPass:'')+
+    (licKey?'\n\n🪪 Kunci lisensi: '+licKey:'')
+  );
   btn.disabled=false;
 }
 
