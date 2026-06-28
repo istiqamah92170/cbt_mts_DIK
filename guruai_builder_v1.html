@@ -3435,8 +3435,8 @@ let currentTab = 'rppm';
  * _tampilkanPreview — tampilkan hasil generate di panel preview.
  * Dipakai oleh generate() dan loadHistory() agar konsisten.
  */
-function _tampilkanPreview(data, result, tabAwal = 'rppm') {
-  currentGenerated = { data, result };
+function _tampilkanPreview(data, result, tabAwal = 'rppm', historyId = null) {
+  currentGenerated = { data, result, historyId };
   currentTab       = tabAwal;
 
   document.getElementById('previewPlaceholder').style.display = 'none';
@@ -3445,6 +3445,22 @@ function _tampilkanPreview(data, result, tabAwal = 'rppm') {
 
   RENDER.renderTabs(currentTab);
   RENDER.showTab(currentTab, result[currentTab]);
+}
+
+/** Simpan seluruh result ke IDB — key: result_<historyId> */
+function _simpanResult(historyId, result) {
+  if (!historyId) return;
+  /* Hanya simpan konten tab (string HTML) — buang data binary besar jika ada */
+  const toSimpan = {};
+  GENERATOR.tabs.forEach(t => {
+    if (result[t.id]) toSimpan[t.id] = result[t.id];
+    /* Simpan juga flag sumber AI per tab */
+    const sumberKey = `${t.id}_sumber`;
+    if (result[sumberKey]) toSimpan[sumberKey] = result[sumberKey];
+  });
+  IDB.set('result_' + historyId, toSimpan);
+  /* Catat historyId terakhir agar bisa di-restore saat init */
+  IDB.set('last_historyId', historyId);
 }
 
 function generate() {
@@ -3470,29 +3486,34 @@ function generate() {
     /* Generate semua konten */
     const result = GENERATOR.generate(data);
 
-    /* Tampilkan preview */
-    _tampilkanPreview(data, result, 'rppm');
+    /* Buat ID riwayat */
+    const historyId = UTIL.uid();
+
+    /* Tampilkan preview — sertakan historyId agar bisa di-persist */
+    _tampilkanPreview(data, result, 'rppm', historyId);
 
     /* Update statistik */
     DATABASE.stats.modul++;
     DATABASE.stats.lkpd++;
     DATABASE.stats.soal += 5;
     DATABASE.stats.asesmen++;
-    /* Hitung jumlah TP dari array STATE_ANALISIS */
     DATABASE.stats.tp += STATE_ANALISIS.tp.length || 1;
 
     /* Simpan ke riwayat */
     DATABASE.history.push({
-      id: UTIL.uid(),
+      id: historyId,
       ts: Date.now(),
       ...data,
       analisis: { topik: STATE_ANALISIS.topik, tp: STATE_ANALISIS.tp, materi: STATE_ANALISIS.materi },
     });
 
-    /* Simpan ke IDB (utama) dan localStorage (fallback) */
+    /* Simpan ke IDB */
     const payload = { stats: DATABASE.stats, history: DATABASE.history };
     IDB.set('main', payload);
     STORAGE.save(CONFIG.LS_KEY, payload);
+
+    /* Persist result tab ke IDB — key: result_<historyId> */
+    _simpanResult(historyId, result);
 
     /* Reset tombol */
     btn.innerHTML = '✨ GENERATE PERANGKAT PEMBELAJARAN';
@@ -3563,12 +3584,31 @@ function loadHistory(id) {
   };
 
   /* 5. Generate semua tab dan langsung tampilkan preview */
-  const result = GENERATOR.generate(data);
-  _tampilkanPreview(data, result, 'rppm');
+  const resultLokal = GENERATOR.generate(data);
 
-  /* 6. Pindah ke halaman Modul Ajar */
+  /* Coba muat result yang sudah dipersist (termasuk hasil AI per tab) */
+  const historyId = h.id;
+  IDB.get('result_' + historyId, null).then(savedResult => {
+    /* Merge: hasil lokal sebagai base, timpa dengan yang tersimpan di IDB */
+    const result = savedResult
+      ? { ...resultLokal, ...savedResult }
+      : resultLokal;
+
+    _tampilkanPreview(data, result, 'rppm', historyId);
+
+    /* Tandai badge AI untuk tab yang sebelumnya di-generate AI */
+    if (savedResult) {
+      GENERATOR.tabs.forEach(t => {
+        if (savedResult[t.id + '_sumber'] === 'ai') {
+          /* Badge akan muncul saat tab diklik — sudah ditangani showTab */
+        }
+      });
+    }
+  });
+
+  /* Pindah ke halaman Modul Ajar */
   goPage('modul');
-  showToast('📂 Modul lama dimuat — preview tersedia di semua tab');
+  showToast('📂 Modul dimuat — termasuk hasil edit AI sebelumnya');
 }
 
 /* ============================================================
@@ -4259,12 +4299,17 @@ function hapusCacheAI() {
  */
 function generateTabLokal(tabId) {
   if (!currentGenerated) { showToast('Generate dulu perangkat terlebih dahulu', 'error'); return; }
-  const { data } = currentGenerated;
+  const { data, historyId } = currentGenerated;
   const fn = GENERATOR['buat' + tabId.charAt(0).toUpperCase() + tabId.slice(1)];
   if (!fn) { showToast('Tab tidak dikenal', 'error'); return; }
 
   const content = fn.call(GENERATOR, data);
   currentGenerated.result[tabId] = content;
+  currentGenerated.result[tabId + '_sumber'] = 'lokal';
+
+  /* Persist perubahan ke IDB */
+  _simpanResult(historyId, currentGenerated.result);
+
   RENDER.showTab(tabId, content);
   currentTab = tabId;
   RENDER.renderTabs(tabId);
@@ -4309,9 +4354,12 @@ async function generateTabAI(tabId) {
 
     const { html, modelLabel } = await AI_ENGINE.generateTab(tabId, data, onProgress);
 
-    /* Simpan hasil AI ke currentGenerated agar switchTab memuat ulang dengan benar */
+    /* Simpan hasil AI ke currentGenerated */
     currentGenerated.result[tabId] = html;
     currentGenerated.result[`${tabId}_sumber`] = 'ai';
+
+    /* Persist ke IDB agar bertahan setelah browser ditutup */
+    _simpanResult(currentGenerated.historyId, currentGenerated.result);
 
     /* Update badge dan konten */
     const badge = document.getElementById(`tabGenBadge-${tabId}`);
@@ -4407,7 +4455,28 @@ async function init() {
   /* 9. Load cache AI dari IDB */
   await AI_CACHE.load();
 
-  /* 10. Pesan selamat datang */
+  /* 10. Restore currentGenerated dari sesi terakhir (termasuk hasil edit AI) */
+  const lastId = await IDB.get('last_historyId', null);
+  if (lastId) {
+    const savedResult = await IDB.get('result_' + lastId, null);
+    const lastHistory = DATABASE.history.find(h => h.id === lastId);
+    if (savedResult && lastHistory) {
+      /* Susun data dari riwayat */
+      const analisis = lastHistory.analisis || {};
+      const data = {
+        ...lastHistory,
+        tp:     (analisis.tp     || []).join('\n'),
+        materi: (analisis.materi || []).join(', '),
+        topik:  analisis.topik   || [],
+      };
+      /* Generate lokal sebagai base lalu timpa dengan yang tersimpan */
+      const resultLokal = GENERATOR.generate(data);
+      const result      = { ...resultLokal, ...savedResult };
+      _tampilkanPreview(data, result, 'rppm', lastId);
+    }
+  }
+
+  /* 11. Pesan selamat datang */
   const guru = DATABASE.settings.guru || 'Guru';
   showToast(`Selamat datang, ${guru}! 👋`);
 }
