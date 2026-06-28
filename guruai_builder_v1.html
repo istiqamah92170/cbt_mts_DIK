@@ -686,6 +686,56 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 }
 .btn-chip-add:hover { background: var(--accent); color: white; }
 
+/* ---- TOMBOL AKSI TAB (Lokal / AI) ---- */
+.btn-tab-action {
+  padding: 4px 11px;
+  border-radius: 6px;
+  font-size: 11.5px; font-weight: 700;
+  transition: all var(--t);
+  white-space: nowrap;
+}
+.btn-tab-lokal {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #CBD5E1;
+}
+.btn-tab-lokal:hover { background: rgba(255,255,255,.2); color: white; }
+.btn-tab-ai {
+  background: linear-gradient(135deg,#6366F1,#4F46E5);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99,102,241,.4);
+}
+.btn-tab-ai:hover { box-shadow: 0 3px 12px rgba(99,102,241,.55); transform: translateY(-1px); }
+.btn-tab-ai:active { transform: translateY(0); }
+.btn-tab-ai-disabled {
+  background: rgba(255,255,255,.1);
+  box-shadow: none;
+  color: #64748B;
+  cursor: not-allowed;
+}
+/* Loading state di body tab */
+.tab-loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; padding: 48px 20px;
+  color: var(--text-muted); text-align: center;
+}
+.tab-loading .spinner {
+  width: 28px; height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: #6366F1;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+.tab-loading p { font-size: 13px; }
+.tab-ai-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+  background: rgba(99,102,241,.12); color: #6366F1;
+  margin-left: 4px;
+}
+
 /* ---- MODEL PICKER ---- */
 .model-option {
   display: flex; align-items: center; gap: 12px;
@@ -2210,6 +2260,70 @@ Format output WAJIB:
     const { modelLabel } = await this._callWithFallback(body, onProgress);
     return modelLabel;
   },
+
+  /**
+   * Generate konten satu tab menggunakan Gemini.
+   * tabId: 'modul' | 'lkpd' | 'soal'
+   * Return: { html, modelLabel }
+   */
+  async generateTab(tabId, data, onProgress) {
+    if (!this.hasKey()) throw new Error('API Key Gemini belum diisi. Buka menu AI Settings.');
+
+    const prompts = {
+
+      modul:
+`Anda pakar Kurikulum Merdeka Indonesia. Buat LANGKAH PEMBELAJARAN detail dan kontekstual.
+Model: ${data.model} | Mapel: ${data.mapel} | Kelas: ${data.kelas} | Waktu: ${data.waktu}
+CP: ${data.cp}
+TP: ${data.tp}
+Materi: ${data.materi}
+Output: HTML saja (h4, p, ul, li, div). Tidak ada Markdown. Tidak ada teks di luar HTML.
+Buat: Pendahuluan (apersepsi, motivasi), Inti (sintaks ${data.model} lengkap min 5 fase, tiap fase ada aktivitas guru & siswa yang spesifik pada materi), Penutup (refleksi, simpulan, tindak lanjut). Sertakan estimasi waktu tiap fase.`,
+
+      lkpd:
+`Anda pakar Kurikulum Merdeka Indonesia. Buat LKPD lengkap dan kontekstual.
+Model: ${data.model} | Mapel: ${data.mapel} | Kelas: ${data.kelas}
+CP: ${data.cp}
+TP: ${data.tp}
+Materi: ${data.materi}
+Output: HTML saja (h4, p, ol, ul, li, table). Tidak ada Markdown. Tidak ada teks di luar HTML.
+Struktur wajib:
+1. Identitas siswa (nama/kelas/kelompok/tanggal) — format tabel kosong
+2. Tujuan Pembelajaran
+3. Petunjuk Pengerjaan
+4. Aktivitas utama sesuai ${data.model} — min 3 aktivitas, pertanyaan spesifik pada materi
+5. Tabel pengamatan / kolom jawaban bernomor
+6. Pertanyaan Analisis — min 3 soal HOTS level C4-C6 spesifik pada materi
+7. Kolom Kesimpulan`,
+
+      soal:
+`Anda pakar asesmen Kurikulum Merdeka Indonesia. Buat soal evaluasi lengkap.
+Mapel: ${data.mapel} | Kelas: ${data.kelas} | Fase: ${data.fase}
+CP: ${data.cp}
+TP: ${data.tp}
+Materi: ${data.materi}
+Output: HTML saja (h4, ol, ul, li, table). Tidak ada Markdown. Tidak ada teks di luar HTML.
+Buat persis bagian berikut:
+A. KISI-KISI — tabel: No | TP | Indikator | Level Bloom | Bentuk | No Soal
+B. PILIHAN GANDA — 5 soal C2-C4, opsi A/B/C/D, konteks nyata spesifik materi
+C. URAIAN — 3 soal C4-C6, terbuka dan mendalam
+D. KUNCI JAWABAN — tabel: No | Jawaban | Skor
+E. PEMBAHASAN — paragraf singkat tiap soal PG`,
+    };
+
+    if (!prompts[tabId]) throw new Error(`Tab '${tabId}' tidak mendukung Generate AI.`);
+
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: prompts[tabId] }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+    };
+
+    const { data: resData, modelLabel } = await this._callWithFallback(body, onProgress);
+    const raw  = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const html = raw.replace(/```html|```/gi, '').trim();
+    if (!html) throw new Error('Gemini tidak menghasilkan konten. Coba lagi.');
+    return { html, modelLabel };
+  },
 };
 
 /** Update tampilan model aktif di UI — dipanggil dari _callWithFallback */
@@ -3067,24 +3181,37 @@ const RENDER = {
     const label = GENERATOR.tabs.find(t => t.id === id)?.label || id;
     const date  = UTIL.formatDate();
 
-    /* Tab RPPM: tabel sudah include styling sendiri, body tanpa padding extra */
+    /* Tab RPPM: tanpa padding extra */
     const bodyStyle = id === 'rppm' ? 'padding:0;' : '';
-    const exportBtn = id === 'rppm'
-      ? `<button class="btn btn-secondary btn-sm"
-           onclick="exportRPPMFromTab()"
-           style="font-size:11px;">📄 Export Word</button>`
-      : '';
+
+    /* Tombol aksi di header tab */
+    let headerBtns = '';
+    if (id === 'rppm') {
+      headerBtns = `<button class="btn btn-secondary btn-sm" onclick="exportRPPMFromTab()" style="font-size:11px;">📄 Export Word</button>`;
+    } else if (['modul','lkpd','soal'].includes(id)) {
+      /* Tab yang mendukung Generate AI */
+      const aiAvail = AI_ENGINE.hasKey();
+      headerBtns = `
+        <button class="btn-tab-action btn-tab-lokal" onclick="generateTabLokal('${id}')" title="Regenerate dengan template lokal">
+          🔄 Lokal
+        </button>
+        <button class="btn-tab-action btn-tab-ai ${!aiAvail ? 'btn-tab-ai-disabled' : ''}"
+          onclick="${aiAvail ? "generateTabAI('" + id + "')" : "showToast('Isi API Key di AI Settings','warning');goPage('aisettings')"}"
+          title="${aiAvail ? 'Generate dengan Gemini AI' : 'API Key belum diisi — buka AI Settings'}">
+          ✨ AI
+        </button>`;
+    }
 
     el.innerHTML = `
       <div class="preview-card">
         <div class="preview-card-header">
           <span>${label}</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${exportBtn}
-            <span style="font-size:10px;color:#64748B;">${date}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${headerBtns}
+            <span id="tabGenBadge-${id}" style="font-size:10px;color:#64748B;margin-left:2px;">${date}</span>
           </div>
         </div>
-        <div class="preview-card-body" style="${bodyStyle}">${content}</div>
+        <div class="preview-card-body" style="${bodyStyle}" id="tabBody-${id}">${content}</div>
       </div>
     `;
   },
@@ -4002,6 +4129,93 @@ function hapusCacheAI() {
   showToast('🗑️ Cache analisis AI dihapus', 'warning');
 }
 
+/* ============================================================
+   GENERATE TAB — Generate ulang satu tab secara Lokal atau AI
+   ============================================================ */
+
+/**
+ * Generate ulang tab dengan template engine lokal.
+ * Langsung sinkron — tidak ada loading.
+ */
+function generateTabLokal(tabId) {
+  if (!currentGenerated) { showToast('Generate dulu perangkat terlebih dahulu', 'error'); return; }
+  const { data } = currentGenerated;
+  const fn = GENERATOR['buat' + tabId.charAt(0).toUpperCase() + tabId.slice(1)];
+  if (!fn) { showToast('Tab tidak dikenal', 'error'); return; }
+
+  const content = fn.call(GENERATOR, data);
+  currentGenerated.result[tabId] = content;
+  RENDER.showTab(tabId, content);
+  currentTab = tabId;
+  RENDER.renderTabs(tabId);
+  showToast(`🔄 ${tabId.toUpperCase()} diperbarui dengan template lokal`);
+}
+
+/**
+ * Generate ulang tab menggunakan Gemini AI.
+ * Tampilkan loading di dalam tab, lalu ganti dengan hasil AI.
+ */
+async function generateTabAI(tabId) {
+  if (!currentGenerated) { showToast('Generate dulu perangkat terlebih dahulu', 'error'); return; }
+  if (!AI_ENGINE.hasKey()) {
+    showToast('API Key Gemini belum diisi', 'warning');
+    goPage('aisettings');
+    return;
+  }
+
+  const { data } = currentGenerated;
+  const tabBody  = document.getElementById(`tabBody-${tabId}`);
+  const tabLabel = GENERATOR.tabs.find(t => t.id === tabId)?.label || tabId;
+
+  /* Tampilkan loading di dalam body tab */
+  if (tabBody) {
+    tabBody.innerHTML = `
+      <div class="tab-loading">
+        <div class="spinner"></div>
+        <p id="tabLoadingMsg">Menghubungi Gemini untuk ${tabLabel}...</p>
+        <p style="font-size:11.5px;opacity:.6;">Biasanya 5–15 detik</p>
+      </div>`;
+  }
+
+  /* Nonaktifkan tombol sementara */
+  const btnAI = document.querySelector(`[onclick="generateTabAI('${tabId}')"]`);
+  if (btnAI) { btnAI.disabled = true; btnAI.textContent = '⏳'; }
+
+  try {
+    const onProgress = (msg) => {
+      const msgEl = document.getElementById('tabLoadingMsg');
+      if (msgEl) msgEl.textContent = msg;
+    };
+
+    const { html, modelLabel } = await AI_ENGINE.generateTab(tabId, data, onProgress);
+
+    /* Simpan hasil AI ke currentGenerated agar switchTab memuat ulang dengan benar */
+    currentGenerated.result[tabId] = html;
+    currentGenerated.result[`${tabId}_sumber`] = 'ai';
+
+    /* Update badge dan konten */
+    const badge = document.getElementById(`tabGenBadge-${tabId}`);
+    if (badge) badge.innerHTML = `<span class="tab-ai-badge">✨ ${modelLabel}</span>`;
+    if (tabBody) tabBody.innerHTML = html;
+
+    showToast(`✨ ${tabLabel} diperbarui oleh ${modelLabel}`);
+  } catch(e) {
+    /* Gagal — tawaran fallback lokal */
+    if (tabBody) tabBody.innerHTML = currentGenerated.result[tabId] || '<p class="text-muted">Gagal. Coba lagi.</p>';
+    showToast(`❌ ${e.message}`, 'error');
+    setTimeout(() => {
+      if (confirm(`Gemini gagal untuk ${tabLabel}.\n\nGunakan template lokal sebagai pengganti?`)) {
+        generateTabLokal(tabId);
+      }
+    }, 300);
+  }
+
+  if (btnAI) { btnAI.disabled = false; btnAI.textContent = '✨ AI'; }
+}
+
+/* ============================================================
+   TOAST NOTIFICATION
+   ============================================================ */
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
