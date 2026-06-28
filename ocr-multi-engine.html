@@ -2533,12 +2533,17 @@
 
       const gasUrl = SpreadsheetManager.getGasUrl();
       const sheet  = SpreadsheetManager.getSheet();
+      Logger.info(`saveSplit: mengirim ${splitResults.length} item ke GAS...`);
+      Logger.info(`saveSplit: GAS URL = ${gasUrl.slice(0,60)}...`);
+      Logger.info(`saveSplit: sheet = "${sheet}"`);
+      Logger.info(`saveSplit: contoh item[0] = ${JSON.stringify(splitResults[0]).slice(0,120)}`);
       try {
         const res  = await fetch(gasUrl, {
           method:'POST', headers:{'Content-Type':'text/plain'},
           body: JSON.stringify({ action:'saveSplit', sheet, results: splitResults }),
         });
         const data = await res.json();
+        Logger.info(`saveSplit response: ${JSON.stringify(data).slice(0,200)}`);
         if (!data.ok) throw new Error(data.error || 'saveSplit gagal');
         showToast(`✂️ ${data.saved} soal dipecah ke kolom Soal/A/B/C/D!`, 'ok');
         Logger.ok(`Pisah kolom selesai: ${data.saved}/${splitResults.length} baris via "${usedModel}".`);
