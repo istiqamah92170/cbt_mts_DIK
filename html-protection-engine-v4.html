@@ -139,6 +139,10 @@ code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px
       <strong style="color:var(--teal);display:block;margin-bottom:6px;">🔐 Enkripsi v4 — AES-256-GCM</strong>
       Engine ini kini menggunakan <strong style="color:var(--text)">Web Crypto API (AES-GCM 256-bit)</strong> dengan PBKDF2 key derivation — standar enkripsi militer yang sama digunakan di aplikasi perbankan dan VPN. Password tidak pernah tersimpan dalam bentuk teks di file hasil.
     </div>
+    <div class="info-box" style="border-color:rgba(62,207,142,.2);">
+      <strong style="color:var(--green);display:block;margin-bottom:6px;">📲 Kompatibel PWA Converter Engine v2</strong>
+      Jika file HTML kamu sudah dikonversi ke PWA menggunakan <strong style="color:var(--text)">PWA Converter Engine v2</strong>, engine ini akan otomatis mendeteksi dan memindahkan script service worker (<code>data-pwa-converter</code>) dari &lt;body&gt; ke &lt;head&gt; sebelum enkripsi — tanpa perlu edit manual apapun.
+    </div>
   </div>
 
   <!-- TAB PROTEKSI -->
@@ -634,6 +638,23 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
     // Honeypot disisipkan ke body nanti
   }
 
+  await sleep(150); setProgress('p',42,'Mendeteksi & merelokasi script PWA...');
+
+  // ─── AUTO-RELOCATE script[data-pwa-converter] dari body ke head ──────────────
+  // Kompatibel dengan PWA Converter Engine v2 milik pengguna
+  // Penanda: atribut data-pwa-converter + berisi serviceWorker.register
+  let pwaRelocated=false;
+  {
+    const _p=new DOMParser();
+    const _d=_p.parseFromString(html,'text/html');
+    const _sw=_d.querySelectorAll('body script[data-pwa-converter]');
+    if(_sw.length>0){
+      _sw.forEach(s=>{_d.head.appendChild(s.cloneNode(true));s.remove();});
+      html='<!DOCTYPE html>\n'+_d.documentElement.outerHTML;
+      pwaRelocated=true;
+    }
+  }
+
   await sleep(180); setProgress('p',48,'Menerapkan enkripsi AES-256-GCM...');
 
   let encPayload='';
@@ -714,7 +735,7 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
   download(html,outName);
 
   document.getElementById('msg-p').textContent='ID: '+id+(licKey?' | Lisensi: '+licKey:'');
-  showAlert('p','ok','✓ File berhasil diproteksi dengan AES-256-GCM dan diunduh: '+outName+(licKey?'\n\nSimpan kunci lisensi ini: '+licKey:''));
+  showAlert('p','ok','✓ File berhasil diproteksi dengan AES-256-GCM dan diunduh: '+outName+(pwaRelocated?'\n\n📲 Script PWA (data-pwa-converter) terdeteksi dan otomatis dipindah dari <body> ke <head> — aman untuk enkripsi.':'')+(licKey?'\n\n🔑 Simpan kunci lisensi ini: '+licKey:''));
   btn.disabled=false;
 }
 
