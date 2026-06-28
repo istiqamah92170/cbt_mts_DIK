@@ -3313,9 +3313,12 @@ const RENDER = {
         <div class="history-badge">📚</div>
         <div class="history-info">
           <h4>${h.mapel} — Kelas ${h.kelas}</h4>
-          <p>${h.materi} | ${h.model} | ${h.sekolah}</p>
+          <p>${h.materi || '—'} | ${h.model || '—'} | ${h.sekolah || '—'}</p>
         </div>
-        <div class="history-time">${UTIL.timeAgo(h.ts)}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          <span class="badge badge-teal" style="font-size:10px;cursor:pointer;">📂 Buka</span>
+          <span class="history-time">${UTIL.timeAgo(h.ts)}</span>
+        </div>
       </div>
     `).join('');
   },
@@ -3428,6 +3431,22 @@ function goPage(page) {
 let currentGenerated = null; /* Simpan hasil generate terakhir */
 let currentTab = 'rppm';
 
+/**
+ * _tampilkanPreview — tampilkan hasil generate di panel preview.
+ * Dipakai oleh generate() dan loadHistory() agar konsisten.
+ */
+function _tampilkanPreview(data, result, tabAwal = 'rppm') {
+  currentGenerated = { data, result };
+  currentTab       = tabAwal;
+
+  document.getElementById('previewPlaceholder').style.display = 'none';
+  document.getElementById('previewContent').style.display     = 'block';
+  document.getElementById('exportBar').style.display          = 'flex';
+
+  RENDER.renderTabs(currentTab);
+  RENDER.showTab(currentTab, result[currentTab]);
+}
+
 function generate() {
   const data = UTIL.getFormData();
   const missing = UTIL.validateForm(data);
@@ -3450,16 +3469,9 @@ function generate() {
   setTimeout(() => {
     /* Generate semua konten */
     const result = GENERATOR.generate(data);
-    currentGenerated = { data, result };
-    currentTab = 'rppm';
 
     /* Tampilkan preview */
-    document.getElementById('previewPlaceholder').style.display = 'none';
-    document.getElementById('previewContent').style.display = 'block';
-    document.getElementById('exportBar').style.display = 'flex';
-
-    RENDER.renderTabs(currentTab);
-    RENDER.showTab(currentTab, result[currentTab]);
+    _tampilkanPreview(data, result, 'rppm');
 
     /* Update statistik */
     DATABASE.stats.modul++;
@@ -3505,35 +3517,58 @@ function loadHistory(id) {
   const h = DATABASE.history.find(x => x.id === id);
   if (!h) return;
 
-  /* Isi ulang field form identitas */
+  /* 1. Isi ulang field form identitas */
   const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','model'];
   fields.forEach(f => {
     const el = document.getElementById('f-' + f);
     if (el && h[f]) el.value = h[f];
   });
 
-  /* Restore STATE_ANALISIS dari riwayat agar Generate bisa langsung jalan */
+  /* 2. Restore STATE_ANALISIS dari riwayat */
   if (h.analisis) {
     STATE_ANALISIS = { ...h.analisis, sudahAnalisis: true };
   } else if (h.tp || h.materi) {
-    /* Kompatibilitas riwayat lama (sebelum workflow baru) */
+    /* Kompatibilitas riwayat lama */
     STATE_ANALISIS = {
-      topik:  h.materi ? h.materi.split(',').map(s=>s.trim()) : [],
-      tp:     h.tp     ? h.tp.split('\n').filter(Boolean) : [],
-      materi: h.materi ? h.materi.split(',').map(s=>s.trim()) : [],
+      topik:  h.materi ? h.materi.split(',').map(s => s.trim()) : [],
+      tp:     h.tp     ? h.tp.split('\n').filter(Boolean)       : [],
+      materi: h.materi ? h.materi.split(',').map(s => s.trim()) : [],
       sudahAnalisis: true,
     };
   }
 
-  /* Tampilkan panel analisis jika ada data */
+  /* 3. Tampilkan panel analisis di form */
   if (STATE_ANALISIS.sudahAnalisis && STATE_ANALISIS.tp.length) {
     syncHiddenFields();
     renderHasilAnalisis();
     document.getElementById('panelAnalisis').style.display = 'block';
   }
 
+  /* 4. Susun data lengkap untuk generate */
+  const data = {
+    sekolah:  h.sekolah  || '',
+    guru:     h.guru     || '',
+    nip:      h.nip      || '',
+    mapel:    h.mapel    || '',
+    fase:     h.fase     || '',
+    kelas:    h.kelas    || '',
+    semester: h.semester || '1',
+    tahun:    h.tahun    || '',
+    waktu:    h.waktu    || '',
+    cp:       h.cp       || '',
+    model:    h.model    || 'PBL',
+    tp:       STATE_ANALISIS.tp.join('\n'),
+    materi:   STATE_ANALISIS.materi.join(', '),
+    topik:    STATE_ANALISIS.topik,
+  };
+
+  /* 5. Generate semua tab dan langsung tampilkan preview */
+  const result = GENERATOR.generate(data);
+  _tampilkanPreview(data, result, 'rppm');
+
+  /* 6. Pindah ke halaman Modul Ajar */
   goPage('modul');
-  showToast('📂 Riwayat dimuat — tinjau TP & Materi lalu Generate');
+  showToast('📂 Modul lama dimuat — preview tersedia di semua tab');
 }
 
 /* ============================================================
