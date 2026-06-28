@@ -2269,60 +2269,145 @@ Format output WAJIB:
   async generateTab(tabId, data, onProgress) {
     if (!this.hasKey()) throw new Error('API Key Gemini belum diisi. Buka menu AI Settings.');
 
-    const prompts = {
+    /* Helper: kirim satu request, return HTML string */
+    const kirim = async (prompt, maxTokens = 8192) => {
+      const body = {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens },
+      };
+      const { data: res, modelLabel } = await this._callWithFallback(body, onProgress);
+      const raw  = res?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const html = raw.replace(/```html|```/gi, '').trim();
+      return { html, modelLabel,
+        selesai: res?.candidates?.[0]?.finishReason !== 'MAX_TOKENS' };
+    };
 
-      modul:
-`Anda pakar Kurikulum Merdeka Indonesia. Buat LANGKAH PEMBELAJARAN detail dan kontekstual.
-Model: ${data.model} | Mapel: ${data.mapel} | Kelas: ${data.kelas} | Waktu: ${data.waktu}
-CP: ${data.cp}
+    /* ── MODUL AJAR ── */
+    if (tabId === 'modul') {
+      const prompt =
+`Anda pakar Kurikulum Merdeka Indonesia.
+Tugas: buat LANGKAH PEMBELAJARAN lengkap dalam format HTML.
+WAJIB selesai sampai bagian Penutup. Jangan berhenti di tengah.
+
+DATA:
+Mapel: ${data.mapel} | Kelas: ${data.kelas} | Waktu: ${data.waktu} | Model: ${data.model}
 TP: ${data.tp}
 Materi: ${data.materi}
-Output: HTML saja (h4, p, ul, li, div). Tidak ada Markdown. Tidak ada teks di luar HTML.
-Buat: Pendahuluan (apersepsi, motivasi), Inti (sintaks ${data.model} lengkap min 5 fase, tiap fase ada aktivitas guru & siswa yang spesifik pada materi), Penutup (refleksi, simpulan, tindak lanjut). Sertakan estimasi waktu tiap fase.`,
 
-      lkpd:
-`Anda pakar Kurikulum Merdeka Indonesia. Buat LKPD lengkap dan kontekstual.
-Model: ${data.model} | Mapel: ${data.mapel} | Kelas: ${data.kelas}
-CP: ${data.cp}
+FORMAT OUTPUT — HTML saja, tag: h4 p ul li div. Tanpa Markdown. Tanpa teks di luar HTML.
+STRUKTUR (semua wajib ada):
+<h4>🌅 Pendahuluan (10 menit)</h4> — salam, apersepsi spesifik materi, motivasi, tujuan
+<h4>🔷 Kegiatan Inti</h4> — semua fase sintaks ${data.model} (min 5 fase), tiap fase: nama fase, aktivitas guru, aktivitas siswa, waktu
+<h4>🌆 Penutup (10 menit)</h4> — refleksi, simpulan bersama, tindak lanjut, doa`;
+
+      const r = await kirim(prompt, 8192);
+      if (!r.html) throw new Error('Gemini tidak menghasilkan konten. Coba lagi.');
+      return { html: r.html, modelLabel: r.modelLabel };
+    }
+
+    /* ── LKPD — 2 pass ── */
+    if (tabId === 'lkpd') {
+      /* Pass 1: identitas, tujuan, petunjuk, aktivitas */
+      if (onProgress) onProgress('Membuat bagian 1/2 (Identitas & Aktivitas)...');
+      const p1 =
+`Anda pakar Kurikulum Merdeka Indonesia.
+Tugas: buat BAGIAN PERTAMA LKPD dalam HTML. WAJIB selesai sampai akhir Aktivitas.
+
+DATA:
+Mapel: ${data.mapel} | Kelas: ${data.kelas} | Model: ${data.model}
 TP: ${data.tp}
 Materi: ${data.materi}
-Output: HTML saja (h4, p, ol, ul, li, table). Tidak ada Markdown. Tidak ada teks di luar HTML.
-Struktur wajib:
-1. Identitas siswa (nama/kelas/kelompok/tanggal) — format tabel kosong
-2. Tujuan Pembelajaran
-3. Petunjuk Pengerjaan
-4. Aktivitas utama sesuai ${data.model} — min 3 aktivitas, pertanyaan spesifik pada materi
-5. Tabel pengamatan / kolom jawaban bernomor
-6. Pertanyaan Analisis — min 3 soal HOTS level C4-C6 spesifik pada materi
-7. Kolom Kesimpulan`,
 
-      soal:
-`Anda pakar asesmen Kurikulum Merdeka Indonesia. Buat soal evaluasi lengkap.
+FORMAT — HTML saja (h4 p ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
+Buat PERSIS bagian berikut lalu BERHENTI (jangan buat bagian lain):
+
+<h4>Lembar Kerja Peserta Didik</h4>
+<h4>1. Identitas</h4> — tabel: Nama | Kelas | Kelompok | Tanggal (kolom isian kosong)
+<h4>2. Tujuan Pembelajaran</h4> — list TP spesifik materi
+<h4>3. Petunjuk Pengerjaan</h4> — 4-5 poin
+<h4>4. Aktivitas Pembelajaran</h4> — 3 aktivitas sesuai ${data.model}, tiap aktivitas: judul fase, narasi konteks spesifik materi, pertanyaan/instruksi konkret`;
+
+      const r1 = await kirim(p1, 4096);
+      if (!r1.html) throw new Error('Gagal membuat bagian 1 LKPD. Coba lagi.');
+
+      /* Pass 2: tabel pengamatan, soal analisis, kesimpulan */
+      if (onProgress) onProgress('Membuat bagian 2/2 (Soal Analisis & Kesimpulan)...');
+      const p2 =
+`Anda pakar Kurikulum Merdeka Indonesia.
+Tugas: buat BAGIAN KEDUA LKPD dalam HTML. WAJIB selesai sampai Kesimpulan.
+
+DATA:
+Mapel: ${data.mapel} | Kelas: ${data.kelas}
+TP: ${data.tp}
+Materi: ${data.materi}
+
+FORMAT — HTML saja (h4 p ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
+Buat PERSIS bagian berikut (jangan ulangi bagian sebelumnya):
+
+<h4>5. Tabel Pengamatan / Data</h4> — tabel bernomor sesuai materi (min 4 kolom, 5 baris isian)
+<h4>6. Pertanyaan Analisis</h4> — 4 soal HOTS level C4-C6, spesifik pada materi "${data.materi}", bernomor, tiap soal min 2 baris ruang jawab (baris kosong)
+<h4>7. Kesimpulan</h4> — kolom isian: "Dari kegiatan ini saya menyimpulkan bahwa..." (5 baris kosong)
+<h4>8. Refleksi Diri</h4> — 3 pertanyaan refleksi singkat dengan kolom isian`;
+
+      const r2 = await kirim(p2, 4096);
+      if (!r2.html) throw new Error('Gagal membuat bagian 2 LKPD. Coba lagi.');
+
+      return {
+        html: r1.html + '\n' + r2.html,
+        modelLabel: r1.modelLabel,
+      };
+    }
+
+    /* ── SOAL — 2 pass ── */
+    if (tabId === 'soal') {
+      /* Pass 1: kisi-kisi + PG */
+      if (onProgress) onProgress('Membuat kisi-kisi & soal PG (1/2)...');
+      const s1 =
+`Anda pakar asesmen Kurikulum Merdeka Indonesia.
+Tugas: buat BAGIAN A dan B soal evaluasi dalam HTML. WAJIB selesai sampai akhir PG.
+
+DATA:
 Mapel: ${data.mapel} | Kelas: ${data.kelas} | Fase: ${data.fase}
-CP: ${data.cp}
 TP: ${data.tp}
 Materi: ${data.materi}
-Output: HTML saja (h4, ol, ul, li, table). Tidak ada Markdown. Tidak ada teks di luar HTML.
-Buat persis bagian berikut:
-A. KISI-KISI — tabel: No | TP | Indikator | Level Bloom | Bentuk | No Soal
-B. PILIHAN GANDA — 5 soal C2-C4, opsi A/B/C/D, konteks nyata spesifik materi
-C. URAIAN — 3 soal C4-C6, terbuka dan mendalam
-D. KUNCI JAWABAN — tabel: No | Jawaban | Skor
-E. PEMBAHASAN — paragraf singkat tiap soal PG`,
-    };
 
-    if (!prompts[tabId]) throw new Error(`Tab '${tabId}' tidak mendukung Generate AI.`);
+FORMAT — HTML saja (h4 ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
+Buat PERSIS dua bagian ini lalu BERHENTI:
 
-    const body = {
-      contents: [{ role: 'user', parts: [{ text: prompts[tabId] }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-    };
+<h4>A. Kisi-Kisi Soal</h4> — tabel: No | Tujuan Pembelajaran | Indikator Soal | Level Bloom | Bentuk | No Soal
+<h4>B. Pilihan Ganda</h4> — 5 soal bernomor, tiap soal: narasi konteks nyata spesifik materi, opsi A/B/C/D (satu benar), tanpa kunci jawaban di sini`;
 
-    const { data: resData, modelLabel } = await this._callWithFallback(body, onProgress);
-    const raw  = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const html = raw.replace(/```html|```/gi, '').trim();
-    if (!html) throw new Error('Gemini tidak menghasilkan konten. Coba lagi.');
-    return { html, modelLabel };
+      const rs1 = await kirim(s1, 4096);
+      if (!rs1.html) throw new Error('Gagal membuat kisi-kisi & PG. Coba lagi.');
+
+      /* Pass 2: uraian + kunci + pembahasan */
+      if (onProgress) onProgress('Membuat soal uraian & kunci jawaban (2/2)...');
+      const s2 =
+`Anda pakar asesmen Kurikulum Merdeka Indonesia.
+Tugas: buat BAGIAN C, D, E soal evaluasi dalam HTML. WAJIB selesai sampai pembahasan.
+
+DATA:
+Mapel: ${data.mapel} | Kelas: ${data.kelas}
+TP: ${data.tp}
+Materi: ${data.materi}
+
+FORMAT — HTML saja (h4 ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
+Buat PERSIS tiga bagian ini (jangan ulangi bagian sebelumnya):
+
+<h4>C. Soal Uraian</h4> — 3 soal bernomor (C4-C6), terbuka, mendalam, spesifik materi, tiap soal ada ruang jawaban (minimal: "Jawaban:_______________")
+<h4>D. Kunci Jawaban</h4> — tabel: No Soal | Kunci/Jawaban Ideal | Skor (PG: 5 soal@4poin, Uraian: 3 soal@10poin)
+<h4>E. Pembahasan</h4> — penjelasan singkat tiap soal PG (kenapa jawaban itu benar, kenapa yang lain salah)`;
+
+      const rs2 = await kirim(s2, 4096);
+      if (!rs2.html) throw new Error('Gagal membuat uraian & kunci. Coba lagi.');
+
+      return {
+        html: rs1.html + '\n' + rs2.html,
+        modelLabel: rs1.modelLabel,
+      };
+    }
+
+    throw new Error(`Tab '${tabId}' tidak mendukung Generate AI.`);
   },
 };
 
