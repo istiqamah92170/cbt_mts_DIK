@@ -2443,35 +2443,55 @@
       statusEl.style.color   = 'var(--text2)';
 
       try {
-        const itemList = [...items.values()];
-        const prompt   = isPisah ? _buildPromptPisah(itemList) : _buildPrompt(itemList);
-        let result = null, usedModel = null;
-
-        for (const model of modelsToTry) {
-          progTxt.textContent  = `Mencoba ${_modelLabel(model)}...`;
-          statusEl.textContent = `🔄 Mencoba: ${_modelLabel(model)}`;
-          Logger.info(`Gemini [${isPisah ? 'pisah' : 'koreksi'}]: mencoba "${model}"...`);
-          const res = await _callGemini(apiKey, model, prompt);
-          if (res.ok) {
-            result = res.corrections; usedModel = model;
-            statusEl.textContent = `✅ Berhasil: ${_modelLabel(model)}`;
-            statusEl.style.color = 'var(--green)';
-            Logger.ok(`Gemini "${model}" berhasil! ${result.length} item.`);
-            break;
-          } else {
-            const isQuota = res.error?.includes('quota') || res.error?.includes('429') || res.error?.includes('RESOURCE_EXHAUSTED');
-            Logger.warn(`Gemini "${model}": ${isQuota ? 'quota habis' : res.error}`);
-            statusEl.textContent = `⚠️ ${_modelLabel(model)}: ${isQuota ? 'quota habis...' : res.error}`;
-            statusEl.style.color = 'var(--yellow)';
-            if (!isQuota) throw new Error(res.error);
-            await _simulateDelay(400);
-          }
+        const itemList  = [...items.values()];
+        // Batch size: 10 item per request agar tidak melebihi token output Gemini
+        const BATCH_SIZE = isPisah ? 10 : 15;
+        const batches    = [];
+        for (let i = 0; i < itemList.length; i += BATCH_SIZE) {
+          batches.push(itemList.slice(i, i + BATCH_SIZE));
         }
 
-        if (!result) throw new Error('Semua model Gemini quota habis. Coba lagi besok.');
-        progTxt.textContent = `Menyimpan ke spreadsheet...`;
-        if (isPisah) await _applySplit(result, usedModel);
-        else         await _applyKoreksi(result, usedModel);
+        let allResults = [];
+        let usedModel  = null;
+        const totalBatches = batches.length;
+
+        for (let bi = 0; bi < batches.length; bi++) {
+          const batch  = batches[bi];
+          const prompt = isPisah ? _buildPromptPisah(batch) : _buildPrompt(batch);
+          let batchResult = null;
+
+          progTxt.textContent  = `Batch ${bi+1}/${totalBatches} (${batch.length} item)...`;
+          statusEl.textContent = `🔄 Batch ${bi+1}/${totalBatches}`;
+
+          for (const model of modelsToTry) {
+            Logger.info(`Gemini batch ${bi+1}/${totalBatches} via "${model}"...`);
+            const res = await _callGemini(apiKey, model, prompt);
+            if (res.ok) {
+              batchResult = res.corrections;
+              usedModel   = model;
+              statusEl.textContent = `✅ Batch ${bi+1}/${totalBatches} · ${_modelLabel(model)}`;
+              statusEl.style.color = 'var(--green)';
+              Logger.ok(`Batch ${bi+1}: ${batchResult.length} item via "${model}".`);
+              break;
+            } else {
+              const isQuota = res.error?.includes('quota') || res.error?.includes('429') || res.error?.includes('RESOURCE_EXHAUSTED');
+              Logger.warn(`Gemini "${model}" batch ${bi+1}: ${isQuota ? 'quota habis' : res.error}`);
+              statusEl.style.color = 'var(--yellow)';
+              if (!isQuota) throw new Error(res.error);
+              await _simulateDelay(400);
+            }
+          }
+
+          if (!batchResult) throw new Error('Semua model quota habis pada batch ' + (bi+1));
+          allResults = allResults.concat(batchResult);
+
+          // Delay antar batch agar tidak rate-limit
+          if (bi < batches.length - 1) await _simulateDelay(800);
+        }
+
+        progTxt.textContent = `Menyimpan ${allResults.length} item ke spreadsheet...`;
+        if (isPisah) await _applySplit(allResults, usedModel);
+        else         await _applyKoreksi(allResults, usedModel);
         _updateUI();
         UIManager.updateStats();
 
