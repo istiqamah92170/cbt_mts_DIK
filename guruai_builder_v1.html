@@ -736,6 +736,29 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   margin-left: 4px;
 }
 
+/* ---- CHATGPT IMPORT ---- */
+.cgpt-tab-picker {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px; padding: 4px;
+}
+.cgpt-tab-btn {
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  background: var(--bg-base);
+  text-align: left;
+  transition: all var(--t); cursor: pointer;
+}
+.cgpt-tab-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
+.cgpt-tab-btn.active {
+  background: rgba(45,212,191,.1);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+.cgpt-tab-btn .cgpt-tab-icon { font-size: 15px; display: block; margin-bottom: 3px; }
+
 /* ---- MODEL PICKER ---- */
 .model-option {
   display: flex; align-items: center; gap: 12px;
@@ -901,6 +924,9 @@ h1,h2,h3,h4 { color: var(--text-primary); }
     </div>
     <div class="nav-item" onclick="goPage('aisettings')" data-page="aisettings">
       <span class="nav-icon">🤖</span> AI Settings
+    </div>
+    <div class="nav-item" onclick="goPage('chatgpt')" data-page="chatgpt">
+      <span class="nav-icon">📋</span> Impor ChatGPT
     </div>
 
     <div class="sidebar-bottom">
@@ -1583,6 +1609,102 @@ h1,h2,h3,h4 { color: var(--text-primary); }
               <p>CP yang sama tidak akan dikirim ulang ke Gemini</p>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="hapusCacheAI()">🗑️ Hapus Cache</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========== IMPOR CHATGPT ========== -->
+    <div class="page" id="page-chatgpt">
+      <div class="page-topbar">
+        <div>
+          <h2>Impor dari ChatGPT</h2>
+          <p>Alternatif jika kuota Gemini habis — salin prompt, cari di ChatGPT, tempel hasilnya di sini</p>
+        </div>
+        <div style="margin-left:auto;">
+          <span class="badge badge-amber" style="font-size:11px;">🔄 Fallback Gemini</span>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+        <!-- KOLOM KIRI: Panduan & Prompt -->
+        <div>
+          <!-- Panduan -->
+          <div class="settings-group" style="margin-bottom:16px;">
+            <div class="settings-group-title">📖 Cara Menggunakan</div>
+            <div style="padding:14px 16px;">
+              <div class="step" style="margin-bottom:8px;"><div class="step-num">1</div>
+                <div><strong>Pilih tab perangkat</strong> di bawah — LKPD, Soal, Modul, dsb</div></div>
+              <div class="step" style="margin-bottom:8px;"><div class="step-num">2</div>
+                <div><strong>Klik "Salin Prompt"</strong> — prompt siap pakai akan tersalin otomatis</div></div>
+              <div class="step" style="margin-bottom:8px;"><div class="step-num">3</div>
+                <div><strong>Buka ChatGPT</strong> (<a href="https://chat.openai.com" target="_blank" style="color:var(--accent);">chat.openai.com</a>) → paste prompt → kirim → tunggu hasil</div></div>
+              <div class="step" style="margin-bottom:8px;"><div class="step-num">4</div>
+                <div><strong>Copy semua teks hasil</strong> ChatGPT (Ctrl+A, Ctrl+C)</div></div>
+              <div class="step" style="margin-bottom:0;"><div class="step-num">5</div>
+                <div><strong>Paste di kolom kanan</strong> → klik "Format & Terapkan" → hasil muncul di tab preview</div></div>
+            </div>
+          </div>
+
+          <!-- Pilih Tab -->
+          <div class="settings-group">
+            <div class="settings-group-title">🎯 Pilih Perangkat yang Ingin Dibuat</div>
+            <div style="padding:8px;">
+              <div class="cgpt-tab-picker" id="cgptTabPicker"></div>
+            </div>
+          </div>
+
+          <!-- Prompt yang Dihasilkan -->
+          <div class="settings-group" style="margin-top:16px;">
+            <div class="settings-group-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>💬 Prompt untuk ChatGPT</span>
+              <button class="btn btn-primary btn-sm" onclick="salinPromptChatGPT()" id="btnSalinPrompt">📋 Salin Prompt</button>
+            </div>
+            <div style="padding:14px 16px;">
+              <p style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">Prompt ini dibuat otomatis dari data modul Anda. Paste langsung ke ChatGPT.</p>
+              <div id="cgptPromptBox" style="
+                background:var(--bg-base);border:1px solid var(--border);border-radius:var(--r-sm);
+                padding:12px;font-size:12px;line-height:1.7;color:var(--text-secondary);
+                white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;
+                font-family:monospace;
+              ">Pilih tab perangkat di atas untuk melihat prompt yang siap disalin.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KOLOM KANAN: Area Paste + Hasil -->
+        <div>
+          <div class="settings-group">
+            <div class="settings-group-title">📥 Tempel Hasil dari ChatGPT</div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+              <p style="font-size:12px;color:var(--text-muted);">Setelah mendapat jawaban dari ChatGPT, copy semua teksnya dan tempel di sini:</p>
+              <textarea id="cgptPasteArea"
+                placeholder="Tempel hasil ChatGPT di sini...&#10;&#10;AI Lokal akan membacanya dan mengubahnya ke format HTML perangkat pembelajaran yang sesuai."
+                style="min-height:320px;font-size:12.5px;line-height:1.7;resize:vertical;"
+                oninput="cgptOnPaste()"></textarea>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="cgptClear()" style="flex:1;">🗑️ Hapus</button>
+                <button class="btn-generate" onclick="cgptFormat()" id="btnCgptFormat"
+                  style="flex:2;padding:10px;font-size:14px;margin-top:0;">
+                  ✨ Format & Terapkan
+                </button>
+              </div>
+              <div id="cgptStatus" style="display:none;font-size:12px;padding:8px 10px;border-radius:var(--r-sm);"></div>
+            </div>
+          </div>
+
+          <!-- Preview hasil format -->
+          <div class="settings-group" style="margin-top:16px;" id="cgptPreviewGroup" style="display:none;">
+            <div class="settings-group-title">👁️ Preview Hasil Format</div>
+            <div id="cgptPreviewBox" style="padding:14px 16px;font-size:13px;line-height:1.8;max-height:400px;overflow-y:auto;"></div>
+            <div style="padding:0 16px 14px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="cgptTerapkan()" id="btnCgptTerapkan">
+                ✅ Terapkan ke Tab Preview
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="cgptFormat()">🔄 Format Ulang</button>
+            </div>
           </div>
         </div>
 
@@ -2305,56 +2427,70 @@ STRUKTUR (semua wajib ada):
       return { html: r.html, modelLabel: r.modelLabel };
     }
 
-    /* ── LKPD — 2 pass ── */
+    /* ── LKPD — 4 pass kecil, tiap pass 1-2 bagian saja ── */
     if (tabId === 'lkpd') {
-      /* Pass 1: identitas, tujuan, petunjuk, aktivitas */
-      if (onProgress) onProgress('Membuat bagian 1/2 (Identitas & Aktivitas)...');
-      const p1 =
-`Anda pakar Kurikulum Merdeka Indonesia.
-Tugas: buat BAGIAN PERTAMA LKPD dalam HTML. WAJIB selesai sampai akhir Aktivitas.
-
-DATA:
-Mapel: ${data.mapel} | Kelas: ${data.kelas} | Model: ${data.model}
+      const ctx = `Mapel: ${data.mapel} | Kelas: ${data.kelas} | Model: ${data.model}
 TP: ${data.tp}
-Materi: ${data.materi}
+Materi: ${data.materi}`;
+      const fmt = `FORMAT: HTML saja, tag h4 p ol ul li table. TANPA Markdown. TANPA teks di luar HTML. WAJIB selesai sampai tag penutup terakhir.`;
 
-FORMAT — HTML saja (h4 p ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
-Buat PERSIS bagian berikut lalu BERHENTI (jangan buat bagian lain):
+      /* Pass 1 — Header + Identitas + Tujuan */
+      if (onProgress) onProgress('Membuat Identitas & Tujuan (1/4)...');
+      const lp1 = await kirim(
+`Anda pakar Kurikulum Merdeka. ${fmt}
+${ctx}
+Buat HANYA dua bagian ini, lalu BERHENTI:
+<h3>Lembar Kerja Peserta Didik (LKPD)</h3>
+<p>Mata Pelajaran: ${data.mapel} | Kelas: ${data.kelas} | Model: ${data.model}</p>
+<h4>1. Identitas Peserta Didik</h4>
+Tabel 2 kolom (Label | Isian kosong): Nama Siswa, Kelas, Kelompok, Tanggal.
+<h4>2. Tujuan Pembelajaran</h4>
+Daftar bernomor dari TP berikut (tulis ulang apa adanya, jangan disingkat):
+${data.tp}`, 2048);
+      if (!lp1.html) throw new Error('LKPD bagian 1 gagal. Coba lagi.');
 
-<h4>Lembar Kerja Peserta Didik</h4>
-<h4>1. Identitas</h4> — tabel: Nama | Kelas | Kelompok | Tanggal (kolom isian kosong)
-<h4>2. Tujuan Pembelajaran</h4> — list TP spesifik materi
-<h4>3. Petunjuk Pengerjaan</h4> — 4-5 poin
-<h4>4. Aktivitas Pembelajaran</h4> — 3 aktivitas sesuai ${data.model}, tiap aktivitas: judul fase, narasi konteks spesifik materi, pertanyaan/instruksi konkret`;
+      /* Pass 2 — Petunjuk + Aktivitas */
+      if (onProgress) onProgress('Membuat Petunjuk & Aktivitas (2/4)...');
+      const lp2 = await kirim(
+`Anda pakar Kurikulum Merdeka. ${fmt}
+${ctx}
+Buat HANYA dua bagian ini, lalu BERHENTI:
+<h4>3. Petunjuk Pengerjaan</h4>
+5 poin petunjuk konkret (durasi, cara kerja kelompok, dll).
+<h4>4. Aktivitas Pembelajaran</h4>
+Buat 3 aktivitas menggunakan model ${data.model} spesifik pada materi "${data.materi}":
+- Tiap aktivitas punya: judul fase, narasi situasi/konteks nyata, 2-3 pertanyaan/instruksi konkret yang harus dijawab siswa.
+- Aktivitas harus berurutan dan saling berkaitan.`, 2048);
+      if (!lp2.html) throw new Error('LKPD bagian 2 gagal. Coba lagi.');
 
-      const r1 = await kirim(p1, 4096);
-      if (!r1.html) throw new Error('Gagal membuat bagian 1 LKPD. Coba lagi.');
+      /* Pass 3 — Tabel Pengamatan + Pertanyaan Analisis */
+      if (onProgress) onProgress('Membuat Tabel & Soal Analisis (3/4)...');
+      const lp3 = await kirim(
+`Anda pakar Kurikulum Merdeka. ${fmt}
+${ctx}
+Buat HANYA dua bagian ini, lalu BERHENTI:
+<h4>5. Tabel Pengamatan / Data</h4>
+Tabel pengamatan spesifik materi "${data.materi}" dengan header kolom yang relevan, minimal 4 kolom dan 5 baris isian kosong (bukan contoh data).
+<h4>6. Pertanyaan Analisis</h4>
+4 soal HOTS level C4-C6 bernomor, spesifik pada materi. Tiap soal diikuti baris kosong untuk jawaban: "Jawaban: ________________________"`, 2048);
+      if (!lp3.html) throw new Error('LKPD bagian 3 gagal. Coba lagi.');
 
-      /* Pass 2: tabel pengamatan, soal analisis, kesimpulan */
-      if (onProgress) onProgress('Membuat bagian 2/2 (Soal Analisis & Kesimpulan)...');
-      const p2 =
-`Anda pakar Kurikulum Merdeka Indonesia.
-Tugas: buat BAGIAN KEDUA LKPD dalam HTML. WAJIB selesai sampai Kesimpulan.
-
-DATA:
-Mapel: ${data.mapel} | Kelas: ${data.kelas}
-TP: ${data.tp}
-Materi: ${data.materi}
-
-FORMAT — HTML saja (h4 p ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
-Buat PERSIS bagian berikut (jangan ulangi bagian sebelumnya):
-
-<h4>5. Tabel Pengamatan / Data</h4> — tabel bernomor sesuai materi (min 4 kolom, 5 baris isian)
-<h4>6. Pertanyaan Analisis</h4> — 4 soal HOTS level C4-C6, spesifik pada materi "${data.materi}", bernomor, tiap soal min 2 baris ruang jawab (baris kosong)
-<h4>7. Kesimpulan</h4> — kolom isian: "Dari kegiatan ini saya menyimpulkan bahwa..." (5 baris kosong)
-<h4>8. Refleksi Diri</h4> — 3 pertanyaan refleksi singkat dengan kolom isian`;
-
-      const r2 = await kirim(p2, 4096);
-      if (!r2.html) throw new Error('Gagal membuat bagian 2 LKPD. Coba lagi.');
+      /* Pass 4 — Kesimpulan + Refleksi */
+      if (onProgress) onProgress('Membuat Kesimpulan & Refleksi (4/4)...');
+      const lp4 = await kirim(
+`Anda pakar Kurikulum Merdeka. ${fmt}
+${ctx}
+Buat HANYA dua bagian ini, lalu BERHENTI:
+<h4>7. Kesimpulan</h4>
+Kalimat pembuka: "Dari kegiatan pembelajaran ini, saya menyimpulkan bahwa..."
+Diikuti 5 baris kosong untuk isian siswa.
+<h4>8. Refleksi Diri</h4>
+3 pertanyaan refleksi pendek yang relevan dengan materi, tiap pertanyaan diikuti baris kosong isian.`, 1024);
+      if (!lp4.html) throw new Error('LKPD bagian 4 gagal. Coba lagi.');
 
       return {
-        html: r1.html + '\n' + r2.html,
-        modelLabel: r1.modelLabel,
+        html: lp1.html + '\n' + lp2.html + '\n' + lp3.html + '\n' + lp4.html,
+        modelLabel: lp1.modelLabel,
       };
     }
 
@@ -3423,6 +3559,7 @@ function goPage(page) {
   }
   if (page === 'banksoal')   renderBankSoal();
   if (page === 'aisettings') updateAIKeyStatus();
+  if (page === 'chatgpt')    initChatGPTPage();
 }
 
 /* ============================================================
@@ -4379,6 +4516,531 @@ async function generateTabAI(tabId) {
   }
 
   if (btnAI) { btnAI.disabled = false; btnAI.textContent = '✨ AI'; }
+}
+
+/* ============================================================
+   TOAST NOTIFICATION
+   ============================================================ */
+/* ============================================================
+   CHATGPT IMPORT — Fallback manual jika Gemini quota habis.
+   Guru salin prompt → paste ke ChatGPT → paste hasilnya di sini
+   → AI Lokal memformat ke HTML perangkat pembelajaran.
+   ============================================================ */
+
+/** Tab yang tersedia di panel ChatGPT Import */
+const CGPT_TABS = [
+  { id: 'rppm',      icon: '📅', label: 'RPPM'          },
+  { id: 'modul',     icon: '📚', label: 'Modul Ajar'    },
+  { id: 'lkpd',      icon: '📋', label: 'LKPD'          },
+  { id: 'rubrik',    icon: '📏', label: 'Rubrik'         },
+  { id: 'asesmen',   icon: '🎯', label: 'Asesmen'        },
+  { id: 'soal',      icon: '❓', label: 'Soal & Kunci'   },
+  { id: 'pengayaan', icon: '🚀', label: 'Pengayaan'      },
+  { id: 'remedial',  icon: '🔄', label: 'Remedial'       },
+];
+
+/** Tab yang sedang aktif di panel ChatGPT */
+let cgptActiveTab  = 'lkpd';
+/** Hasil format terakhir — siap diterapkan ke preview */
+let cgptLastResult = null;
+
+/**
+ * Prompt per tab — dibuat dari data form yang sudah diisi guru.
+ * Guru tidak perlu menulis prompt sendiri.
+ */
+function cgptBuatPrompt(tabId) {
+  const d = currentGenerated?.data || UTIL.getFormData();
+  const tp     = d.tp     || STATE_ANALISIS.tp.join('\n')     || '(belum dianalisis)';
+  const materi = d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
+
+  const konteks = `IDENTITAS PEMBELAJARAN:
+Sekolah     : ${d.sekolah || '—'}
+Mata Pelajaran: ${d.mapel || '—'}
+Kelas / Fase: ${d.kelas || '—'} / ${d.fase || '—'}
+Semester    : ${d.semester || '—'}
+Tahun Pelajaran: ${d.tahun || '—'}
+Alokasi Waktu: ${d.waktu || '—'}
+Model Pembelajaran: ${d.model || 'PBL'}
+Guru        : ${d.guru || '—'}
+
+CAPAIAN PEMBELAJARAN (CP):
+${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}
+
+TUJUAN PEMBELAJARAN (TP):
+${tp}
+
+MATERI POKOK:
+${materi}`;
+
+  const prompts = {
+
+    rppm:
+`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat RPPM (Rencana Pelaksanaan Pembelajaran) format KBCDAN PM yang lengkap.
+
+${konteks}
+
+Buat RPPM dengan struktur berikut (tulis semuanya, jangan disingkat):
+A. IDENTITAS — isi semua data dari identitas di atas
+B. IDENTIFIKASI
+   - Peserta Didik: deskripsi singkat
+   - Materi Pelajaran: dari materi pokok
+   - Tema KBC (Panca Cinta): pilih yang relevan
+   - Dimensi Profil Lulusan: pilih yang relevan
+C. DESAIN PEMBELAJARAN
+   - Capaian Pembelajaran
+   - Lintas Disiplin Ilmu
+   - Tujuan Pembelajaran
+   - Topik, Materi Integrasi KBC, Praktik Pedagogis
+   - Kemitraan, Lingkungan, Pemanfaatan Digital
+D. PENGALAMAN BELAJAR
+   - Dalil/Ayat yang relevan (jika ada)
+   - Kegiatan AWAL, INTI (Memahami, Mengaplikasi, Merefleksi), PENUTUP
+E. ASESMEN — Awal, Proses, Akhir
+
+Tulis dalam format teks biasa yang rapi dan lengkap. Jangan terpotong.`,
+
+    modul:
+`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat LANGKAH PEMBELAJARAN yang detail dan lengkap untuk Modul Ajar.
+
+${konteks}
+
+Buat langkah pembelajaran dengan struktur berikut:
+1. PENDAHULUAN (10 menit)
+   - Salam dan doa pembuka
+   - Apersepsi: kaitkan dengan pengalaman nyata siswa terkait ${materi}
+   - Motivasi: manfaat mempelajari materi
+   - Penyampaian tujuan pembelajaran
+
+2. KEGIATAN INTI (sesuai model ${d.model || 'PBL'})
+   Tulis semua fase/sintaks ${d.model || 'PBL'} secara lengkap:
+   - Nama fase
+   - Aktivitas guru (konkret dan spesifik)
+   - Aktivitas siswa (konkret dan spesifik)
+   - Estimasi waktu
+
+3. PENUTUP (10 menit)
+   - Refleksi bersama
+   - Simpulan materi
+   - Pemberian tugas/tindak lanjut
+   - Doa penutup
+
+Tulis selengkap mungkin. Setiap aktivitas harus spesifik pada materi ${materi}, bukan generik.`,
+
+    lkpd:
+`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat LKPD (Lembar Kerja Peserta Didik) yang lengkap dan kontekstual.
+
+${konteks}
+
+Buat LKPD dengan 8 bagian berikut (WAJIB semua ada, jangan disingkat):
+
+1. IDENTITAS PESERTA DIDIK
+   Nama: _________________ | Kelas: _______ | Kelompok: _______ | Tanggal: _______
+
+2. TUJUAN PEMBELAJARAN
+   (salin semua TP di atas)
+
+3. PETUNJUK PENGERJAAN
+   (5 poin petunjuk konkret)
+
+4. AKTIVITAS PEMBELAJARAN (model ${d.model || 'PBL'})
+   Buat 3 aktivitas berurutan, tiap aktivitas ada:
+   - Judul & fase
+   - Narasi situasi nyata spesifik pada materi ${materi}
+   - 2-3 pertanyaan/instruksi konkret
+
+5. TABEL PENGAMATAN / DATA
+   Tabel dengan header kolom spesifik materi ${materi}, minimal 4 kolom, 5 baris kosong
+
+6. PERTANYAAN ANALISIS
+   4 soal HOTS level C4-C6 spesifik pada materi
+   (tiap soal diikuti: Jawaban: ___________________________)
+
+7. KESIMPULAN
+   "Dari kegiatan ini saya menyimpulkan bahwa..."
+   (5 baris kosong)
+
+8. REFLEKSI DIRI
+   3 pertanyaan refleksi
+   (tiap pertanyaan diikuti baris kosong)
+
+Tulis lengkap semua bagian. Jangan terpotong di tengah.`,
+
+    rubrik:
+`Kamu adalah pakar asesmen Kurikulum Merdeka Indonesia. Buat RUBRIK PENILAIAN yang lengkap.
+
+${konteks}
+
+Buat rubrik penilaian dengan struktur:
+1. RUBRIK PROSES (observasi selama kegiatan)
+   Tabel: No | Aspek Penilaian | Sangat Baik (4) | Baik (3) | Cukup (2) | Perlu Bimbingan (1)
+   Minimal 5 aspek yang relevan dengan model ${d.model || 'PBL'} dan materi ${materi}
+
+2. RUBRIK PRODUK/HASIL KERJA
+   Tabel penilaian hasil LKPD/laporan siswa
+
+3. RUMUS NILAI
+   Cara menghitung nilai akhir
+
+4. FORMAT REKAP NILAI
+   Tabel: No | Nama Siswa | Skor tiap aspek | Total | Nilai | Predikat
+
+5. PREDIKAT
+   A (≥90), B (75-89), C (60-74), D (<60)
+
+Tulis selengkap mungkin dan spesifik pada materi.`,
+
+    asesmen:
+`Kamu adalah pakar asesmen Kurikulum Merdeka Indonesia. Buat INSTRUMEN ASESMEN yang lengkap.
+
+${konteks}
+
+Buat instrumen asesmen dengan 3 jenis:
+
+1. ASESMEN DIAGNOSTIK (sebelum pembelajaran)
+   - 3 pertanyaan lisan untuk mengetahui pemahaman awal tentang ${materi}
+   - Panduan interpretasi jawaban siswa
+
+2. ASESMEN FORMATIF (selama pembelajaran)
+   Tabel: Strategi | Cara Pelaksanaan | Waktu
+   Minimal 4 strategi berbeda (Exit Ticket, Observasi, Pertanyaan Lisan, dll)
+
+3. ASESMEN SUMATIF (setelah pembelajaran)
+   - Bentuk asesmen
+   - Kisi-kisi singkat
+   - KKM dan skala nilai
+
+4. ASESMEN PROFIL PELAJAR PANCASILA
+   Tabel: Dimensi | Indikator yang Diamati
+   (sesuaikan dengan kegiatan pembelajaran ${materi})
+
+Tulis lengkap dan spesifik.`,
+
+    soal:
+`Kamu adalah pakar asesmen Kurikulum Merdeka Indonesia. Buat SOAL EVALUASI lengkap beserta kunci.
+
+${konteks}
+
+Buat soal dengan struktur berikut (WAJIB semua ada):
+
+A. KISI-KISI SOAL
+   Tabel: No | Tujuan Pembelajaran | Indikator Soal | Level Bloom | Bentuk Soal | No Soal
+
+B. SOAL PILIHAN GANDA (5 soal, level C2-C4)
+   Tiap soal:
+   - Nomor dan teks soal (ada konteks nyata spesifik materi ${materi})
+   - Pilihan A, B, C, D (satu benar, pengecoh masuk akal)
+
+C. SOAL URAIAN (3 soal, level C4-C6)
+   Soal terbuka yang mendalam, spesifik pada materi
+   (ada ruang: "Jawaban: ___")
+
+D. KUNCI JAWABAN
+   Tabel: No Soal | Jawaban/Kunci | Skor
+   (PG: masing-masing 4 poin, Uraian: masing-masing 10 poin)
+
+E. PEMBAHASAN SINGKAT
+   Penjelasan mengapa jawaban PG itu benar dan pengecoh lain salah
+
+Tulis semua bagian lengkap. Jangan terpotong.`,
+
+    pengayaan:
+`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat PROGRAM PENGAYAAN yang lengkap.
+
+${konteks}
+
+Buat program pengayaan untuk siswa yang sudah melampaui KKM:
+
+1. TUJUAN PENGAYAAN
+   (spesifik pada materi ${materi})
+
+2. KEGIATAN PENGAYAAN (4 kegiatan berbeda)
+   - Eksplorasi mandiri (sumber belajar lanjutan)
+   - Soal HOTS level C5-C6 (3 soal)
+   - Proyek mini kreatif
+   - Tutor sebaya
+
+3. PENILAIAN PENGAYAAN
+   Tabel: Kegiatan | Bobot | Kriteria Penilaian
+
+4. SUMBER BELAJAR LANJUTAN
+   Rekomendasi buku, website, video terkait ${materi}
+
+Tulis selengkap mungkin.`,
+
+    remedial:
+`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat PROGRAM REMEDIAL yang lengkap.
+
+${konteks}
+
+Buat program remedial untuk siswa yang belum mencapai KKM:
+
+1. IDENTIFIKASI KESULITAN
+   Tabel: Kemungkinan Kesulitan | Penyebab | Penanganan
+   (minimal 3 kesulitan umum terkait materi ${materi})
+
+2. LANGKAH REMEDIAL (4 langkah berurutan)
+   - Diagnosis ulang
+   - Penyampaian ulang dengan pendekatan berbeda
+   - Latihan terbimbing (soal lebih sederhana)
+   - Tes remedial
+
+3. SOAL REMEDIAL (3 soal tingkat dasar)
+   Soal yang lebih mudah, berfokus pada konsep dasar ${materi}
+
+4. PENILAIAN REMEDIAL
+   Ketentuan nilai maksimal dan cara pencatatan
+
+Tulis selengkap mungkin.`,
+  };
+
+  return prompts[tabId] || 'Tab tidak dikenal.';
+}
+
+/** Render tab picker di panel ChatGPT */
+function cgptRenderTabPicker() {
+  const el = document.getElementById('cgptTabPicker');
+  if (!el) return;
+  el.innerHTML = CGPT_TABS.map(t => `
+    <button class="cgpt-tab-btn ${t.id === cgptActiveTab ? 'active' : ''}"
+      onclick="cgptPilihTab('${t.id}')">
+      <span class="cgpt-tab-icon">${t.icon}</span>${t.label}
+    </button>
+  `).join('');
+}
+
+/** Pilih tab di panel ChatGPT */
+function cgptPilihTab(tabId) {
+  cgptActiveTab  = tabId;
+  cgptLastResult = null;
+  document.getElementById('cgptPreviewGroup')?.style && (
+    document.getElementById('cgptPreviewGroup').style.display = 'none'
+  );
+  cgptRenderTabPicker();
+  cgptUpdatePrompt();
+}
+
+/** Update tampilan prompt sesuai tab aktif */
+function cgptUpdatePrompt() {
+  const el = document.getElementById('cgptPromptBox');
+  if (!el) return;
+  const prompt = cgptBuatPrompt(cgptActiveTab);
+  el.textContent = prompt;
+}
+
+/** Salin prompt ke clipboard */
+function salinPromptChatGPT() {
+  const prompt = cgptBuatPrompt(cgptActiveTab);
+  navigator.clipboard.writeText(prompt).then(() => {
+    showToast('📋 Prompt disalin! Buka ChatGPT dan paste di sana.');
+    const btn = document.getElementById('btnSalinPrompt');
+    if (btn) { btn.textContent = '✅ Tersalin!'; setTimeout(() => btn.textContent = '📋 Salin Prompt', 2000); }
+  }).catch(() => {
+    /* Fallback untuk browser yang tidak support clipboard API */
+    const el = document.getElementById('cgptPromptBox');
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+    showToast('📋 Prompt dipilih — tekan Ctrl+C untuk menyalin');
+  });
+}
+
+/** Deteksi ada isi di textarea */
+function cgptOnPaste() {
+  const val = document.getElementById('cgptPasteArea')?.value?.trim();
+  const btn = document.getElementById('btnCgptFormat');
+  if (btn) btn.style.opacity = val ? '1' : '0.6';
+}
+
+/** Format teks ChatGPT → HTML perangkat pembelajaran */
+function cgptFormat() {
+  const raw = document.getElementById('cgptPasteArea')?.value?.trim();
+  if (!raw) { showToast('Tempel hasil ChatGPT terlebih dahulu', 'error'); return; }
+
+  const btn = document.getElementById('btnCgptFormat');
+  if (btn) { btn.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:middle;margin-right:6px;"></div>Memformat...'; btn.disabled = true; }
+
+  setTimeout(() => {
+    try {
+      const html = cgptTeksKeHTML(raw, cgptActiveTab);
+      cgptLastResult = html;
+
+      /* Tampilkan preview */
+      const pg = document.getElementById('cgptPreviewGroup');
+      const pb = document.getElementById('cgptPreviewBox');
+      if (pg) pg.style.display = 'block';
+      if (pb) pb.innerHTML = html;
+
+      /* Status sukses */
+      const st = document.getElementById('cgptStatus');
+      if (st) {
+        st.style.cssText = 'display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;font-size:12px;padding:8px 10px;border-radius:6px;';
+        st.textContent = `✅ Format selesai — ${cgptHitungKata(raw)} kata diformat ke HTML. Klik "Terapkan ke Tab Preview" untuk melihat di tab ${CGPT_TABS.find(t=>t.id===cgptActiveTab)?.label}.`;
+      }
+      showToast('✅ Berhasil diformat! Klik Terapkan untuk memasukkan ke preview.');
+    } catch(e) {
+      showToast(`❌ Gagal memformat: ${e.message}`, 'error');
+    }
+    if (btn) { btn.innerHTML = '✨ Format & Terapkan'; btn.disabled = false; }
+  }, 400);
+}
+
+/** Hitung jumlah kata */
+function cgptHitungKata(teks) {
+  return teks.split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Konversi teks mentah ChatGPT → HTML format GuruAI Builder.
+ * Parser berbasis pola — mengenali heading, tabel, list, dst.
+ */
+function cgptTeksKeHTML(teks, tabId) {
+  const baris = teks.split('\n');
+  let html    = '';
+  let inList  = false;
+  let inTable = false;
+  let tableRows = [];
+
+  const tutupList  = () => { if (inList)  { html += '</ul>';   inList  = false; } };
+  const tutupTable = () => {
+    if (inTable) {
+      if (tableRows.length) {
+        const header = tableRows[0];
+        const body   = tableRows.slice(1);
+        html += '<table><tr>' +
+          header.map(h => `<th>${h}</th>`).join('') + '</tr>' +
+          body.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') +
+          '</table>';
+      }
+      tableRows = []; inTable = false;
+    }
+  };
+
+  baris.forEach(b => {
+    const trim = b.trim();
+    if (!trim) { tutupList(); tutupTable(); html += '<br>'; return; }
+
+    /* Tabel markdown: | col | col | */
+    if (trim.startsWith('|') && trim.endsWith('|')) {
+      tutupList();
+      /* Skip baris separator |---|---| */
+      if (/^\|[\s\-:|]+\|$/.test(trim)) { inTable = true; return; }
+      const cols = trim.slice(1,-1).split('|').map(c => c.trim());
+      tableRows.push(cols);
+      inTable = true;
+      return;
+    }
+    tutupTable();
+
+    /* Heading level 1: # atau HURUF BESAR semua atau A. B. C. */
+    if (/^#{1,2}\s/.test(trim)) {
+      tutupList();
+      const teks = trim.replace(/^#+\s/, '');
+      html += `<h3>${teks}</h3>`;
+      return;
+    }
+    if (/^#{3,4}\s/.test(trim)) {
+      tutupList();
+      const teks = trim.replace(/^#+\s/, '');
+      html += `<h4>${teks}</h4>`;
+      return;
+    }
+
+    /* Heading angka seperti "1. IDENTITAS" atau "A. KISI-KISI" */
+    if (/^([A-Z]\.|[0-9]+\.)\s+[A-Z\s]{4,}$/.test(trim)) {
+      tutupList();
+      html += `<h4>${trim}</h4>`;
+      return;
+    }
+
+    /* Bold **teks** atau __teks__ sebagai sub-heading */
+    if (/^\*{2}.+\*{2}$/.test(trim) || /^_{2}.+_{2}$/.test(trim)) {
+      tutupList();
+      const t = trim.replace(/^\*{2}|_{2}|\*{2}$|_{2}$/g, '');
+      html += `<h4>${t}</h4>`;
+      return;
+    }
+
+    /* List item: - atau * atau • atau angka. */
+    if (/^[-*•]\s/.test(trim) || /^\d+\.\s/.test(trim)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      const isi = trim.replace(/^[-*•]\s|^\d+\.\s/, '')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/_{2,}/g, '<span style="display:inline-block;min-width:120px;border-bottom:1px solid #999;">&nbsp;</span>');
+      html += `<li>${isi}</li>`;
+      return;
+    }
+
+    /* Baris biasa / paragraf */
+    tutupList();
+    const isi = trim
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/_{3,}/g, '<span style="display:inline-block;min-width:120px;border-bottom:1px solid #999;">&nbsp;</span>')
+      .replace(/Jawaban:\s*_+/gi, '<br><strong>Jawaban:</strong> <span style="display:inline-block;min-width:200px;border-bottom:1px solid #999;">&nbsp;</span>');
+
+    /* Baris kotak isian (____) dijadikan kotak visual */
+    if (/_{5,}/.test(isi)) {
+      html += `<p>${isi}</p>`;
+    } else {
+      html += `<p>${isi}</p>`;
+    }
+  });
+
+  tutupList();
+  tutupTable();
+
+  /* Bungkus dengan wrapper dan info sumber */
+  return `
+    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;padding:6px 10px;
+      background:rgba(245,158,11,.08);border-radius:var(--r-sm);border-left:3px solid var(--amber);">
+      📋 Diimpor dari ChatGPT — ${CGPT_TABS.find(t=>t.id===tabId)?.label || tabId}
+    </div>
+    ${html}`;
+}
+
+/** Terapkan hasil format ke tab preview Modul Ajar */
+function cgptTerapkan() {
+  if (!cgptLastResult) { showToast('Format dulu hasilnya', 'error'); return; }
+
+  /* Pastikan currentGenerated ada */
+  if (!currentGenerated) {
+    showToast('Generate modul ajar terlebih dahulu sebelum menerapkan impor', 'warning');
+    goPage('modul');
+    return;
+  }
+
+  /* Simpan ke currentGenerated dan persist */
+  currentGenerated.result[cgptActiveTab]             = cgptLastResult;
+  currentGenerated.result[cgptActiveTab + '_sumber'] = 'chatgpt';
+  _simpanResult(currentGenerated.historyId, currentGenerated.result);
+
+  /* Pindah ke Modul Ajar dan tampilkan tab yang relevan */
+  goPage('modul');
+  currentTab = cgptActiveTab;
+  RENDER.renderTabs(currentTab);
+  RENDER.showTab(currentTab, cgptLastResult);
+
+  const label = CGPT_TABS.find(t => t.id === cgptActiveTab)?.label || cgptActiveTab;
+  showToast(`✅ ${label} dari ChatGPT berhasil diterapkan ke preview!`);
+}
+
+/** Hapus area paste */
+function cgptClear() {
+  const el = document.getElementById('cgptPasteArea');
+  if (el) el.value = '';
+  cgptLastResult = null;
+  const pg = document.getElementById('cgptPreviewGroup');
+  if (pg) pg.style.display = 'none';
+  const st = document.getElementById('cgptStatus');
+  if (st) st.style.display = 'none';
+}
+
+/** Init halaman ChatGPT saat dibuka */
+function initChatGPTPage() {
+  cgptRenderTabPicker();
+  cgptUpdatePrompt();
 }
 
 /* ============================================================
