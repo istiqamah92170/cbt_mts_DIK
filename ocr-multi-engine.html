@@ -2717,32 +2717,34 @@ TEKS OCR YANG PERLU DIPROSES:
 ${numbered}`;
     }
     function _parseGeminiResponse(raw, itemList) {
+      // Log raw response untuk debug parse
+      Logger.info(`Gemini raw (${raw.length} char): ${raw.slice(0, 300)}`);
       try {
-        // Bersihkan markdown fence jika ada (```json ... ``` atau ``` ... ```)
+        // Bersihkan markdown fence
         let clean = raw
           .replace(/^```json\s*/i, '')
           .replace(/^```\s*/i, '')
           .replace(/\s*```$/i, '')
           .trim();
 
-        // Cari blok JSON jika ada teks sebelum/sesudahnya
+        // Cari blok JSON { ... } terluar — toleran terhadap teks sebelum/sesudah
         const jsonMatch = clean.match(/\{[\s\S]*\}/);
         if (jsonMatch) clean = jsonMatch[0];
 
         const parsed = JSON.parse(clean);
         const corrs  = parsed.corrections || parsed.results || parsed.items || [];
-        const valid  = corrs.filter(c => c.no != null && c.text != null);
+        // Terima item yang punya field text ATAU soal (mode pisah)
+        const valid  = corrs.filter(c => c.no != null && (c.text != null || c.soal != null));
         if (valid.length > 0) return valid;
 
-        // Jika array langsung (tanpa wrapper)
         if (Array.isArray(parsed)) {
-          return parsed.filter(c => c.no != null && c.text != null);
+          return parsed.filter(c => c.no != null && (c.text != null || c.soal != null));
         }
 
         throw new Error('Format tidak dikenali');
       } catch (e) {
-        Logger.warn(`Gemini: gagal parse JSON (${e.message}), kembalikan teks asli.`);
-        // Fallback — kembalikan teks asli tanpa perubahan
+        Logger.warn(`Gemini parse gagal (${e.message})`);
+        Logger.warn(`Raw 500 char: ${raw.slice(0, 500)}`);
         return itemList.map(it => ({ no: it.rowNo, text: it.ocrText }));
       }
     }
