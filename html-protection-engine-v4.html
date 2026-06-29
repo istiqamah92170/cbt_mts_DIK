@@ -362,15 +362,21 @@ async function runProtect(){
     var body=doc.body;
     if(body){
       epStr=JSON.stringify(await _aesEnc(body.innerHTML,pass));
-      var pwStr=JSON.stringify(pass);
+      // Payload disimpan di meta tag — 100% aman, tidak ada risiko memutus script tag
+      var metaPayload='<meta id="_aes_ep" name="_aes_ep" content="'+btoa(unescape(encodeURIComponent(epStr)))+'">'
+        +'<meta id="_aes_pw" name="_aes_pw" content="'+btoa(unescape(encodeURIComponent(pass)))+'">'
+        +'<meta id="_aes_id" name="_aes_id" content="'+id+'">';
 
-      // Bangun script runtime sebagai array of strings untuk menghindari karakter pemecah
       var rt=[];
       rt.push('<sc'+'ript id="_aes_rt" data-pid="'+id+'" data-enc="aes256">');
       rt.push('(function(){');
-      rt.push('var _d='+JSON.stringify(epStr)+';');
-      rt.push('var _p='+pwStr+';');
-      rt.push('var _id='+JSON.stringify(id)+';');
+      rt.push('var _dm=document.getElementById("_aes_ep");');
+      rt.push('var _pm=document.getElementById("_aes_pw");');
+      rt.push('var _im=document.getElementById("_aes_id");');
+      rt.push('if(!_dm||!_pm)return;');
+      rt.push('var _d=decodeURIComponent(escape(atob(_dm.getAttribute("content"))));');
+      rt.push('var _p=decodeURIComponent(escape(atob(_pm.getAttribute("content"))));');
+      rt.push('var _id=_im?_im.getAttribute("content"):"";');
       rt.push('function _err(t,m){document.head.innerHTML="<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5}</style>";document.body.innerHTML="<div style=\'text-align:center;padding:2rem\'><h2>"+t+"</h2><p style=\'color:#666;margin-top:.5rem\'>"+m+"</p></div>";}');
       rt.push('async function _dec(){');
       rt.push('try{');
@@ -427,8 +433,9 @@ async function runProtect(){
     else if(html.includes('<HEAD>'))html=html.replace('<HEAD>','<HEAD>\n'+meta);
   }
   if(encBlock){
-    if(html.includes('</head>'))html=html.replace('</head>','\n'+encBlock+'\n</head>');
-    else html=encBlock+html;
+    var headIns=(typeof metaPayload!=='undefined'?metaPayload:'')+encBlock;
+    if(html.includes('</head>'))html=html.replace('</head>','\n'+headIns+'\n</head>');
+    else html=headIns+html;
   }
   if(hp){
     if(html.includes('<body'))html=html.replace(/(<body[^>]*>)/,'$1'+hp);
@@ -460,7 +467,20 @@ async function runDecrypt(){
 
   await _sleep(100);_setP('-d',20,'Menganalisis file...');
 
-  var m=_fc.match(/var _d=("(?:[^"\\]|\\.)*");/);
+  // Cari payload dari meta tag (format baru) ATAU dari JS variable (format lama)
+  var m=null;
+  var _epMeta=null;
+  var _pwMeta=null;
+  var _tmpDoc=(new DOMParser()).parseFromString(_fc,'text/html');
+  var _epEl=_tmpDoc.getElementById('_aes_ep');
+  var _pwEl=_tmpDoc.getElementById('_aes_pw');
+  if(_epEl&&_pwEl){
+    _epMeta=decodeURIComponent(escape(atob(_epEl.getAttribute('content'))));
+    _pwMeta=decodeURIComponent(escape(atob(_pwEl.getAttribute('content'))));
+    m=['','dummy']; // tandai ditemukan
+  } else {
+    m=_fc.match(/var _d=("(?:[^"\\]|\\.)*");/);
+  }
   var pidM=_fc.match(/data-pid="([^"]+)"/);
 
   await _sleep(150);_setP('-d',45,'Mendekripsi AES-256-GCM...');
@@ -472,9 +492,12 @@ async function runDecrypt(){
   }
 
   try{
-    var epStr=JSON.parse(m[1]);
+    var epStr=_epMeta?_epMeta:JSON.parse(m[1]);
     var ep=JSON.parse(epStr);
-    var result=await _aesDec(ep,pass);
+    // Jika password dari meta tag tersedia, gunakan itu (format baru)
+    // Jika tidak, gunakan password yang diinput user (format lama)
+    var decPass=_pwMeta?_pwMeta:pass;
+    var result=await _aesDec(ep,decPass);
     if(!result||result.trim().length<5)throw new Error('Password salah');
 
     await _sleep(120);_setP('-d',70,'Memulihkan HTML...');
