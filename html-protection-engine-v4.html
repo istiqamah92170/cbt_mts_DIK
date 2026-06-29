@@ -760,7 +760,13 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
   if(document.getElementById('o-integrity').checked){
     const hashSource=scripts.join('')+encPayload+id+owner;
     const intHash=await sha256(hashSource);
-    integrityBlock=`\n<script data-integrity="${intHash.substring(0,16)}">\n(function(){var _s=document.querySelector('script[data-pid]');if(!_s||!_s.getAttribute('data-pid')){document.open();document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:5rem"><h2>\u26a0 File Rusak<\/h2><p>Integritas file tidak valid.<\/p><\/body><\/html>');document.close();}})();\n<\/script>\n`;
+    integrityBlock='\n<scr'+'ipt data-integrity="'+intHash.substring(0,16)+'">'
+      +'\n(function(){'
+      +'var _s=document.querySelector(\'script[data-pid]\');'
+      +'if(!_s||!_s.getAttribute(\'data-pid\')){'
+      +'document.head.innerHTML=\'<style>body{font-family:sans-serif;text-align:center;padding:5rem}</style>\';'
+      +'document.body.innerHTML=\'<h2>\u26a0 File Rusak</h2><p>Integritas tidak valid.</p>\';'
+      +'}})();\n</'+'script>\n';
   }
 
   await sleep(100); setProgress('p',72,'Finalisasi sistem keamanan...');
@@ -773,14 +779,19 @@ await sleep(80); setProgress('p',82,'Obfuskasi & finalisasi...');
   let allScript=scripts.join('\n');
   if(document.getElementById('o-obfuscate').checked){
     const vn=['_va','_vb','_vc','_vd','_ve'].map(v=>v+'='+Math.floor(Math.random()*99999));
-    allScript=`var ${vn.join(',')};`+allScript;
+    allScript='var '+vn.join(',')+';'+allScript;
   }
 
-  const protBlock=`\n<!-- [PROTECTED: ${id} | ${owner} | ${date}] -->\n<script data-pid="${id}">\n(function(){\n${allScript}\n})();\n<\/script>\n`;
+  const protBlock='\n<!-- [PROTECTED: '+id+' | '+owner+' | '+date+'] -->\n'
+    +'<scr'+'ipt data-pid="'+id+'">\n(function(){\n'+allScript+'\n})();\n'
+    +'</'+'script>\n';
 
   // Honeypot
   if(document.getElementById('o-honeypot').checked){
-    const hp=`\n<!-- OWNER-PROOF:${id}:${owner}:${date} -->\n<span data-wm="${id}" data-owner="${encodeURIComponent(owner)}" style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;font-size:0;color:transparent;" aria-hidden="true">${id}</span>\n`;
+    const hp='\n<!-- OWNER-PROOF:'+id+':'+owner+':'+date+' -->\n'
+      +'<span data-wm="'+id+'" data-owner="'+encodeURIComponent(owner)+'" '
+      +'style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;font-size:0;color:transparent;" '
+      +'aria-hidden="true">'+id+'</span>\n';
     if(html.includes('<body'))html=html.replace(/(<body[^>]*>)/,'$1'+hp);
     else html=hp+html;
   }
