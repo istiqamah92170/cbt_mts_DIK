@@ -406,7 +406,12 @@ async function runProtect(){
       rt.push('if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",_dec);}else{_dec();}');
       rt.push('})();');
       rt.push('</'+'script>');
-      encBlock=rt.join('\n');
+      var rtCode=rt.slice(1,-1).join('\n'); // ambil isi tanpa tag script
+      var rtB64=btoa(unescape(encodeURIComponent(rtCode)));
+      // Script hanya berisi eval(atob()) — tidak ada tag penutup script di dalamnya
+      encBlock='<sc'+'ript id="_aes_rt" data-pid="'+id+'" data-enc="aes256">'
+        +'(async function(){eval(decodeURIComponent(escape(atob("'+rtB64+'"))));})()'
+        +'</'+'script>';
 
       body.innerHTML='';
       html=doc.documentElement.outerHTML;
@@ -427,21 +432,34 @@ async function runProtect(){
       +'aria-hidden="true">'+id+'</span>\n';
   }
 
+  // Gunakan split+join bukan replace() untuk menghindari karakter berbahaya
+  function _ins(str,target,insertion){
+    if(str.indexOf(target)===-1)return str;
+    var idx=str.indexOf(target);
+    return str.slice(0,idx)+insertion+str.slice(idx);
+  }
+  function _insAfter(str,target,insertion){
+    if(str.indexOf(target)===-1)return str;
+    var idx=str.indexOf(target)+target.length;
+    return str.slice(0,idx)+insertion+str.slice(idx);
+  }
+
   if(wm)html=wm+html;
   if(meta){
-    if(html.includes('<head>'))html=html.replace('<head>','<head>\n'+meta);
-    else if(html.includes('<HEAD>'))html=html.replace('<HEAD>','<HEAD>\n'+meta);
+    if(html.indexOf('<head>')>-1)html=_insAfter(html,'<head>','\n'+meta);
+    else if(html.indexOf('<HEAD>')>-1)html=_insAfter(html,'<HEAD>','\n'+meta);
   }
   if(encBlock){
     var headIns=(typeof metaPayload!=='undefined'?metaPayload:'')+encBlock;
-    if(html.includes('</head>'))html=html.replace('</head>','\n'+headIns+'\n</head>');
+    if(html.indexOf('</head>')>-1)html=_ins(html,'</head>','\n'+headIns+'\n');
     else html=headIns+html;
   }
   if(hp){
-    if(html.includes('<body'))html=html.replace(/(<body[^>]*>)/,'$1'+hp);
+    var bodyTag=html.match(/<body[^>]*>/i);
+    if(bodyTag){var bIdx=html.indexOf(bodyTag[0])+bodyTag[0].length;html=html.slice(0,bIdx)+hp+html.slice(bIdx);}
     else html=hp+html;
   }
-  if(html.includes('</body>'))html=html.replace('</body>',protBlock+'</body>');
+  if(html.indexOf('</body>')>-1)html=_ins(html,'</body>',protBlock);
   else html+=protBlock;
 
   _setP('',100,'Selesai!');
