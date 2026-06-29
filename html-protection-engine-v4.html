@@ -683,13 +683,18 @@ function _killPage(){document.body.innerHTML='<div style="font-family:sans-serif
 
       // Password tertanam — pengguna tidak perlu input apapun
       // Render via blob URL agar tidak ada konflik document.write
+      // Encode payload aman: ganti </script> agar tidak memutus tag script
+      const safeEP=JSON.stringify(encPayload).replace(/<\/script>/gi,'<\\/script>');
+      const safePW=JSON.stringify(pass).replace(/<\/script>/gi,'<\\/script>');
+      const safeLH=JSON.stringify(licHash).replace(/<\/script>/gi,'<\\/script>');
+
       decryptBlock=`
 <script id="_aes_runtime" data-pid="${id}" data-enc="aes256">
 (function(){
 'use strict';
-var _EP=${JSON.stringify(encPayload)};
-var _PW=${JSON.stringify(pass)};
-var _LH=${JSON.stringify(licHash)};
+var _EP=${safeEP};
+var _PW=${safePW};
+var _LH=${safeLH};
 var _LID=${JSON.stringify(id)};
 var _useLic=${useLic?'true':'false'};
 
