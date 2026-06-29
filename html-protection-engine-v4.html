@@ -394,17 +394,36 @@ async function runProtect(){
       rt.push('if(decoded.indexOf("<head>")>-1)decoded=decoded.replace("<head>","<head>"+bTag);');
       rt.push('else if(decoded.indexOf("<HEAD>")>-1)decoded=decoded.replace("<HEAD>","<HEAD>"+bTag);');
       rt.push('else decoded="<!DOCTYPE html><html><head>"+bTag+"</head><body>"+decoded+"</body></html>";');
-      rt.push('var st=document.createElement("style");');
-      rt.push('st.textContent="html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden}#_ifr{position:fixed;top:0;left:0;width:100vw;height:100vh;border:none;z-index:99999;display:block}";');
-      rt.push('document.head.appendChild(st);');
-      rt.push('var fr=document.createElement("iframe");');
-      rt.push('fr.id="_ifr";');
-      rt.push('fr.setAttribute("sandbox","allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-top-navigation");');
-      rt.push('document.body.innerHTML="";');
-      rt.push('document.body.appendChild(fr);');
-      rt.push('fr.contentDocument.open();');
-      rt.push('fr.contentDocument.write(decoded);');
-      rt.push('fr.contentDocument.close();');
+      // Parse decoded HTML dan render langsung ke dokumen aktif
+      // Ini mempertahankan origin sehingga semua CSS, font, script bisa dimuat
+      rt.push('var parser=new DOMParser();');
+      rt.push('var newDoc=parser.parseFromString(decoded,"text/html");');
+      // Ganti head: hapus meta proteksi, pertahankan CSS dan font
+      rt.push('var newHead=newDoc.head;');
+      rt.push('var curHead=document.head;');
+      // Hapus semua elemen head yang bukan proteksi engine
+      rt.push('while(curHead.firstChild)curHead.removeChild(curHead.firstChild);');
+      // Salin semua elemen dari newHead ke curHead
+      rt.push('var hNodes=Array.from(newHead.childNodes);');
+      rt.push('hNodes.forEach(function(n){curHead.appendChild(n.cloneNode(true));});');
+      // Eksekusi ulang script di head
+      rt.push('curHead.querySelectorAll("script").forEach(function(s){');
+      rt.push('  var ns=document.createElement("script");');
+      rt.push('  if(s.src)ns.src=s.src; else ns.textContent=s.textContent;');
+      rt.push('  ns.type=s.type||"text/javascript";');
+      rt.push('  curHead.appendChild(ns);');
+      rt.push('  s.remove();');
+      rt.push('});');
+      // Ganti body content
+      rt.push('document.body.innerHTML=newDoc.body.innerHTML;');
+      // Eksekusi ulang script di body agar semua fungsi JS berjalan
+      rt.push('document.body.querySelectorAll("script").forEach(function(s){');
+      rt.push('  var ns=document.createElement("script");');
+      rt.push('  if(s.src)ns.src=s.src; else ns.textContent=s.textContent;');
+      rt.push('  ns.type=s.type||"text/javascript";');
+      rt.push('  document.body.appendChild(ns);');
+      rt.push('  s.remove();');
+      rt.push('});');
       
       rt.push('}catch(e){_err("Gagal Memuat","Coba muat ulang halaman.");}');
       rt.push('}');
