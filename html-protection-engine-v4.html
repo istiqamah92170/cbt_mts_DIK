@@ -394,36 +394,10 @@ async function runProtect(){
       rt.push('if(decoded.indexOf("<head>")>-1)decoded=decoded.replace("<head>","<head>"+bTag);');
       rt.push('else if(decoded.indexOf("<HEAD>")>-1)decoded=decoded.replace("<HEAD>","<HEAD>"+bTag);');
       rt.push('else decoded="<!DOCTYPE html><html><head>"+bTag+"</head><body>"+decoded+"</body></html>";');
-      // Parse decoded HTML dan render langsung ke dokumen aktif
-      // Ini mempertahankan origin sehingga semua CSS, font, script bisa dimuat
-      rt.push('var parser=new DOMParser();');
-      rt.push('var newDoc=parser.parseFromString(decoded,"text/html");');
-      // Ganti head: hapus meta proteksi, pertahankan CSS dan font
-      rt.push('var newHead=newDoc.head;');
-      rt.push('var curHead=document.head;');
-      // Hapus semua elemen head yang bukan proteksi engine
-      rt.push('while(curHead.firstChild)curHead.removeChild(curHead.firstChild);');
-      // Salin semua elemen dari newHead ke curHead
-      rt.push('var hNodes=Array.from(newHead.childNodes);');
-      rt.push('hNodes.forEach(function(n){curHead.appendChild(n.cloneNode(true));});');
-      // Eksekusi ulang script di head
-      rt.push('curHead.querySelectorAll("script").forEach(function(s){');
-      rt.push('  var ns=document.createElement("script");');
-      rt.push('  if(s.src)ns.src=s.src; else ns.textContent=s.textContent;');
-      rt.push('  ns.type=s.type||"text/javascript";');
-      rt.push('  curHead.appendChild(ns);');
-      rt.push('  s.remove();');
-      rt.push('});');
-      // Ganti body content
-      rt.push('document.body.innerHTML=newDoc.body.innerHTML;');
-      // Eksekusi ulang script di body agar semua fungsi JS berjalan
-      rt.push('document.body.querySelectorAll("script").forEach(function(s){');
-      rt.push('  var ns=document.createElement("script");');
-      rt.push('  if(s.src)ns.src=s.src; else ns.textContent=s.textContent;');
-      rt.push('  ns.type=s.type||"text/javascript";');
-      rt.push('  document.body.appendChild(ns);');
-      rt.push('  s.remove();');
-      rt.push('});');
+      // Encode ke base64 lalu redirect ke data URI
+      // Browser merender data URI sebagai dokumen penuh dengan semua script aktif
+      rt.push('var b64=btoa(unescape(encodeURIComponent(decoded)));');
+      rt.push('window.location.replace("data:text/html;charset=utf-8;base64,"+b64);');
       
       rt.push('}catch(e){_err("Gagal Memuat","Coba muat ulang halaman.");}');
       rt.push('}');
