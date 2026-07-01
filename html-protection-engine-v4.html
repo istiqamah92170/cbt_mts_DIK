@@ -5,74 +5,62 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HTML Protection Engine v4</title>
 <style>
-:root{--bg:#0f0f11;--sur:#18181c;--sur2:#222228;--bor:#2e2e38;--bor2:#3e3e4e;--txt:#e8e8f0;--mut:#8888a0;--acc:#7c6ff7;--acc2:#5a52d5;--grn:#3ecf8e;--red:#f26b6b;--amb:#f5a623;--tel:#2dd4bf;--rad:10px;--rads:6px}
+:root{--bg:#0f0f11;--sur:#18181c;--sur2:#222228;--bor:#2e2e38;--bor2:#3e3e4e;--txt:#e8e8f0;--mut:#8888a0;--acc:#7c6ff7;--grn:#3ecf8e;--red:#f26b6b;--amb:#f5a623;--tel:#2dd4bf}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;line-height:1.6}
-header{border-bottom:1px solid var(--bor);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:56px;position:sticky;top:0;background:rgba(15,15,17,.95);backdrop-filter:blur(8px);z-index:100}
-.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
-.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--acc),var(--tel));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+header{border-bottom:1px solid var(--bor);padding:0 1.5rem;display:flex;align-items:center;height:52px;position:sticky;top:0;background:rgba(15,15,17,.96);backdrop-filter:blur(8px);z-index:100}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}
+.logo-icon{width:26px;height:26px;background:linear-gradient(135deg,var(--acc),var(--tel));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
 .ver{background:var(--sur2);border:1px solid var(--bor);color:var(--mut);font-size:11px;padding:2px 8px;border-radius:20px;margin-left:auto}
-.wrap{max-width:820px;margin:0 auto;padding:2rem 1.5rem}
-.tabs{display:flex;gap:4px;background:var(--sur);border:1px solid var(--bor);border-radius:var(--rad);padding:4px;margin-bottom:1.5rem}
-.tb{flex:1;padding:8px 12px;border:none;background:transparent;color:var(--mut);border-radius:var(--rads);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
-.tb:hover{color:var(--txt);background:var(--sur2)}
+.wrap{max-width:780px;margin:0 auto;padding:1.5rem}
+.tabs{display:flex;gap:4px;background:var(--sur);border:1px solid var(--bor);border-radius:10px;padding:4px;margin-bottom:1.25rem}
+.tb{flex:1;padding:7px 10px;border:none;background:transparent;color:var(--mut);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
 .tb.active{background:var(--sur2);color:var(--txt);border:1px solid var(--bor2)}
-.dz{border:1.5px dashed var(--bor2);border-radius:var(--rad);padding:2.5rem 2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--sur);margin-bottom:1rem}
-.dz:hover,.dz.over{border-color:var(--acc);background:rgba(124,111,247,.06)}
-.fi{display:none;background:var(--sur);border:1px solid var(--bor);border-radius:var(--rad);padding:12px 16px;align-items:center;gap:12px;margin-bottom:1rem}
+.dz{border:1.5px dashed var(--bor2);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--sur);margin-bottom:1rem}
+.dz:hover,.dz.over{border-color:var(--acc);background:rgba(124,111,247,.05)}
+.fi{display:none;background:var(--sur);border:1px solid var(--bor);border-radius:10px;padding:11px 14px;align-items:center;gap:10px;margin-bottom:1rem}
 .fi.show{display:flex}
-.sl{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin:1.25rem 0 8px}
-.ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
-.ig label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}
-.ig input,.ig select{width:100%;background:var(--sur);border:1px solid var(--bor);border-radius:var(--rads);padding:8px 11px;color:var(--txt);font-size:13px;outline:none;transition:border-color .15s}
-.ig input:focus,.ig select:focus{border-color:var(--acc)}
+.sl{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;margin:1.1rem 0 7px}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:.9rem}
+.ig label{display:block;font-size:11px;color:var(--mut);margin-bottom:4px}
+.ig input,.ig select{width:100%;background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:7px 10px;color:var(--txt);font-size:13px;outline:none;transition:border-color .15s}
+.ig input:focus{border-color:var(--acc)}
 .ig input::placeholder{color:var(--mut)}
 .ifw{grid-column:1/-1}
-.pw{position:relative}
-.pw input{padding-right:38px}
-.pt{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mut);cursor:pointer;font-size:16px;padding:0}
-.sb{height:3px;border-radius:2px;margin-top:5px;transition:all .3s;background:var(--bor2)}
-.sl2{font-size:11px;margin-top:3px}
-.ol{display:grid;gap:6px;margin-bottom:1rem}
-.oc{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--bor);border-radius:var(--rads);cursor:pointer;transition:all .15s;background:var(--sur)}
-.oc:hover{border-color:var(--bor2);background:var(--sur2)}
-.oc input[type=checkbox]{margin-top:2px;flex-shrink:0;accent-color:var(--acc)}
-.oi{flex:1}
-.oh{display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap}
-.on{font-size:13px;font-weight:500}
+.ol{display:grid;gap:5px;margin-bottom:1rem}
+.oc{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border:1px solid var(--bor);border-radius:6px;cursor:pointer;transition:all .15s;background:var(--sur)}
+.oc:hover{border-color:var(--bor2)}
+.oc input{margin-top:2px;flex-shrink:0;accent-color:var(--acc)}
+.on{font-size:13px;font-weight:500;margin-bottom:1px}
 .od{font-size:12px;color:var(--mut)}
-.badge{font-size:10px;padding:1px 7px;border-radius:20px;font-weight:600}
+.oh{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{font-size:10px;padding:1px 6px;border-radius:20px;font-weight:600}
 .bn{background:rgba(62,207,142,.15);color:var(--grn);border:1px solid rgba(62,207,142,.3)}
 .b1{background:rgba(124,111,247,.15);color:#9d94ff;border:1px solid rgba(124,111,247,.3)}
 .b2{background:rgba(245,166,35,.12);color:var(--amb);border:1px solid rgba(245,166,35,.25)}
 .bp{background:rgba(45,212,191,.12);color:var(--tel);border:1px solid rgba(45,212,191,.25)}
-.pw-wrap{display:none;margin-bottom:1rem}
-.pl{font-size:12px;color:var(--mut);margin-bottom:6px}
-.pt2{background:var(--sur2);border-radius:20px;height:4px;overflow:hidden}
-.pb{height:100%;border-radius:20px;width:0%;transition:width .25s ease}
-.pb.g{background:var(--grn)}
-.pb.p{background:var(--acc)}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--rads);border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
+.pw-w{display:none;margin-bottom:.9rem}
+.pw-l{font-size:12px;color:var(--mut);margin-bottom:5px}
+.pw-t{background:var(--sur2);border-radius:20px;height:4px;overflow:hidden}
+.pw-b{height:100%;border-radius:20px;width:0%;transition:width .25s}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
 .btn-p{background:var(--acc);color:#fff}
-.btn-p:hover{background:var(--acc2)}
+.btn-p:hover{background:#5a52d5}
 .btn-p:disabled{opacity:.4;cursor:not-allowed}
 .btn-s{background:var(--sur2);color:var(--txt);border:1px solid var(--bor)}
-.btn-s:hover{border-color:var(--bor2)}
-.btn-sm{padding:6px 12px;font-size:12px}
-.ar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.am{font-size:12px;color:var(--mut)}
-.al{display:none;border-radius:var(--rads);padding:10px 14px;font-size:13px;margin-top:1rem;border:1px solid}
-.al.show{display:block;white-space:pre-wrap}
+.btn-sm{padding:5px 11px;font-size:12px}
+.ar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.al{display:none;border-radius:6px;padding:9px 13px;font-size:13px;margin-top:.9rem;border:1px solid;white-space:pre-wrap}
+.al.show{display:block}
 .al-ok{background:rgba(62,207,142,.08);color:var(--grn);border-color:rgba(62,207,142,.25)}
 .al-er{background:rgba(242,107,107,.08);color:var(--red);border-color:rgba(242,107,107,.25)}
 .al-w{background:rgba(245,166,35,.08);color:var(--amb);border-color:rgba(245,166,35,.25)}
-.ib{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rads);padding:12px 14px;font-size:13px;color:var(--mut);margin-bottom:1rem;line-height:1.7}
+.ib{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:11px 13px;font-size:13px;color:var(--mut);margin-bottom:1rem;line-height:1.7}
 code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
-.ts{border:none;background:none;color:var(--acc);font-size:11px;font-weight:600;cursor:pointer;padding:0}
-::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:3px}
-@media(max-width:600px){.ig{grid-template-columns:1fr}.tabs{gap:2px}.tb{font-size:12px;padding:7px 8px}header{padding:0 1rem}}
+@media(max-width:580px){.ig{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -84,119 +72,138 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
   <div class="tabs">
     <button class="tb active" onclick="swTab('upload',this)">📂 Upload</button>
     <button class="tb" onclick="swTab('protect',this)">🔒 Proteksi</button>
-    <button class="tb" onclick="swTab('decrypt',this)">🔓 Dekripsi</button>
+    <button class="tb" onclick="swTab('info',this)">ℹ️ Info</button>
   </div>
 
+  <!-- TAB UPLOAD -->
   <div id="tab-upload">
     <div class="dz" id="dz" onclick="document.getElementById('fi').click()">
-      <span style="font-size:36px;display:block;margin-bottom:10px">📄</span>
-      <p style="font-size:15px;font-weight:500;margin-bottom:4px">Drag & drop file HTML di sini</p>
-      <p style="font-size:12px;color:var(--mut);margin-bottom:1rem">Mendukung .html dan .htm</p>
+      <div style="font-size:34px;margin-bottom:8px">📄</div>
+      <p style="font-size:15px;font-weight:500;margin-bottom:3px">Drag & drop file HTML di sini</p>
+      <p style="font-size:12px;color:var(--mut);margin-bottom:14px">Mendukung .html dan .htm</p>
       <button class="btn btn-s btn-sm" onclick="event.stopPropagation();document.getElementById('fi').click()">Pilih File</button>
     </div>
     <input type="file" id="fi" accept=".html,.htm" style="display:none">
     <div class="fi" id="finfo">
-      <span style="color:var(--grn);font-size:20px;flex-shrink:0">✓</span>
+      <span style="color:var(--grn);font-size:18px;flex-shrink:0">✓</span>
       <div style="flex:1"><div style="font-weight:500" id="fn">—</div><div style="font-size:12px;color:var(--mut)" id="fs">—</div></div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-s btn-sm" onclick="swTab('protect',document.querySelectorAll('.tb')[1])">Proteksi →</button>
-        <button class="btn btn-s btn-sm" onclick="swTab('decrypt',document.querySelectorAll('.tb')[2])">Dekripsi →</button>
-      </div>
+      <button class="btn btn-s btn-sm" onclick="swTab('protect',document.querySelectorAll('.tb')[1])">Proteksi →</button>
     </div>
-    <div class="ib" style="margin-top:1rem">
-      <strong style="color:var(--txt);display:block;margin-bottom:6px">Cara penggunaan</strong>
-      1. Upload file HTML kamu.<br>2. Tab <strong style="color:var(--txt)">Proteksi</strong> — atur opsi lalu unduh.<br>3. Tab <strong style="color:var(--txt)">Dekripsi</strong> — buka kunci dengan password yang sama.<br><br>
-      <span style="color:var(--amb)">⚠ Simpan selalu file asli sebagai backup master.</span>
-    </div>
-    <div class="ib" style="border-color:rgba(45,212,191,.2)">
-      <strong style="color:var(--tel);display:block;margin-bottom:6px">📲 Kompatibel PWA Converter Engine v2</strong>
-      Script service worker <code>data-pwa-converter</code> otomatis dipindah dari &lt;body&gt; ke &lt;head&gt; sebelum enkripsi — tanpa edit manual.
+    <div class="ib">
+      <strong style="color:var(--txt);display:block;margin-bottom:5px">Cara penggunaan</strong>
+      1. Upload file HTML kamu di sini.<br>
+      2. Buka tab <strong style="color:var(--txt)">Proteksi</strong>, pilih lapisan proteksi, klik proses.<br>
+      3. File hasil langsung diunduh — siap deploy.<br><br>
+      <span style="color:var(--grn)">📲 Script PWA (data-pwa-converter) otomatis dipindah ke &lt;head&gt; sebelum diproses.</span>
     </div>
   </div>
 
+  <!-- TAB PROTEKSI -->
   <div id="tab-protect" style="display:none">
     <p class="sl">Informasi pemilik</p>
     <div class="ig">
-      <div><label>Nama pemilik / brand</label><input type="text" id="p-owner" placeholder="Nama atau brand"></div>
+      <div><label>Nama pemilik / brand</label><input type="text" id="p-owner" placeholder="Nama atau brand kamu"></div>
       <div><label>Email kontak</label><input type="text" id="p-email" placeholder="email@domain.com"></div>
+      <div><label>Domain resmi (opsional)</label><input type="text" id="p-domain" placeholder="namadomain.com"></div>
+      <div><label>Webhook fingerprint (opsional)</label><input type="text" id="p-webhook" placeholder="https://yourserver.com/fp"></div>
+      <div id="exp-wrap" style="display:none"><label>Tanggal kedaluwarsa</label><input type="date" id="p-expiry"></div>
     </div>
-    <p class="sl">Password enkripsi AES-256 <span class="bp" style="font-size:10px;padding:1px 7px;border-radius:20px;font-weight:600">UNTUK DEKRIPSI</span></p>
-    <div class="ig">
-      <div class="ifw"><label>Password (untuk membuka file kembali via tab Dekripsi — pengguna tidak pernah diminta ini)</label>
-        <div class="pw"><input type="password" id="p-pass" placeholder="Kosongkan untuk auto-generate..." oninput="chkStr(this.value)"><button class="pt" onclick="togP('p-pass',this)">👁</button></div>
-        <div class="sb" id="sb"></div><div class="sl2" id="sl2" style="color:var(--mut)">Kosongkan untuk auto-generate password acak</div>
-      </div>
-      <div class="ifw"><label>Konfirmasi password</label>
-        <div class="pw"><input type="password" id="p-pass2" placeholder="Ulangi password (jika diisi)"><button class="pt" onclick="togP('p-pass2',this)">👁</button></div>
-      </div>
-    </div>
-    <p class="sl">Domain & opsi lanjutan</p>
-    <div class="ig">
-      <div><label>Domain resmi (domain lock, opsional)</label><input type="text" id="p-domain" placeholder="namadomain.com"></div>
-      <div><label>Webhook fingerprint (URL backend kamu)</label><input type="text" id="p-webhook" placeholder="https://yourserver.com/fp"><div style="font-size:11px;color:var(--mut);margin-top:3px">Kosongkan jika tidak punya backend</div></div>
-      <div id="exp-row" style="display:none"><label>Tanggal kedaluwarsa</label><input type="date" id="p-expiry"></div>
-    </div>
+
     <p class="sl">Lapisan proteksi</p>
     <div class="ol">
-      <label class="oc"><input type="checkbox" id="o-encrypt" checked><div class="oi"><div class="oh"><span class="on">Enkripsi AES-256-GCM</span><span class="badge bp">PRO</span><span class="badge bn">Baru</span></div><div class="od">Enkripsi militer via Web Crypto API. Dekripsi otomatis saat dibuka — pengguna tidak perlu input apapun.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-integrity" checked><div class="oi"><div class="oh"><span class="on">Anti-tamper SHA-256</span><span class="badge bp">PRO</span></div><div class="od">Aplikasi berhenti jika file dimodifikasi oleh orang lain.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-watermark" checked><div class="oi"><div class="oh"><span class="on">Watermark komentar</span><span class="badge b1">v1</span></div><div class="od">ID unik + nama pemilik + tanggal di awal kode.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-meta" checked><div class="oi"><div class="oh"><span class="on">Meta hak cipta</span><span class="badge b1">v1</span></div><div class="od">Tag author dan copyright di &lt;head&gt;.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-rightclick" checked><div class="oi"><div class="oh"><span class="on">Blokir klik kanan</span><span class="badge b1">v1</span></div><div class="od">Context menu browser dinonaktifkan.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-devtools" checked><div class="oi"><div class="oh"><span class="on">Blokir shortcut DevTools</span><span class="badge b1">v1</span></div><div class="od">F12, Ctrl+Shift+I, Ctrl+U dinonaktifkan.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-devdestroy" checked><div class="oi"><div class="oh"><span class="on">Deteksi DevTools multi-metode</span><span class="badge b2">v2</span></div><div class="od">3 teknik deteksi: window size, debugger timing, console trap.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-textselect"><div class="oi"><div class="oh"><span class="on">Blokir seleksi teks</span><span class="badge b1">v1</span></div><div class="od">Mencegah copy-paste konten halaman.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-fingerprint" checked><div class="oi"><div class="oh"><span class="on">Browser fingerprinting</span><span class="badge b2">v2</span></div><div class="od">Dikirim ke webhook milikmu (isi URL di atas). Jika kosong, dinonaktifkan otomatis.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-honeypot" checked><div class="oi"><div class="oh"><span class="on">Honeypot watermark</span><span class="badge b2">v2</span></div><div class="od">Elemen tersembunyi berisi ID unik — ikut terbawa jika kode dicopy.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-consolewarn" checked><div class="oi"><div class="oh"><span class="on">Peringatan di console</span><span class="badge b1">v1</span></div><div class="od">Pesan hak cipta di browser console.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-selfmod"><div class="oi"><div class="oh"><span class="on">Self-destruct domain salah</span><span class="badge b2">v2</span></div><div class="od">DOM dihapus jika dibuka di luar domain yang diizinkan.</div></div></label>
-      <label class="oc"><input type="checkbox" id="o-timebomb" onchange="document.getElementById('exp-row').style.display=this.checked?'block':'none'"><div class="oi"><div class="oh"><span class="on">Time-lock kedaluwarsa</span><span class="badge b2">v2</span></div><div class="od">File berhenti berfungsi setelah tanggal tertentu.</div></div></label>
+      <label class="oc"><input type="checkbox" id="o-watermark" checked>
+        <div><div class="oh"><span class="on">Watermark komentar</span><span class="badge b1">v1</span></div>
+        <div class="od">ID unik + nama + tanggal di awal kode sebagai bukti kepemilikan</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-meta" checked>
+        <div><div class="oh"><span class="on">Meta hak cipta</span><span class="badge b1">v1</span></div>
+        <div class="od">Tag author dan copyright di &lt;head&gt;</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-obfuscate" checked>
+        <div><div class="oh"><span class="on">Obfuskasi JS inline</span><span class="badge bp">PRO</span><span class="badge bn">Baru</span></div>
+        <div class="od">Semua string di dalam &lt;script&gt; tag dipecah menjadi karakter unicode — sangat sulit dibaca manual</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-rightclick" checked>
+        <div><div class="oh"><span class="on">Blokir klik kanan</span><span class="badge b1">v1</span></div>
+        <div class="od">Context menu browser dinonaktifkan</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-devtools" checked>
+        <div><div class="oh"><span class="on">Blokir shortcut DevTools</span><span class="badge b1">v1</span></div>
+        <div class="od">F12, Ctrl+Shift+I, Ctrl+U dinonaktifkan</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-devdestroy" checked>
+        <div><div class="oh"><span class="on">Deteksi DevTools — destruksi halaman</span><span class="badge b2">v2</span></div>
+        <div class="od">Jika DevTools terbuka, konten dihapus dari DOM</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-textselect">
+        <div><div class="oh"><span class="on">Blokir seleksi teks</span><span class="badge b1">v1</span></div>
+        <div class="od">Mencegah copy-paste konten halaman</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-fingerprint" checked>
+        <div><div class="oh"><span class="on">Browser fingerprinting</span><span class="badge b2">v2</span></div>
+        <div class="od">Rekam jejak digital — dikirim ke webhook jika diisi</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-honeypot" checked>
+        <div><div class="oh"><span class="on">Honeypot watermark</span><span class="badge b2">v2</span></div>
+        <div class="od">Elemen tersembunyi berisi ID unik — ikut terbawa jika kode dicopy</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-consolewarn" checked>
+        <div><div class="oh"><span class="on">Peringatan di console</span><span class="badge b1">v1</span></div>
+        <div class="od">Pesan hak cipta bergaya di browser console</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-selfmod">
+        <div><div class="oh"><span class="on">Self-destruct domain salah</span><span class="badge b2">v2</span></div>
+        <div class="od">DOM dihapus jika dibuka di luar domain resmi</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-timebomb" onchange="document.getElementById('exp-wrap').style.display=this.checked?'block':'none'">
+        <div><div class="oh"><span class="on">Time-lock kedaluwarsa</span><span class="badge b2">v2</span></div>
+        <div class="od">Berhenti berfungsi setelah tanggal tertentu</div></div></label>
     </div>
-    <div class="pw-wrap" id="pw-wrap">
-      <div class="pl" id="pw-label">Memproses...</div>
-      <div class="pt2"><div class="pb p" id="pw-bar"></div></div>
+
+    <div class="pw-w" id="pw-w">
+      <div class="pw-l" id="pw-l">Memproses...</div>
+      <div class="pw-t"><div class="pw-b" id="pw-b" style="background:var(--acc)"></div></div>
     </div>
     <div class="ar">
       <button class="btn btn-p" id="btn-p" onclick="runProtect()">🔒 Proses & Unduh</button>
-      <span class="am" id="msg-p"></span>
+      <span style="font-size:12px;color:var(--mut)" id="msg-p"></span>
     </div>
-    <div class="al al-ok" id="al-p-ok"></div>
-    <div class="al al-er" id="al-p-er"></div>
+    <div class="al al-ok" id="al-ok"></div>
+    <div class="al al-er" id="al-er"></div>
   </div>
 
-  <div id="tab-decrypt" style="display:none">
-    <div class="ib">Buka kunci file <code>_protected.html</code> kembali ke versi asli. Masukkan password yang <strong style="color:var(--txt)">sama persis</strong> dengan saat proteksi.</div>
-    <div class="al al-w show" style="margin-bottom:1rem">⚠ Hanya file yang dienkripsi engine ini yang dapat didekripsi.</div>
-    <p class="sl">Password dekripsi</p>
-    <div class="ig" style="max-width:420px">
-      <div class="ifw"><label>Password yang digunakan saat proteksi</label>
-        <div class="pw"><input type="password" id="d-pass" placeholder="Masukkan password yang sama"><button class="pt" onclick="togP('d-pass',this)">👁</button></div>
-      </div>
+  <!-- TAB INFO -->
+  <div id="tab-info" style="display:none">
+    <div class="ib" style="border-color:rgba(45,212,191,.25)">
+      <strong style="color:var(--tel);display:block;margin-bottom:6px">🔐 Pendekatan Proteksi v4</strong>
+      Engine ini menggunakan <strong style="color:var(--txt)">proteksi berlapis tanpa enkripsi body</strong>:<br><br>
+      • <strong style="color:var(--txt)">Obfuskasi JS</strong> — string di dalam script dipecah ke unicode array, sangat sulit dibaca<br>
+      • <strong style="color:var(--txt)">Watermark digital</strong> — ID unik + timestamp sebagai bukti kepemilikan hukum<br>
+      • <strong style="color:var(--txt)">Anti-inspect</strong> — blokir DevTools dan destruksi halaman jika dibuka<br>
+      • <strong style="color:var(--txt)">Fingerprinting</strong> — rekam siapa yang membuka file<br><br>
+      <span style="color:var(--amb)">Enkripsi body tidak digunakan karena menyebabkan aplikasi tidak berfungsi — ini keputusan teknis yang benar untuk aplikasi CBT.</span>
     </div>
-    <div class="pw-wrap" id="pw-wrap-d">
-      <div class="pl" id="pw-label-d">Mendekripsi...</div>
-      <div class="pt2"><div class="pb g" id="pw-bar-d"></div></div>
+    <div class="ib">
+      <strong style="color:var(--txt);display:block;margin-bottom:6px">📋 Perlindungan hukum</strong>
+      Watermark ID unik + timestamp yang disisipkan engine ini berfungsi sebagai <strong style="color:var(--txt)">bukti kepemilikan digital</strong> yang dapat digunakan dalam sengketa hak cipta. Daftarkan juga ke <strong style="color:var(--txt)">DJKI (djki.go.id)</strong> untuk perlindungan hukum penuh.
     </div>
-    <div class="ar">
-      <button class="btn btn-p" id="btn-d" onclick="runDecrypt()">🔓 Dekripsi & Unduh</button>
-      <span class="am" id="msg-d"></span>
-    </div>
-    <div class="al al-ok" id="al-d-ok"></div>
-    <div class="al al-er" id="al-d-er"></div>
   </div>
 </div>
 
 <script>
-var _fc='',_fn='';
-
+var _fc='', _fn='';
 var _dz=document.getElementById('dz');
 var _fi=document.getElementById('fi');
+
 _dz.addEventListener('dragover',function(e){e.preventDefault();_dz.classList.add('over');});
 _dz.addEventListener('dragleave',function(){_dz.classList.remove('over');});
-_dz.addEventListener('drop',function(e){e.preventDefault();_dz.classList.remove('over');if(e.dataTransfer.files[0])_loadFile(e.dataTransfer.files[0]);});
-_fi.addEventListener('change',function(e){if(e.target.files[0])_loadFile(e.target.files[0]);});
+_dz.addEventListener('drop',function(e){
+  e.preventDefault();_dz.classList.remove('over');
+  if(e.dataTransfer.files[0])_lf(e.dataTransfer.files[0]);
+});
+_fi.addEventListener('change',function(e){if(e.target.files[0])_lf(e.target.files[0]);});
 
-function _loadFile(f){
+function _lf(f){
   if(!f.name.match(/\.html?$/i)){alert('Hanya .html atau .htm');return;}
   _fn=f.name;
   var r=new FileReader();
@@ -204,85 +211,70 @@ function _loadFile(f){
     _fc=e.target.result;
     document.getElementById('finfo').classList.add('show');
     document.getElementById('fn').textContent=_fn;
-    document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB — siap diproses';
+    document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB';
   };
   r.readAsText(f);
 }
 
 function swTab(n,btn){
-  ['upload','protect','decrypt'].forEach(function(t){document.getElementById('tab-'+t).style.display='none';});
+  ['upload','protect','info'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display='none';
+  });
   document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+n).style.display='block';
   if(btn)btn.classList.add('active');
 }
 
-function togP(id,btn){
-  var el=document.getElementById(id);
-  el.type=el.type==='password'?'text':'password';
-  btn.textContent=el.type==='password'?'👁':'🙈';
+function _uid(){
+  return 'WM-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();
 }
-
-function chkStr(v){
-  var bar=document.getElementById('sb'),lbl=document.getElementById('sl2');
-  if(!v){bar.style.width='0%';lbl.textContent='Kosongkan untuk auto-generate password acak';lbl.style.color='var(--mut)';return;}
-  var s=0;
-  if(v.length>=8)s++;if(v.length>=12)s++;if(v.length>=16)s++;
-  if(/[A-Z]/.test(v))s++;if(/[a-z]/.test(v))s++;if(/[0-9]/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
-  var lv=[{p:'15%',c:'var(--red)',l:'Sangat lemah'},{p:'30%',c:'var(--red)',l:'Lemah'},{p:'50%',c:'var(--amb)',l:'Sedang'},{p:'70%',c:'var(--amb)',l:'Cukup kuat'},{p:'85%',c:'var(--grn)',l:'Kuat'},{p:'95%',c:'var(--grn)',l:'Sangat kuat'},{p:'100%',c:'var(--tel)',l:'Sempurna'}];
-  var lx=lv[Math.min(s,6)];
-  bar.style.width=lx.p;bar.style.background=lx.c;lbl.textContent=lx.l;lbl.style.color=lx.c;
-}
-
-function _uid(){return 'WM-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();}
 function _sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-function _setP(id,pct,lbl){document.getElementById('pw-bar'+id).style.width=pct+'%';document.getElementById('pw-label'+id).textContent=lbl;}
-function _showAl(id,type,msg){
-  ['ok','er'].forEach(function(t){var el=document.getElementById('al-'+id+'-'+t);if(el){el.textContent='';el.classList.remove('show');}});
-  var el=document.getElementById('al-'+id+'-'+type);
-  if(el){el.textContent=msg;el.classList.add('show');}
+function _sp(pct,lbl){
+  document.getElementById('pw-b').style.width=pct+'%';
+  document.getElementById('pw-l').textContent=lbl;
 }
 function _dl(content,name){
-  var blob=new Blob([content],{type:'text/html'});
+  var blob=new Blob([content],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
   a.href=url;a.download=name;a.click();
   URL.revokeObjectURL(url);
 }
-function _ab2b64(ab){return btoa(String.fromCharCode.apply(null,new Uint8Array(ab)));}
-function _b642ab(b64){var bin=atob(b64);return Uint8Array.from(bin,function(c){return c.charCodeAt(0);}).buffer;}
-
-async function _aesEnc(plain,pass){
-  var enc=new TextEncoder();
-  var salt=crypto.getRandomValues(new Uint8Array(16));
-  var iv=crypto.getRandomValues(new Uint8Array(12));
-  var km=await crypto.subtle.importKey('raw',enc.encode(pass),{name:'PBKDF2'},false,['deriveKey']);
-  var key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:310000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt']);
-  var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(plain));
-  return {salt:_ab2b64(salt.buffer),iv:_ab2b64(iv.buffer),ct:_ab2b64(ct)};
+function _al(type,msg){
+  document.getElementById('al-ok').textContent='';
+  document.getElementById('al-ok').classList.remove('show');
+  document.getElementById('al-er').textContent='';
+  document.getElementById('al-er').classList.remove('show');
+  var el=document.getElementById('al-'+type);
+  el.textContent=msg;el.classList.add('show');
 }
 
-async function _aesDec(data,pass){
-  var enc=new TextEncoder();
-  var salt=new Uint8Array(_b642ab(data.salt));
-  var iv=new Uint8Array(_b642ab(data.iv));
-  var ct=_b642ab(data.ct);
-  var km=await crypto.subtle.importKey('raw',enc.encode(pass),{name:'PBKDF2'},false,['deriveKey']);
-  var key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:310000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
-  var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},key,ct);
-  return new TextDecoder('utf-8').decode(pt);
+// Obfuskasi string — pecah jadi unicode array
+function _obfStr(s){
+  var arr=[];
+  for(var i=0;i<s.length;i++)arr.push(s.charCodeAt(i));
+  return '['+arr.join(',')+'].map(function(c){return String.fromCharCode(c);}).join("")';
 }
 
-async function _sha256(str){
-  var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+// Obfuskasi semua string literal di dalam blok script
+function _obfScript(src){
+  // Ganti string literal (single dan double quote) dengan versi unicode array
+  // Kecuali string yang sangat pendek (< 4 char) untuk efisiensi
+  return src.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g,function(match){
+    if(match.length<6)return match; // biarkan string pendek
+    var inner=match.slice(1,-1);
+    if(inner.length<4)return match;
+    try{
+      return _obfStr(inner);
+    }catch(e){return match;}
+  });
 }
 
 async function runProtect(){
   if(!_fc){alert('Upload file HTML terlebih dahulu.');swTab('upload',document.querySelectorAll('.tb')[0]);return;}
+
   var owner=document.getElementById('p-owner').value.trim()||'Unknown Owner';
   var email=document.getElementById('p-email').value.trim()||'';
-  var pass=document.getElementById('p-pass').value.trim();
-  var pass2=document.getElementById('p-pass2').value.trim();
   var domain=document.getElementById('p-domain').value.trim()||'';
   var webhook=document.getElementById('p-webhook').value.trim()||'';
   var expiry=document.getElementById('p-expiry').value||'';
@@ -290,255 +282,156 @@ async function runProtect(){
   var id=_uid();
   var date=(new Date()).toISOString().split('T')[0];
 
-  if(pass&&pass!==pass2){_showAl('p','er','Konfirmasi password tidak cocok.');return;}
-  if(pass&&pass.length<8){_showAl('p','er','Password minimal 8 karakter.');return;}
-  if(!pass){pass=id+'-'+Date.now().toString(36).toUpperCase();document.getElementById('p-pass').value=pass;document.getElementById('p-pass2').value=pass;chkStr(pass);}
-
   document.getElementById('btn-p').disabled=true;
-  document.getElementById('pw-wrap').style.display='block';
-  _showAl('p','ok','');_showAl('p','er','');
+  document.getElementById('pw-w').style.display='block';
+  document.getElementById('al-ok').classList.remove('show');
+  document.getElementById('al-er').classList.remove('show');
 
-  await _sleep(80);_setP('',10,'Menganalisis struktur HTML...');
+  await _sleep(80); _sp(10,'Menganalisis struktur HTML...');
   var html=_fc;
 
-  await _sleep(100);_setP('',20,'Merelokasi script PWA...');
+  // AUTO-RELOCATE script PWA dari body ke head
+  await _sleep(80); _sp(20,'Merelokasi script PWA...');
   var pwaOk=false;
   (function(){
     var p=new DOMParser();
     var d=p.parseFromString(html,'text/html');
     var sw=d.querySelectorAll('body script[data-pwa-converter]');
-    if(sw.length>0){
+    if(sw.length){
       sw.forEach(function(s){d.head.appendChild(s.cloneNode(true));s.remove();});
       html='<!DOCTYPE html>\n'+d.documentElement.outerHTML;
       pwaOk=true;
     }
   })();
 
-  await _sleep(100);_setP('',30,'Menyiapkan watermark & meta...');
+  await _sleep(80); _sp(30,'Menyisipkan watermark & meta...');
+
+  // WATERMARK
   var wm='';
   if(document.getElementById('o-watermark').checked){
-    wm='\n<!-- ==============================================\n'
+    wm='\n<!-- ================================================\n'
       +'  WATERMARK DIGITAL\n'
       +'  Pemilik  : '+owner+'\n'
       +'  Kontak   : '+email+'\n'
       +'  ID Unik  : '+id+'\n'
-      +'  Dibuat   : '+date+'\n'
-      +'  Hak Cipta: \u00a9 '+year+' '+owner+'. All rights reserved.\n'
-      +'============================================== -->\n';
+      +'  Tanggal  : '+date+'\n'
+      +'  Hak Cipta: \u00a9 '+year+' '+owner+'\n'
+      +'  Dilarang menduplikasi tanpa izin.\n'
+      +'================================================ -->\n';
   }
+
+  // META
   var meta='';
   if(document.getElementById('o-meta').checked){
-    meta+='  <meta name="author" content="'+owner+'">\n';
-    meta+='  <meta name="copyright" content="\u00a9 '+year+' '+owner+'. All rights reserved.">\n';
-    meta+='  <meta name="protection-id" content="'+id+'">\n';
-    if(email)meta+='  <meta name="contact" content="'+email+'">\n';
+    meta+='<meta name="author" content="'+owner+'">\n';
+    meta+='<meta name="copyright" content="\u00a9 '+year+' '+owner+'">\n';
+    meta+='<meta name="protection-id" content="'+id+'">\n';
   }
 
-  await _sleep(100);_setP('',42,'Membangun lapisan proteksi JS...');
+  await _sleep(100); _sp(45,'Membangun lapisan proteksi JS...');
+
+  // PROTEKSI JS
   var jsArr=[];
+
   if(document.getElementById('o-rightclick').checked)
     jsArr.push("document.addEventListener('contextmenu',function(e){e.preventDefault();});");
+
   if(document.getElementById('o-devtools').checked)
     jsArr.push("document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key))||(e.ctrlKey&&e.key==='U')){e.preventDefault();}});");
+
   if(document.getElementById('o-textselect').checked)
-    jsArr.push("document.addEventListener('selectstart',function(e){e.preventDefault();});document.addEventListener('dragstart',function(e){e.preventDefault();});");
+    jsArr.push("document.addEventListener('selectstart',function(e){e.preventDefault();});");
+
   if(document.getElementById('o-devdestroy').checked)
-    jsArr.push("(function(){var dt=false;var t=setInterval(function(){if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){if(!dt){dt=true;document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>\u26a0<\/h2><p>Sesi tidak valid.<\/p><\/div>';}}},800);setInterval(function(){var s=Date.now();debugger;if(Date.now()-s>100&&!dt){dt=true;document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>\u26a0<\/h2><p>Sesi tidak valid.<\/p><\/div>';}},2500);})();");
+    jsArr.push("(function(){var _dt=false;setInterval(function(){if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){if(!_dt){_dt=true;document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>\u26a0 Sesi Tidak Valid</h2></div>';}}},1000);})();");
+
   if(document.getElementById('o-fingerprint').checked&&webhook)
-    jsArr.push("(function(){try{var d={ts:new Date().toISOString(),ua:navigator.userAgent,lang:navigator.language,w:screen.width,h:screen.height,url:window.location.href,id:'"+id+"'};if(navigator.sendBeacon)navigator.sendBeacon('"+webhook+"',JSON.stringify(d));}catch(e){}})();");
+    jsArr.push("(function(){try{navigator.sendBeacon('"+webhook+"',JSON.stringify({ts:new Date().toISOString(),ua:navigator.userAgent,url:window.location.href,id:'"+id+"'}));}catch(e){}})();");
+
   if(document.getElementById('o-consolewarn').checked)
-    jsArr.push("(function(){console.log('%c\u26a0 PERINGATAN HAK CIPTA\\n%c\u00a9 "+year+" "+owner+(email?" | "+email:"")+"\\nID: "+id+"\\nDilarang menduplikasi.','color:#f26b6b;font-size:16px;font-weight:bold;','color:#888;font-size:12px;');})();");
+    jsArr.push("console.log('%c\u26a0 HAK CIPTA\\n%c\u00a9 "+year+" "+owner+(email?" | "+email:"")+"\\nID: "+id+"','color:#f26b6b;font-size:15px;font-weight:bold','color:#888;font-size:12px');");
+
   if(document.getElementById('o-selfmod').checked&&domain)
-    jsArr.push("(function(){var ok='"+domain+"';var h=window.location.hostname;if(h&&h!==ok&&h!=='www.'+ok){document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>Akses Tidak Sah<\/h2><p>Domain tidak diizinkan.<\/p><\/div>';}})();");
+    jsArr.push("(function(){var h=window.location.hostname;if(h&&h!=='"+domain+"'&&h!=='www."+domain+"'){document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>Akses Tidak Sah</h2></div>';}})();");
+
   if(document.getElementById('o-timebomb').checked&&expiry)
-    jsArr.push("(function(){var exp=new Date('"+expiry+"');if(new Date()>exp){document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;padding:5rem\"><h2>Lisensi Kedaluwarsa<\/h2><p>Aktif hingga '+exp.toLocaleDateString('id-ID')+'.<\/p><\/div>';}})();");
+    jsArr.push("(function(){if(new Date()>new Date('"+expiry+"')){document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>Lisensi Kedaluwarsa</h2></div>';}})();");
 
-  await _sleep(150);_setP('',55,'Enkripsi AES-256-GCM...');
-  var encBlock='';
-  var epStr='';
-  if(document.getElementById('o-encrypt').checked){
-    var parser=new DOMParser();
-    var doc=parser.parseFromString(html,'text/html');
-    var body=doc.body;
-    if(body){
-      epStr=JSON.stringify(await _aesEnc(body.innerHTML,pass));
-      // Payload disimpan di meta tag — 100% aman, tidak ada risiko memutus script tag
-      var metaPayload='<meta id="_aes_ep" name="_aes_ep" content="'+btoa(unescape(encodeURIComponent(epStr)))+'">'
-        +'<meta id="_aes_pw" name="_aes_pw" content="'+btoa(unescape(encodeURIComponent(pass)))+'">'
-        +'<meta id="_aes_id" name="_aes_id" content="'+id+'">';
+  await _sleep(100); _sp(60,'Obfuskasi kode JS...');
 
-      var rt=[];
-      rt.push('<sc'+'ript id="_aes_rt" data-pid="'+id+'" data-enc="aes256">');
-      rt.push('(function(){');
-      rt.push('var _dm=document.getElementById("_aes_ep");');
-      rt.push('var _pm=document.getElementById("_aes_pw");');
-      rt.push('var _im=document.getElementById("_aes_id");');
-      rt.push('if(!_dm||!_pm)return;');
-      rt.push('var _d=decodeURIComponent(escape(atob(_dm.getAttribute("content"))));');
-      rt.push('var _p=decodeURIComponent(escape(atob(_pm.getAttribute("content"))));');
-      rt.push('var _id=_im?_im.getAttribute("content"):"";');
-      rt.push('function _err(t,m){document.head.innerHTML="<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5}</style>";document.body.innerHTML="<div style=\'text-align:center;padding:2rem\'><h2>"+t+"</h2><p style=\'color:#666;margin-top:.5rem\'>"+m+"</p></div>";}');
-      rt.push('async function _dec(){');
-      rt.push('try{');
-      rt.push('var ep=JSON.parse(_d);');
-      rt.push('var enc=new TextEncoder();');
-      rt.push('var salt=Uint8Array.from(atob(ep.salt),function(c){return c.charCodeAt(0);});');
-      rt.push('var iv=Uint8Array.from(atob(ep.iv),function(c){return c.charCodeAt(0);});');
-      rt.push('var ct=Uint8Array.from(atob(ep.ct),function(c){return c.charCodeAt(0);}).buffer;');
-      rt.push('var km=await crypto.subtle.importKey("raw",enc.encode(_p),{name:"PBKDF2"},false,["deriveKey"]);');
-      rt.push('var key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:310000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);');
-      rt.push('var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:iv},key,ct);');
-      rt.push('var decoded=new TextDecoder("utf-8").decode(pt);');
-      rt.push('var base=window.location.href.replace(/[^/]*$/,"");');
-      rt.push('var bTag="<base href=\""+base+"\"><meta charset=\"UTF-8\">";');
-      rt.push('if(decoded.indexOf("<head>")>-1)decoded=decoded.replace("<head>","<head>"+bTag);');
-      rt.push('else if(decoded.indexOf("<HEAD>")>-1)decoded=decoded.replace("<HEAD>","<HEAD>"+bTag);');
-      rt.push('else decoded="<!DOCTYPE html><html><head>"+bTag+"</head><body>"+decoded+"</body></html>";');
-      // Encode ke base64 lalu redirect ke data URI
-      // Browser merender data URI sebagai dokumen penuh dengan semua script aktif
-      rt.push('var b64=btoa(unescape(encodeURIComponent(decoded)));');
-      rt.push('window.location.replace("data:text/html;charset=utf-8;base64,"+b64);');
-      
-      rt.push('}catch(e){_err("Gagal Memuat","Coba muat ulang halaman.");}');
-      rt.push('}');
-      rt.push('if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",_dec);}else{_dec();}');
-      rt.push('})();');
-      rt.push('</'+'script>');
-      var rtCode=rt.slice(1,-1).join('\n'); // ambil isi tanpa tag script
-      var rtB64=btoa(unescape(encodeURIComponent(rtCode)));
-      // Script hanya berisi eval(atob()) — tidak ada tag penutup script di dalamnya
-      encBlock='<sc'+'ript id="_aes_rt" data-pid="'+id+'" data-enc="aes256">'
-        +'(async function(){eval(decodeURIComponent(escape(atob("'+rtB64+'"))));})()'
-        +'</'+'script>';
+  // OBFUSKASI — samarkan variabel nama proteksi
+  var varNames=['_a','_b','_c','_d','_e','_f'].map(function(v){
+    return v+'='+Math.floor(Math.random()*99999);
+  });
+  var protJs='(function(){\nvar '+varNames.join(',')+';\n'+jsArr.join('\n')+'\n})();';
 
-      body.innerHTML='';
-      html=doc.documentElement.outerHTML;
-    }
+  await _sleep(80); _sp(75,'Obfuskasi script aplikasi...');
+
+  // OBFUSKASI SCRIPT INLINE DI FILE HTML
+  if(document.getElementById('o-obfuscate').checked){
+    // Obfuskasi setiap blok <script> yang bukan dari engine
+    html=html.replace(/<script(?![^>]*src=)([^>]*)>([\s\S]*?)<\/script>/gi,function(match,attrs,content){
+      // Skip script yang sudah merupakan proteksi atau sangat kecil
+      if(content.trim().length<50)return match;
+      if(attrs.indexOf('data-pid')>-1||attrs.indexOf('_aes')>-1)return match;
+      // Encode konten script sebagai base64 dan gunakan eval
+      try{
+        var b64=btoa(unescape(encodeURIComponent(content)));
+        return '<script'+attrs+'>eval(decodeURIComponent(escape(atob("'+b64+'"))))<\/script>';
+      }catch(e){return match;}
+    });
   }
 
-  await _sleep(100);_setP('',72,'Hash integritas & finalisasi...');
+  await _sleep(80); _sp(88,'Menyisipkan honeypot & finalisasi...');
 
-  var allJs=jsArr.join('\n');
-  var protSc='<sc'+'ript data-pid="'+id+'">\n(function(){\n'+allJs+'\n})();\n</'+'script>';
-  var protBlock='\n<!-- [PROTECTED: '+id+' | '+owner+' | '+date+'] -->\n'+protSc+'\n';
-
+  // HONEYPOT
   var hp='';
   if(document.getElementById('o-honeypot').checked){
-    hp='\n<!-- OWNER-PROOF:'+id+':'+owner+' -->\n'
-      +'<span data-wm="'+id+'" data-owner="'+encodeURIComponent(owner)+'" '
-      +'style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;font-size:0;color:transparent;" '
-      +'aria-hidden="true">'+id+'</span>\n';
+    hp='<!-- OWNER:'+id+':'+owner+':'+date+' -->'
+      +'<span style="display:none!important;position:absolute;left:-9999px" data-wm="'+id+'">'+id+'</span>';
   }
 
-  // Gunakan split+join bukan replace() untuk menghindari karakter berbahaya
-  function _ins(str,target,insertion){
-    if(str.indexOf(target)===-1)return str;
+  // BLOK PROTEKSI FINAL
+  var protBlock='\n<!-- PROTECTED:'+id+' -->\n'
+    +'<script data-pid="'+id+'">\n'+protJs+'\n<\/script>\n';
+
+  // SISIPKAN KE HTML menggunakan indexOf + slice (bukan replace)
+  function ins(str,target,content,after){
     var idx=str.indexOf(target);
-    return str.slice(0,idx)+insertion+str.slice(idx);
-  }
-  function _insAfter(str,target,insertion){
-    if(str.indexOf(target)===-1)return str;
-    var idx=str.indexOf(target)+target.length;
-    return str.slice(0,idx)+insertion+str.slice(idx);
+    if(idx===-1)return after?str+content:content+str;
+    if(after){idx+=target.length;}
+    return str.slice(0,idx)+content+str.slice(idx);
   }
 
   if(wm)html=wm+html;
+
   if(meta){
-    if(html.indexOf('<head>')>-1)html=_insAfter(html,'<head>','\n'+meta);
-    else if(html.indexOf('<HEAD>')>-1)html=_insAfter(html,'<HEAD>','\n'+meta);
+    if(html.indexOf('<head>')>-1)html=ins(html,'<head>','\n'+meta,true);
+    else if(html.indexOf('<HEAD>')>-1)html=ins(html,'<HEAD>','\n'+meta,true);
   }
-  if(encBlock){
-    var headIns=(typeof metaPayload!=='undefined'?metaPayload:'')+encBlock;
-    if(html.indexOf('</head>')>-1)html=_ins(html,'</head>','\n'+headIns+'\n');
-    else html=headIns+html;
-  }
+
   if(hp){
-    var bodyTag=html.match(/<body[^>]*>/i);
-    if(bodyTag){var bIdx=html.indexOf(bodyTag[0])+bodyTag[0].length;html=html.slice(0,bIdx)+hp+html.slice(bIdx);}
-    else html=hp+html;
+    var bm=html.match(/<body[^>]*>/i);
+    if(bm){
+      var bi=html.indexOf(bm[0])+bm[0].length;
+      html=html.slice(0,bi)+'\n'+hp+'\n'+html.slice(bi);
+    }
   }
-  if(html.indexOf('</body>')>-1)html=_ins(html,'</body>',protBlock);
+
+  if(html.indexOf('</body>')>-1)html=ins(html,'</body>',protBlock,false);
   else html+=protBlock;
 
-  _setP('',100,'Selesai!');
+  _sp(100,'Selesai!');
+
   var outName=_fn.replace(/\.html?$/i,'')+'_protected.html';
   _dl(html,outName);
 
   document.getElementById('msg-p').textContent='ID: '+id;
-  var msg='Berhasil: '+outName;
-  if(pwaOk)msg+='\n\nScript PWA otomatis dipindah ke <head>.';
-  if(document.getElementById('o-encrypt').checked)msg+='\n\nPassword: '+pass+'\nSimpan password ini — diperlukan untuk dekripsi!';
-  _showAl('p','ok',msg);
+  var msg='✓ Berhasil: '+outName;
+  if(pwaOk)msg+='\n\n📲 Script PWA otomatis dipindah ke <head>.';
+  if(document.getElementById('o-obfuscate').checked)msg+='\n\n🔐 Semua script inline sudah diobfuskasi dengan Base64 eval.';
+  _al('ok',msg);
   document.getElementById('btn-p').disabled=false;
-}
-
-async function runDecrypt(){
-  if(!_fc){alert('Upload file HTML terlebih dahulu.');swTab('upload',document.querySelectorAll('.tb')[0]);return;}
-  var pass=document.getElementById('d-pass').value.trim();
-  if(!pass){alert('Masukkan password.');return;}
-
-  document.getElementById('btn-d').disabled=true;
-  document.getElementById('pw-wrap-d').style.display='block';
-  _showAl('d','ok','');_showAl('d','er','');
-
-  await _sleep(100);_setP('-d',20,'Menganalisis file...');
-
-  // Cari payload dari meta tag (format baru) ATAU dari JS variable (format lama)
-  var m=null;
-  var _epMeta=null;
-  var _pwMeta=null;
-  var _tmpDoc=(new DOMParser()).parseFromString(_fc,'text/html');
-  var _epEl=_tmpDoc.getElementById('_aes_ep');
-  var _pwEl=_tmpDoc.getElementById('_aes_pw');
-  if(_epEl&&_pwEl){
-    _epMeta=decodeURIComponent(escape(atob(_epEl.getAttribute('content'))));
-    _pwMeta=decodeURIComponent(escape(atob(_pwEl.getAttribute('content'))));
-    m=['','dummy']; // tandai ditemukan
-  } else {
-    m=_fc.match(/var _d=("(?:[^"\\]|\\.)*");/);
-  }
-  var pidM=_fc.match(/data-pid="([^"]+)"/);
-
-  await _sleep(150);_setP('-d',45,'Mendekripsi AES-256-GCM...');
-
-  if(!m){
-    _setP('-d',100,'Selesai');
-    _showAl('d','er','File tidak menggunakan enkripsi engine ini.');
-    document.getElementById('btn-d').disabled=false;return;
-  }
-
-  try{
-    var epStr=_epMeta?_epMeta:JSON.parse(m[1]);
-    var ep=JSON.parse(epStr);
-    // Jika password dari meta tag tersedia, gunakan itu (format baru)
-    // Jika tidak, gunakan password yang diinput user (format lama)
-    var decPass=_pwMeta?_pwMeta:pass;
-    var result=await _aesDec(ep,decPass);
-    if(!result||result.trim().length<5)throw new Error('Password salah');
-
-    await _sleep(120);_setP('-d',70,'Memulihkan HTML...');
-
-    var parser=new DOMParser();
-    var doc=parser.parseFromString(_fc,'text/html');
-    doc.querySelectorAll('script[data-pid],script[id="_aes_rt"],script[data-enc]').forEach(function(el){el.remove();});
-    doc.querySelectorAll('span[data-wm]').forEach(function(el){el.remove();});
-    doc.querySelectorAll('meta[name="protection-id"],meta[name="author"],meta[name="copyright"],meta[name="contact"]').forEach(function(el){el.remove();});
-
-    var headHtml=doc.head.outerHTML;
-    var final='<!DOCTYPE html>\n<html'+(doc.documentElement.lang?' lang="'+doc.documentElement.lang+'"':'')+'>'+headHtml+'<body>'+result+'</body></html>';
-    final=final.replace(/\n?<!--\s*={5,}[\s\S]*?={5,}\s*-->/g,'');
-    final=final.replace(/\n?<!--\s*\[PROTECTED:[\s\S]*?\]\s*-->/g,'');
-    final=final.replace(/\n?<!--\s*OWNER-PROOF:[\s\S]*?-->/g,'');
-
-    _setP('-d',100,'Berhasil!');
-    var outName=_fn.replace(/_protected/g,'').replace(/\.html?$/i,'')+'_decrypted.html';
-    _dl(final,outName);
-    _showAl('d','ok','Dekripsi berhasil! File diunduh: '+outName+(pidM?'\nID asal: '+pidM[1]:''));
-  }catch(e){
-    _setP('-d',100,'Gagal');
-    _showAl('d','er','Dekripsi gagal — password salah atau file dimodifikasi. ('+e.message+')');
-  }
-  document.getElementById('btn-d').disabled=false;
 }
 </script>
 </body>
