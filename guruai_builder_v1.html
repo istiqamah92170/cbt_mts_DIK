@@ -911,10 +911,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
       <span class="nav-icon">📊</span> Dashboard
     </div>
     <div class="nav-item" onclick="goPage('modul')" data-page="modul">
-      <span class="nav-icon">📚</span> Modul Ajar
-    </div>
-    <div class="nav-item" onclick="goPage('rppm')" data-page="rppm">
-      <span class="nav-icon">📅</span> RPPM
+      <span class="nav-icon">📅</span> Modul Ajar (RPPM)
     </div>
     <div class="nav-item" onclick="goPage('banksoal')" data-page="banksoal">
       <span class="nav-icon">📝</span> Bank Soal
@@ -1007,7 +1004,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
       <div class="page-topbar">
         <div>
           <h2>Modul Ajar</h2>
-          <p>Isi identitas → Tempel CP → Analisis → Tinjau → Generate</p>
+          <p>Isi identitas → Tempel CP → Analisis → Tinjau → Generate RPPM & Perangkat</p>
         </div>
       </div>
       <div class="modul-body">
@@ -2404,23 +2401,29 @@ Format output WAJIB:
         selesai: res?.candidates?.[0]?.finishReason !== 'MAX_TOKENS' };
     };
 
-    /* ── MODUL AJAR ── */
-    if (tabId === 'modul') {
+    /* ── RPPM (menggantikan Modul Ajar) ── */
+    if (tabId === 'rppm') {
       const prompt =
-`Anda pakar Kurikulum Merdeka Indonesia.
-Tugas: buat LANGKAH PEMBELAJARAN lengkap dalam format HTML.
-WAJIB selesai sampai bagian Penutup. Jangan berhenti di tengah.
+`Anda pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
+Tugas: buat RPPM (Rencana Pelaksanaan Pembelajaran) format KBCDAN PM yang lengkap dan detail.
+WAJIB selesai sampai bagian E. Jangan berhenti di tengah.
 
 DATA:
-Mapel: ${data.mapel} | Kelas: ${data.kelas} | Waktu: ${data.waktu} | Model: ${data.model}
+Mapel: ${data.mapel} | Kelas: ${data.kelas} | Fase: ${data.fase} | Waktu: ${data.waktu}
+Model: ${data.model} | Guru: ${data.guru} | Sekolah: ${data.sekolah}
+CP: ${data.cp}
 TP: ${data.tp}
 Materi: ${data.materi}
 
-FORMAT OUTPUT — HTML saja, tag: h4 p ul li div. Tanpa Markdown. Tanpa teks di luar HTML.
-STRUKTUR (semua wajib ada):
-<h4>🌅 Pendahuluan (10 menit)</h4> — salam, apersepsi spesifik materi, motivasi, tujuan
-<h4>🔷 Kegiatan Inti</h4> — semua fase sintaks ${data.model} (min 5 fase), tiap fase: nama fase, aktivitas guru, aktivitas siswa, waktu
-<h4>🌆 Penutup (10 menit)</h4> — refleksi, simpulan bersama, tindak lanjut, doa`;
+FORMAT OUTPUT — HTML saja, tag: h4 p ul li div table. Tanpa Markdown. Tanpa teks di luar HTML.
+STRUKTUR WAJIB LENGKAP:
+<h4>A. IDENTITAS</h4> — tabel identitas lengkap
+<h4>B. IDENTIFIKASI</h4> — peserta didik, materi, Panca Cinta (pilih yang relevan), DPL (pilih yang relevan)
+<h4>C. DESAIN PEMBELAJARAN</h4> — CP, lintas disiplin, TP, topik, integrasi KBC, model, kemitraan, lingkungan, digital
+<h4>D. LANGKAH PEMBELAJARAN</h4> — dalil/ayat relevan, AWAL (apersepsi+motivasi), INTI (Memahami→Mengaplikasi→Merefleksi sesuai sintaks ${data.model}), PENUTUP
+<h4>E. ASESMEN</h4> — awal (diagnostik), proses (formatif), akhir (sumatif, pilih jenisnya)
+
+Setiap bagian harus spesifik pada materi "${data.materi}", bukan generik.`;
 
       const r = await kirim(prompt, 8192);
       if (!r.html) throw new Error('Gemini tidak menghasilkan konten. Coba lagi.');
@@ -2912,23 +2915,21 @@ function cpReset() {
 
 
 const GENERATOR = {
-  /** Semua tab yang dihasilkan */
+  /** Semua tab yang dihasilkan — RPPM menggantikan Modul Ajar */
   tabs: [
-    { id: 'rppm',      label: '📅 RPPM'         },
-    { id: 'modul',     label: '📚 Modul Ajar'   },
-    { id: 'lkpd',      label: '📋 LKPD'         },
-    { id: 'rubrik',    label: '📏 Rubrik'        },
-    { id: 'asesmen',   label: '🎯 Asesmen'       },
-    { id: 'soal',      label: '❓ Soal & Kunci'  },
-    { id: 'pengayaan', label: '🚀 Pengayaan'     },
-    { id: 'remedial',  label: '🔄 Remedial'      },
+    { id: 'rppm',      label: '📅 RPPM'          },
+    { id: 'lkpd',      label: '📋 LKPD'          },
+    { id: 'rubrik',    label: '📏 Rubrik'         },
+    { id: 'asesmen',   label: '🎯 Asesmen'        },
+    { id: 'soal',      label: '❓ Soal & Kunci'   },
+    { id: 'pengayaan', label: '🚀 Pengayaan'      },
+    { id: 'remedial',  label: '🔄 Remedial'       },
   ],
 
   /** Generate semua konten berdasarkan data form */
   generate(data) {
     return {
       rppm:      this.buatRPPM(data),
-      modul:     this.buatModul(data),
       lkpd:      this.buatLKPD(data),
       rubrik:    this.buatRubrik(data),
       asesmen:   this.buatAsesmen(data),
@@ -3409,7 +3410,7 @@ const RENDER = {
     let headerBtns = '';
     if (id === 'rppm') {
       headerBtns = `<button class="btn btn-secondary btn-sm" onclick="exportRPPMFromTab()" style="font-size:11px;">📄 Export Word</button>`;
-    } else if (['modul','lkpd','soal'].includes(id)) {
+    } else if (['rppm','lkpd','soal'].includes(id)) {
       /* Tab yang mendukung Generate AI */
       const aiAvail = AI_ENGINE.hasKey();
       headerBtns = `
@@ -4437,8 +4438,11 @@ function hapusCacheAI() {
 function generateTabLokal(tabId) {
   if (!currentGenerated) { showToast('Generate dulu perangkat terlebih dahulu', 'error'); return; }
   const { data, historyId } = currentGenerated;
-  const fn = GENERATOR['buat' + tabId.charAt(0).toUpperCase() + tabId.slice(1)];
-  if (!fn) { showToast('Tab tidak dikenal', 'error'); return; }
+
+  /* RPPM menggunakan buatRPPM, bukan buatModul */
+  const fnName = 'buat' + tabId.charAt(0).toUpperCase() + tabId.slice(1);
+  const fn = GENERATOR[fnName];
+  if (!fn) { showToast('Tab tidak dikenal: ' + tabId, 'error'); return; }
 
   const content = fn.call(GENERATOR, data);
   currentGenerated.result[tabId] = content;
@@ -4529,14 +4533,13 @@ async function generateTabAI(tabId) {
 
 /** Tab yang tersedia di panel ChatGPT Import */
 const CGPT_TABS = [
-  { id: 'rppm',      icon: '📅', label: 'RPPM'          },
-  { id: 'modul',     icon: '📚', label: 'Modul Ajar'    },
-  { id: 'lkpd',      icon: '📋', label: 'LKPD'          },
-  { id: 'rubrik',    icon: '📏', label: 'Rubrik'         },
-  { id: 'asesmen',   icon: '🎯', label: 'Asesmen'        },
-  { id: 'soal',      icon: '❓', label: 'Soal & Kunci'   },
-  { id: 'pengayaan', icon: '🚀', label: 'Pengayaan'      },
-  { id: 'remedial',  icon: '🔄', label: 'Remedial'       },
+  { id: 'rppm',      icon: '📅', label: 'RPPM (Modul Ajar)' },
+  { id: 'lkpd',      icon: '📋', label: 'LKPD'              },
+  { id: 'rubrik',    icon: '📏', label: 'Rubrik'             },
+  { id: 'asesmen',   icon: '🎯', label: 'Asesmen'            },
+  { id: 'soal',      icon: '❓', label: 'Soal & Kunci'       },
+  { id: 'pengayaan', icon: '🚀', label: 'Pengayaan'          },
+  { id: 'remedial',  icon: '🔄', label: 'Remedial'           },
 ];
 
 /** Tab yang sedang aktif di panel ChatGPT */
@@ -4894,136 +4897,196 @@ function cgptHitungKata(teks) {
 
 /**
  * Konversi teks mentah ChatGPT → HTML format GuruAI Builder.
- * Parser berbasis pola — mengenali heading, tabel, list, dst.
+ * Parser multi-pass: deteksi struktur → konversi → bungkus.
  */
 function cgptTeksKeHTML(teks, tabId) {
-  const baris = teks.split('\n');
-  let html    = '';
-  let inList  = false;
+  if (!teks || !teks.trim()) throw new Error('Teks kosong.');
+
+  const tabInfo = CGPT_TABS.find(t => t.id === tabId);
+  let html = '';
+
+  /* ── HELPER ── */
+  const esc    = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const inline = s => s
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+    .replace(/_{3,}/g, '<span style="display:inline-block;min-width:160px;border-bottom:1.5px solid #999;">&nbsp;</span>')
+    .replace(/Jawaban\s*:\s*_*/gi, '<strong>Jawaban:</strong> <span style="display:inline-block;min-width:200px;border-bottom:1.5px solid #999;">&nbsp;</span>');
+
+  /* ── NORMALISASI ── */
+  /* Hapus karakter unicode tak terlihat, normalkan baris */
+  let norm = teks
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, '  ')
+    .replace(/\u00a0/g, ' ')   /* non-breaking space */
+    .replace(/\n{3,}/g, '\n\n'); /* max 2 baris kosong berturut */
+
+  const baris = norm.split('\n');
+  let i = 0;
+
+  /* State */
+  let inUl    = false;
+  let inOl    = false;
   let inTable = false;
   let tableRows = [];
+  let olNum   = 0;
 
-  const tutupList  = () => { if (inList)  { html += '</ul>';   inList  = false; } };
+  const tutupList = () => {
+    if (inUl)  { html += '</ul>';  inUl  = false; }
+    if (inOl)  { html += '</ol>';  inOl  = false; olNum = 0; }
+  };
   const tutupTable = () => {
-    if (inTable) {
-      if (tableRows.length) {
-        const header = tableRows[0];
-        const body   = tableRows.slice(1);
-        html += '<table><tr>' +
-          header.map(h => `<th>${h}</th>`).join('') + '</tr>' +
-          body.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') +
-          '</table>';
-      }
-      tableRows = []; inTable = false;
-    }
+    if (!inTable || !tableRows.length) { inTable = false; return; }
+    const isHeader = tableRows.length > 1 &&
+      /^[-:\s|]+$/.test((tableRows[1] || []).join('|'));
+    const header = tableRows[0];
+    const rows   = isHeader ? tableRows.slice(2) : tableRows.slice(1);
+    html += '<table><thead><tr>' +
+      header.map(h => `<th>${inline(h)}</th>`).join('') +
+      '</tr></thead><tbody>' +
+      rows.map(r => '<tr>' + r.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>').join('') +
+      '</tbody></table>';
+    tableRows = []; inTable = false;
   };
 
-  baris.forEach(b => {
+  while (i < baris.length) {
+    const b    = baris[i];
     const trim = b.trim();
-    if (!trim) { tutupList(); tutupTable(); html += '<br>'; return; }
+    i++;
 
-    /* Tabel markdown: | col | col | */
+    /* Baris kosong */
+    if (!trim) {
+      tutupList();
+      tutupTable();
+      html += '<br>';
+      continue;
+    }
+
+    /* ── TABEL markdown ── */
     if (trim.startsWith('|') && trim.endsWith('|')) {
       tutupList();
-      /* Skip baris separator |---|---| */
-      if (/^\|[\s\-:|]+\|$/.test(trim)) { inTable = true; return; }
-      const cols = trim.slice(1,-1).split('|').map(c => c.trim());
-      tableRows.push(cols);
       inTable = true;
-      return;
+      /* Baris separator |---|---| → skip tapi tandai */
+      if (/^\|[\s\-:|]+\|$/.test(trim)) {
+        tableRows.push([]); /* placeholder separator */
+        continue;
+      }
+      const cols = trim.slice(1, -1).split('|').map(c => c.trim());
+      tableRows.push(cols);
+      continue;
     }
     tutupTable();
 
-    /* Heading level 1: # atau HURUF BESAR semua atau A. B. C. */
-    if (/^#{1,2}\s/.test(trim)) {
+    /* ── HEADING markdown # ── */
+    const hm = trim.match(/^(#{1,4})\s+(.+)/);
+    if (hm) {
       tutupList();
-      const teks = trim.replace(/^#+\s/, '');
-      html += `<h3>${teks}</h3>`;
-      return;
-    }
-    if (/^#{3,4}\s/.test(trim)) {
-      tutupList();
-      const teks = trim.replace(/^#+\s/, '');
-      html += `<h4>${teks}</h4>`;
-      return;
+      const lvl  = hm[1].length;
+      const teks = inline(hm[2]);
+      html += lvl <= 2 ? `<h3>${teks}</h3>` : `<h4>${teks}</h4>`;
+      continue;
     }
 
-    /* Heading angka seperti "1. IDENTITAS" atau "A. KISI-KISI" */
-    if (/^([A-Z]\.|[0-9]+\.)\s+[A-Z\s]{4,}$/.test(trim)) {
+    /* ── HEADING bergaya: A. JUDUL BESAR atau 1. JUDUL BESAR ── */
+    if (/^([A-Z]\.|[0-9]+\.)[\s\t]+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ\s]{3,}$/.test(trim)) {
       tutupList();
-      html += `<h4>${trim}</h4>`;
-      return;
+      html += `<h4>${inline(trim)}</h4>`;
+      continue;
     }
 
-    /* Bold **teks** atau __teks__ sebagai sub-heading */
-    if (/^\*{2}.+\*{2}$/.test(trim) || /^_{2}.+_{2}$/.test(trim)) {
+    /* ── HEADING bergaya: teks huruf besar semua (min 4 huruf, tanpa titik di akhir) ── */
+    if (/^[A-Z\s\u00C0-\u00FF]{4,}$/.test(trim) && !trim.endsWith('.') && trim.length < 60) {
       tutupList();
-      const t = trim.replace(/^\*{2}|_{2}|\*{2}$|_{2}$/g, '');
-      html += `<h4>${t}</h4>`;
-      return;
+      html += `<h4>${inline(trim)}</h4>`;
+      continue;
     }
 
-    /* List item: - atau * atau • atau angka. */
-    if (/^[-*•]\s/.test(trim) || /^\d+\.\s/.test(trim)) {
-      if (!inList) { html += '<ul>'; inList = true; }
-      const isi = trim.replace(/^[-*•]\s|^\d+\.\s/, '')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/_{2,}/g, '<span style="display:inline-block;min-width:120px;border-bottom:1px solid #999;">&nbsp;</span>');
-      html += `<li>${isi}</li>`;
-      return;
+    /* ── BOLD sebagai heading: **Teks** sendirian di baris ── */
+    if (/^\*\*[^*]+\*\*$/.test(trim)) {
+      tutupList();
+      const t = trim.replace(/^\*\*|\*\*$/g, '');
+      html += `<h4>${inline(t)}</h4>`;
+      continue;
     }
 
-    /* Baris biasa / paragraf */
+    /* ── LIST ITEM bullet ── */
+    const bulletM = trim.match(/^[-*•▪▸➢➤→]\s+(.+)/);
+    if (bulletM) {
+      tutupTable();
+      if (inOl) { html += '</ol>'; inOl = false; olNum = 0; }
+      if (!inUl) { html += '<ul>'; inUl = true; }
+      html += `<li>${inline(bulletM[1])}</li>`;
+      continue;
+    }
+
+    /* ── LIST ITEM numbered ── */
+    const numM = trim.match(/^(\d+)[.)]\s+(.+)/);
+    if (numM) {
+      tutupTable();
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (!inOl) { html += '<ol>'; inOl = true; olNum = 0; }
+      html += `<li>${inline(numM[2])}</li>`;
+      continue;
+    }
+
+    /* ── KOTAK ISIAN berupa baris garis ── */
+    if (/^[_\-]{10,}$/.test(trim)) {
+      tutupList();
+      html += `<p><span style="display:inline-block;width:90%;border-bottom:1.5px solid #999;min-height:20px;">&nbsp;</span></p>`;
+      continue;
+    }
+
+    /* ── PARAGRAF biasa ── */
     tutupList();
-    const isi = trim
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/_{3,}/g, '<span style="display:inline-block;min-width:120px;border-bottom:1px solid #999;">&nbsp;</span>')
-      .replace(/Jawaban:\s*_+/gi, '<br><strong>Jawaban:</strong> <span style="display:inline-block;min-width:200px;border-bottom:1px solid #999;">&nbsp;</span>');
-
-    /* Baris kotak isian (____) dijadikan kotak visual */
-    if (/_{5,}/.test(isi)) {
-      html += `<p>${isi}</p>`;
-    } else {
-      html += `<p>${isi}</p>`;
-    }
-  });
+    html += `<p>${inline(trim)}</p>`;
+  }
 
   tutupList();
   tutupTable();
 
-  /* Bungkus dengan wrapper dan info sumber */
-  return `
-    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;padding:6px 10px;
-      background:rgba(245,158,11,.08);border-radius:var(--r-sm);border-left:3px solid var(--amber);">
-      📋 Diimpor dari ChatGPT — ${CGPT_TABS.find(t=>t.id===tabId)?.label || tabId}
-    </div>
-    ${html}`;
+  /* Bungkus dengan info sumber */
+  const badge = `
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:7px 12px;
+      background:rgba(245,158,11,.08);border-radius:var(--r-sm);border-left:3px solid var(--amber);
+      display:flex;align-items:center;gap:8px;">
+      📋 <span>Diimpor dari ChatGPT — <strong>${tabInfo?.label || tabId}</strong></span>
+    </div>`;
+
+  return badge + html;
 }
 
-/** Terapkan hasil format ke tab preview Modul Ajar */
+/** Terapkan hasil format ke tab preview — tidak perlu Generate dulu */
 function cgptTerapkan() {
   if (!cgptLastResult) { showToast('Format dulu hasilnya', 'error'); return; }
 
-  /* Pastikan currentGenerated ada */
+  /* Jika belum ada currentGenerated, buat dummy dari form data */
   if (!currentGenerated) {
-    showToast('Generate modul ajar terlebih dahulu sebelum menerapkan impor', 'warning');
-    goPage('modul');
-    return;
+    const data = {
+      ...UTIL.getFormData(),
+      tp:     STATE_ANALISIS.tp.join('\n'),
+      materi: STATE_ANALISIS.materi.join(', '),
+      topik:  STATE_ANALISIS.topik,
+    };
+    /* Generate semua tab lokal sebagai base */
+    const result = GENERATOR.generate(data);
+    const historyId = UTIL.uid();
+    _tampilkanPreview(data, result, cgptActiveTab, historyId);
   }
 
-  /* Simpan ke currentGenerated dan persist */
+  /* Simpan hasil ChatGPT ke tab yang dipilih */
   currentGenerated.result[cgptActiveTab]             = cgptLastResult;
   currentGenerated.result[cgptActiveTab + '_sumber'] = 'chatgpt';
   _simpanResult(currentGenerated.historyId, currentGenerated.result);
 
-  /* Pindah ke Modul Ajar dan tampilkan tab yang relevan */
+  /* Pindah ke Modul Ajar dan tampilkan tab */
   goPage('modul');
   currentTab = cgptActiveTab;
   RENDER.renderTabs(currentTab);
   RENDER.showTab(currentTab, cgptLastResult);
 
   const label = CGPT_TABS.find(t => t.id === cgptActiveTab)?.label || cgptActiveTab;
-  showToast(`✅ ${label} dari ChatGPT berhasil diterapkan ke preview!`);
+  showToast(`✅ ${label} dari ChatGPT berhasil diterapkan!`);
 }
 
 /** Hapus area paste */
