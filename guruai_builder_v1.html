@@ -4578,29 +4578,111 @@ ${materi}`;
   const prompts = {
 
     rppm:
-`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat RPPM (Rencana Pelaksanaan Pembelajaran) format KBCDAN PM yang lengkap.
+`Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
+Tugas: isi RPPM (Rencana Pelaksanaan Pembelajaran KBC DAN PM) berdasarkan data berikut.
 
 ${konteks}
 
-Buat RPPM dengan struktur berikut (tulis semuanya, jangan disingkat):
-A. IDENTITAS — isi semua data dari identitas di atas
-B. IDENTIFIKASI
-   - Peserta Didik: deskripsi singkat
-   - Materi Pelajaran: dari materi pokok
-   - Tema KBC (Panca Cinta): pilih yang relevan
-   - Dimensi Profil Lulusan: pilih yang relevan
-C. DESAIN PEMBELAJARAN
-   - Capaian Pembelajaran
-   - Lintas Disiplin Ilmu
-   - Tujuan Pembelajaran
-   - Topik, Materi Integrasi KBC, Praktik Pedagogis
-   - Kemitraan, Lingkungan, Pemanfaatan Digital
-D. PENGALAMAN BELAJAR
-   - Dalil/Ayat yang relevan (jika ada)
-   - Kegiatan AWAL, INTI (Memahami, Mengaplikasi, Merefleksi), PENUTUP
-E. ASESMEN — Awal, Proses, Akhir
+PENTING: Gunakan format MARKER PERSIS seperti di bawah ini.
+Setiap field diawali [FIELD:nama_field] dan diakhiri [/FIELD].
+Jangan ubah nama marker. Tulis isinya selengkap mungkin. Jangan potong.
 
-Tulis dalam format teks biasa yang rapi dan lengkap. Jangan terpotong.`,
+[FIELD:peserta_didik]
+Tuliskan deskripsi peserta didik kelas ${d.kelas || '—'}, jumlah siswa, karakteristik umum.
+[/FIELD]
+
+[FIELD:materi_pelajaran]
+Tuliskan materi pelajaran pokok yang akan dipelajari berdasarkan CP dan TP.
+[/FIELD]
+
+[FIELD:panca_cinta]
+Pilih dari: Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama Manusia | Cinta Tanah Air
+Tulis hanya yang dipilih, pisah koma. Pilih yang paling relevan dengan materi.
+[/FIELD]
+
+[FIELD:dpl]
+Pilih dari: DPL1 Keimanan dan Ketakwaan | DPL2 Kewargaan | DPL3 Penalaran Kritis | DPL4 Kreativitas | DPL5 Kolaborasi | DPL6 Kemandirian | DPL7 Kesehatan | DPL8 Komunikasi
+Tulis hanya yang dipilih, pisah koma. Pilih 2-3 yang paling relevan dengan model ${d.model || 'PBL'}.
+[/FIELD]
+
+[FIELD:cp]
+Salin CP di atas persis apa adanya tanpa diubah.
+[/FIELD]
+
+[FIELD:lintas_disiplin]
+Tuliskan mata pelajaran lain yang berkaitan dengan materi ini.
+[/FIELD]
+
+[FIELD:tujuan_pembelajaran]
+Tuliskan semua TP dari data di atas, satu per baris, lengkap.
+[/FIELD]
+
+[FIELD:topik]
+Tuliskan topik-topik pembelajaran yang akan dibahas, relevan dengan CP dan TP.
+[/FIELD]
+
+[FIELD:integrasi_kbc]
+Tuliskan bagaimana nilai KBC (Panca Cinta yang dipilih) diintegrasikan dalam pembelajaran ini. Konkret dan spesifik.
+[/FIELD]
+
+[FIELD:praktik_pedagogis]
+Tuliskan model/strategi/metode pembelajaran beserta alasannya. Contoh: ${d.model || 'PBL'} — jelaskan mengapa model ini dipilih untuk materi ini.
+[/FIELD]
+
+[FIELD:kemitraan]
+Tuliskan mitra kerjasama dalam pembelajaran ini (guru lain, orang tua, komunitas, dll).
+[/FIELD]
+
+[FIELD:lingkungan]
+Tuliskan lingkungan pembelajaran yang digunakan (ruang fisik, virtual, budaya belajar).
+[/FIELD]
+
+[FIELD:digital]
+Tuliskan pemanfaatan teknologi digital dalam pembelajaran ini (LMS, aplikasi, platform, dll).
+[/FIELD]
+
+[FIELD:dalil]
+Tuliskan ayat Al-Qur'an atau Hadits yang relevan dengan materi "${materi}". Sertakan teks Arab jika ada.
+[/FIELD]
+
+[FIELD:dalil_sumber]
+Tuliskan sumber dalil di atas (misal: Q.S. Al-Baqarah: 31 atau H.R. Bukhari).
+[/FIELD]
+
+[FIELD:kegiatan_awal]
+Tuliskan kegiatan AWAL pembelajaran secara lengkap dan detail (orientasi, apersepsi kontekstual, motivasi, penyampaian tujuan). Prinsip: berkesadaran, bermakna, menggembirakan. Minimal 150 kata.
+[/FIELD]
+
+[FIELD:memahami]
+Tuliskan kegiatan INTI — fase MEMAHAMI secara lengkap. Aktivitas siswa dan guru yang konkret spesifik pada materi "${materi}". Minimal 150 kata.
+[/FIELD]
+
+[FIELD:mengaplikasi]
+Tuliskan kegiatan INTI — fase MENGAPLIKASI secara lengkap. Aktivitas penerapan nyata spesifik pada materi "${materi}". Minimal 150 kata.
+[/FIELD]
+
+[FIELD:merefleksi]
+Tuliskan kegiatan INTI — fase MEREFLEKSI secara lengkap. Refleksi siswa atas pengalaman belajar. Minimal 100 kata.
+[/FIELD]
+
+[FIELD:kegiatan_penutup]
+Tuliskan kegiatan PENUTUP secara lengkap. Umpan balik, simpulan, perencanaan selanjutnya, doa penutup. Minimal 100 kata.
+[/FIELD]
+
+[FIELD:asesmen_awal]
+Tuliskan asesmen pada AWAL pembelajaran: metode diagnostik, pertanyaan pemantik, cara mengukur kesiapan belajar siswa.
+[/FIELD]
+
+[FIELD:asesmen_proses]
+Tuliskan asesmen pada PROSES pembelajaran: strategi assessment as/for/of learning yang digunakan, kapan dan bagaimana.
+[/FIELD]
+
+[FIELD:asesmen_akhir]
+Pilih dari: Tes Tertulis | Tes Lisan | Penilaian Kinerja | Penilaian Proyek | Penilaian Produk | Observasi | Portofolio | Peer Assessment | Self Assessment | Penilaian Berbasis Kelas
+Tulis yang dipilih, pisah koma. Pilih yang sesuai model ${d.model || 'PBL'}.
+[/FIELD]
+
+Tulis SEMUA field di atas. Jangan lewati satu pun. Jangan potong di tengah field.`,
 
     modul:
 `Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat LANGKAH PEMBELAJARAN yang detail dan lengkap untuk Modul Ajar.
@@ -4867,7 +4949,26 @@ function cgptFormat() {
 
   setTimeout(() => {
     try {
-      const html = cgptTeksKeHTML(raw, cgptActiveTab);
+      let html;
+
+      /* RPPM: gunakan parser marker khusus */
+      if (cgptActiveTab === 'rppm') {
+        const hasMarker = raw.includes('[FIELD:') && raw.includes('[/FIELD]');
+        if (hasMarker) {
+          html = cgptParseRPPM(raw);
+          if (!html) {
+            /* Marker ada tapi tidak cukup field — fallback ke parser HTML */
+            html = cgptTeksKeHTML(raw, cgptActiveTab);
+          }
+        } else {
+          /* Tidak ada marker — kemungkinan format lama, pakai parser HTML biasa */
+          html = cgptTeksKeHTML(raw, cgptActiveTab);
+          showToast('⚠️ Gunakan prompt terbaru agar field RPPM terisi otomatis', 'warning');
+        }
+      } else {
+        html = cgptTeksKeHTML(raw, cgptActiveTab);
+      }
+
       cgptLastResult = html;
 
       /* Tampilkan preview */
@@ -4879,10 +4980,13 @@ function cgptFormat() {
       /* Status sukses */
       const st = document.getElementById('cgptStatus');
       if (st) {
+        const isRPPM = cgptActiveTab === 'rppm' && raw.includes('[FIELD:');
         st.style.cssText = 'display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;font-size:12px;padding:8px 10px;border-radius:6px;';
-        st.textContent = `✅ Format selesai — ${cgptHitungKata(raw)} kata diformat ke HTML. Klik "Terapkan ke Tab Preview" untuk melihat di tab ${CGPT_TABS.find(t=>t.id===cgptActiveTab)?.label}.`;
+        st.textContent = isRPPM
+          ? `✅ RPPM terformat! Semua field diisi otomatis dari hasil ChatGPT. Klik "Terapkan" untuk melihat di tab RPPM.`
+          : `✅ Format selesai — ${cgptHitungKata(raw)} kata. Klik "Terapkan ke Tab Preview".`;
       }
-      showToast('✅ Berhasil diformat! Klik Terapkan untuk memasukkan ke preview.');
+      showToast('✅ Format selesai! Klik Terapkan.');
     } catch(e) {
       showToast(`❌ Gagal memformat: ${e.message}`, 'error');
     }
@@ -5087,6 +5191,183 @@ function cgptTerapkan() {
 
   const label = CGPT_TABS.find(t => t.id === cgptActiveTab)?.label || cgptActiveTab;
   showToast(`✅ ${label} dari ChatGPT berhasil diterapkan!`);
+}
+
+/**
+ * Parse hasil ChatGPT RPPM berdasarkan sistem marker [FIELD:xxx]...[/FIELD]
+ * Isi langsung ke field-field di panel RPPM dan tampilkan preview RPPM.
+ * Return: HTML preview RPPM yang sudah terisi.
+ */
+function cgptParseRPPM(teks) {
+  /* Ekstrak semua field dari marker */
+  const ambil = (nama) => {
+    const re  = new RegExp(`\\[FIELD:${nama}\\]([\\s\\S]*?)\\[/FIELD\\]`, 'i');
+    const m   = teks.match(re);
+    return m ? m[1].trim() : '';
+  };
+
+  const f = {
+    peserta:     ambil('peserta_didik'),
+    materi:      ambil('materi_pelajaran'),
+    pancaCinta:  ambil('panca_cinta'),
+    dpl:         ambil('dpl'),
+    cp:          ambil('cp'),
+    lintas:      ambil('lintas_disiplin'),
+    tp:          ambil('tujuan_pembelajaran'),
+    topik:       ambil('topik'),
+    integrasi:   ambil('integrasi_kbc'),
+    model:       ambil('praktik_pedagogis'),
+    mitra:       ambil('kemitraan'),
+    lingkungan:  ambil('lingkungan'),
+    digital:     ambil('digital'),
+    dalil:       ambil('dalil'),
+    dalilSumber: ambil('dalil_sumber'),
+    awal:        ambil('kegiatan_awal'),
+    memahami:    ambil('memahami'),
+    mengaplikasi:ambil('mengaplikasi'),
+    merefleksi:  ambil('merefleksi'),
+    penutup:     ambil('kegiatan_penutup'),
+    asAwal:      ambil('asesmen_awal'),
+    asProses:    ambil('asesmen_proses'),
+    asAkhir:     ambil('asesmen_akhir'),
+  };
+
+  /* Cek apakah ada field yang terisi */
+  const terisi = Object.values(f).filter(v => v.length > 0).length;
+  if (terisi < 3) return null; /* Bukan format RPPM dengan marker */
+
+  /* Isi field-field di panel RPPM */
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val) el.value = val;
+  };
+  const d = UTIL.getFormData();
+
+  setVal('r-sekolah',      d.sekolah || '');
+  setVal('r-mapel',        d.mapel   || '');
+  setVal('r-fase',         `${d.fase || ''} / ${d.kelas || ''}`);
+  setVal('r-waktu',        d.waktu   || '');
+  setVal('r-tahun',        d.tahun   || '');
+  setVal('r-guru',         d.guru    || '');
+  setVal('r-peserta',      f.peserta);
+  setVal('r-materi',       f.materi);
+  setVal('r-cp',           f.cp || d.cp);
+  setVal('r-lintas',       f.lintas);
+  setVal('r-tp',           f.tp);
+  setVal('r-topik',        f.topik);
+  setVal('r-integrasi',    f.integrasi);
+  setVal('r-model',        f.model);
+  setVal('r-mitra',        f.mitra);
+  setVal('r-lingkungan',   f.lingkungan);
+  setVal('r-digital',      f.digital);
+  setVal('r-dalil',        f.dalil);
+  setVal('r-dalil-sumber', f.dalilSumber);
+  setVal('r-awal',         f.awal);
+  setVal('r-memahami',     f.memahami);
+  setVal('r-mengaplikasi', f.mengaplikasi);
+  setVal('r-merefleksi',   f.merefleksi);
+  setVal('r-penutup',      f.penutup);
+  setVal('r-as-awal',      f.asAwal);
+  setVal('r-as-proses',    f.asProses);
+
+  /* Centang Panca Cinta */
+  const kbcDipilih = f.pancaCinta.split(',').map(s => s.trim().toLowerCase());
+  document.querySelectorAll('input[name="kbc"]').forEach(el => {
+    el.checked = kbcDipilih.some(k =>
+      el.value.toLowerCase().includes(k) || k.includes(el.value.toLowerCase().split(' ')[1] || '')
+    );
+  });
+
+  /* Centang DPL */
+  const dplDipilih = f.dpl.split(',').map(s => s.trim().toLowerCase());
+  document.querySelectorAll('input[name="dpl"]').forEach(el => {
+    el.checked = dplDipilih.some(k =>
+      el.value.toLowerCase().includes(k.replace(/dpl\d+\s*/i,'').trim()) ||
+      k.includes(el.value.toLowerCase().split(' ')[0])
+    );
+  });
+
+  /* Centang Asesmen Akhir */
+  const asAkhirDipilih = f.asAkhir.split(',').map(s => s.trim().toLowerCase());
+  document.querySelectorAll('input[name="asakhir"]').forEach(el => {
+    el.checked = asAkhirDipilih.some(k =>
+      el.value.toLowerCase().includes(k) || k.includes(el.value.toLowerCase())
+    );
+  });
+
+  /* Simpan ke IDB */
+  const rppmData = getRPPMData?.();
+  if (rppmData) {
+    IDB.set('rppm', rppmData);
+    STORAGE.save(CONFIG.LS_KEY + '_rppm', rppmData);
+  }
+
+  /* Bangun HTML preview RPPM dari data yang sudah terisi */
+  const ceklis = arr => arr.map(v =>
+    `<span style="display:inline-block;margin:2px 4px 2px 0;background:rgba(45,212,191,.12);
+    border:1px solid rgba(45,212,191,.3);color:var(--accent-dark);padding:2px 9px;
+    border-radius:12px;font-size:12px;font-weight:600;">☑ ${v}</span>`
+  ).join('');
+  const val = v => (v || '—').replace(/\n/g, '<br>');
+  const kbcList = f.pancaCinta.split(',').map(s=>s.trim()).filter(Boolean);
+  const dplList = f.dpl.split(',').map(s=>s.trim()).filter(Boolean);
+  const asAkhirList = f.asAkhir.split(',').map(s=>s.trim()).filter(Boolean);
+
+  return `
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;padding:7px 12px;
+      background:rgba(245,158,11,.08);border-radius:var(--r-sm);border-left:3px solid var(--amber);">
+      📋 Diimpor dari ChatGPT — <strong>RPPM KBCDAN PM</strong> | Field terisi: ${terisi}/23
+    </div>
+    <table class="rppm-table">
+      <tr><td colspan="2" style="text-align:center;font-weight:800;font-size:14px;padding:12px;background:var(--bg-base);">
+        RENCANA PELAKSANAAN KBC DAN PM
+      </td></tr>
+      <tr><th>Sekolah</th><td>${val(d.sekolah)}</td></tr>
+      <tr><th>Mata Pelajaran</th><td>${val(d.mapel)}</td></tr>
+      <tr><th>Fase / Kelas</th><td>${val(d.fase)} / ${val(d.kelas)}</td></tr>
+      <tr><th>Alokasi Waktu</th><td>${val(d.waktu)}</td></tr>
+      <tr><th>Tahun Pelajaran</th><td>${val(d.tahun)}</td></tr>
+      <tr><th>Nama Penyusun</th><td>${val(d.guru)}</td></tr>
+
+      <tr><td colspan="2" class="section-head">B. IDENTIFIKASI</td></tr>
+      <tr><th>Peserta Didik</th><td>${val(f.peserta)}</td></tr>
+      <tr><th>Materi Pelajaran</th><td>${val(f.materi)}</td></tr>
+      <tr><th>Tema KBC (Panca Cinta)</th><td>${kbcList.length ? ceklis(kbcList) : val(f.pancaCinta)}</td></tr>
+      <tr><th>Dimensi Profil Lulusan</th><td>${dplList.length ? ceklis(dplList) : val(f.dpl)}</td></tr>
+
+      <tr><td colspan="2" class="section-head">C. DESAIN PEMBELAJARAN</td></tr>
+      <tr><th>Capaian Pembelajaran</th><td>${val(f.cp || d.cp)}</td></tr>
+      <tr><th>Lintas Disiplin Ilmu</th><td>${val(f.lintas)}</td></tr>
+      <tr><th>Tujuan Pembelajaran</th><td>${val(f.tp)}</td></tr>
+      <tr><th>Topik Pembelajaran</th><td>${val(f.topik)}</td></tr>
+      <tr><th>Materi Integrasi KBC</th><td>${val(f.integrasi)}</td></tr>
+      <tr><th>Praktik Pedagogis</th><td>${val(f.model)}</td></tr>
+      <tr><th>Kemitraan Pembelajaran</th><td>${val(f.mitra)}</td></tr>
+      <tr><th>Lingkungan Pembelajaran</th><td>${val(f.lingkungan)}</td></tr>
+      <tr><th>Pemanfaatan Digital</th><td>${val(f.digital)}</td></tr>
+
+      <tr><td colspan="2" class="section-head">D. PENGALAMAN BELAJAR</td></tr>
+      <tr><td colspan="2" style="padding:12px;">
+        ${f.dalil ? `<div class="rppm-dalil"><small>📖 Dalil</small>${val(f.dalil)}${f.dalilSumber ? `<br><strong style="color:var(--amber);font-size:11px;">${f.dalilSumber}</strong>` : ''}</div>` : ''}
+        <div class="rppm-tahap"><strong>🌅 AWAL</strong>${val(f.awal)}</div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--accent-dark);margin:8px 0 4px;">🔷 INTI</div>
+        <div class="rppm-tahap"><strong>💡 Memahami</strong>${val(f.memahami)}</div>
+        <div class="rppm-tahap"><strong>🛠️ Mengaplikasi</strong>${val(f.mengaplikasi)}</div>
+        <div class="rppm-tahap"><strong>🪞 Merefleksi</strong>${val(f.merefleksi)}</div>
+        <div class="rppm-tahap" style="border-color:var(--amber);"><strong>🌆 PENUTUP</strong>${val(f.penutup)}</div>
+      </td></tr>
+
+      <tr><td colspan="2" class="section-head">E. ASESMEN PEMBELAJARAN</td></tr>
+      <tr><th>Asesmen Awal</th><td>${val(f.asAwal)}</td></tr>
+      <tr><th>Asesmen Proses</th><td>${val(f.asProses)}</td></tr>
+      <tr><th>Asesmen Akhir</th><td>${asAkhirList.length ? ceklis(asAkhirList) : val(f.asAkhir)}</td></tr>
+
+      <tr><td colspan="2" style="padding:14px;text-align:right;font-size:12px;">
+        ${d.sekolah || '...'}, ${UTIL.formatDate()}<br><br>
+        Guru Mata Pelajaran<br><br><br>
+        <strong>${d.guru || '__________________'}</strong>
+      </td></tr>
+    </table>`;
 }
 
 /** Hapus area paste */
