@@ -974,6 +974,13 @@
             <div class="mode-desc">Offline — tanpa API</div>
           </div>
         </div>
+        <div class="mode-option" data-mode="gemini" onclick="selectMode(this)">
+          <div class="mode-radio"><div class="mode-radio-dot"></div></div>
+          <div class="mode-info">
+            <div class="mode-name">Gemini Vision <span class="mode-badge">OCR+SPLIT</span></div>
+            <div class="mode-desc">OCR + pisah kolom langsung</div>
+          </div>
+        </div>
         <div class="mode-option" data-mode="compare" onclick="selectMode(this)">
           <div class="mode-radio"><div class="mode-radio-dot"></div></div>
           <div class="mode-info">
@@ -988,6 +995,11 @@
     <div class="sidebar-section">
       <div class="section-label">🚦 Status Engine</div>
       <div class="engine-list">
+        <div class="engine-item">
+          <div class="engine-led led-off" id="led-gemini"></div>
+          <div class="engine-name">Gemini Vision</div>
+          <div class="engine-status-text" id="status-gemini">Belum dikonfigurasi</div>
+        </div>
         <div class="engine-item">
           <div class="engine-led led-off" id="led-gpt"></div>
           <div class="engine-name">GPT Vision</div>
@@ -1767,14 +1779,200 @@
     }
   }
 
+  /* ── Gemini Vision Engine — LIVE (OCR + Split langsung) ── */
+  class GeminiVisionEngine extends BaseOCREngine {
+    constructor() {
+      super('Gemini Vision');
+      this.apiKey    = '';
+      this.model     = 'gemini-3.1-flash-lite';
+      this.abortCtrl = null;
+    }
+
+    async initialize() {
+      this.apiKey = document.getElementById('geminiKey')?.value?.trim() || '';
+      this.model  = document.getElementById('geminiModel')?.value || 'gemini-3.1-flash-lite';
+      if (this.model === 'auto') this.model = 'gemini-3.1-flash-lite';
+
+      if (!this.apiKey) {
+        UIManager.setEngineLed('gemini', 'err', 'API Key kosong');
+        this.ready = false;
+        return false;
+      }
+      this.ready = true;
+      UIManager.setEngineLed('gemini', 'ok', `Siap · ${_modelLabel(this.model)}`);
+      Logger.ok(`Gemini Vision siap dengan model "${this.model}".`);
+      return true;
+    }
+
+    /**
+     * OCR + Split langsung dari gambar.
+     * Alur: URL → GAS fetchImage (base64) → Gemini multimodal → JSON split
+     * Return: { engine, text, soal, a, b, c, d, confidence }
+     */
+    async processImage(url) {
+      if (!this.ready) {
+        const ok = await this.initialize();
+        if (!ok) return this._error('Gemini Vision: API key belum diisi di panel Gemini');
+      }
+      if (this.cancelled) return this._error('Dibatalkan');
+
+      try {
+        this.abortCtrl = new AbortController();
+        const timeout  = SettingsManager.get('timeout', 30000);
+
+        // ── Langkah 1: Fetch gambar via GAS proxy → base64 ──
+        let base64Data = null;
+        let mimeType   = 'image/jpeg';
+
+        if (SpreadsheetManager.isConnected()) {
+          Logger.info(`Gemini Vision: fetch gambar via GAS proxy...`);
+          const gasUrl   = SpreadsheetManager.getGasUrl();
+          const proxyUrl = gasUrl + '?action=fetchImage&url=' + encodeURIComponent(url);
+          try {
+            const resp = await fetch(proxyUrl, { signal: this.abortCtrl.signal });
+            const data = await resp.json();
+            if (data.ok && data.base64) {
+              base64Data = data.base64;
+              mimeType   = data.mimeType || 'image/jpeg';
+              Logger.info(`Gemini Vision: gambar diterima (${(data.size/1024).toFixed(0)} KB).`);
+            } else {
+              Logger.warn('GAS proxy: ' + (data.error || 'tidak ada base64'));
+            }
+          } catch (e) {
+            Logger.warn('GAS proxy fetch gagal: ' + e.message);
+          }
+        }
+
+        if (!base64Data) return this._error('Gambar tidak bisa difetch. Pastikan spreadsheet terhubung.');
+
+        // ── Langkah 2: Kirim ke Gemini multimodal API ──
+        const prompt = this._buildOCRSplitPrompt();
+
+        const FALLBACK_MODELS = [
+          this.model,
+          'gemini-3.1-flash-lite', 'gemini-3-flash-preview',
+          'gemini-3.5-flash', 'gemini-3-flash',
+        ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+
+        let parsed = null;
+        let usedModel = null;
+
+        for (const model of FALLBACK_MODELS) {
+          if (this.cancelled) return this._error('Dibatalkan');
+
+          for (const apiVer of ['v1', 'v1beta']) {
+            try {
+              const res = await fetch(
+                `https://generativelanguage.googleapis.com/${apiVer}/models/${model}:generateContent?key=${this.apiKey}`,
+                {
+                  method : 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  signal : this.abortCtrl.signal,
+                  body   : JSON.stringify({
+                    contents: [{
+                      parts: [
+                        { inline_data: { mime_type: mimeType, data: base64Data } },
+                        { text: prompt },
+                      ]
+                    }],
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+                  }),
+                }
+              );
+
+              const data = await res.json();
+
+              if (data?.error?.status === 'NOT_FOUND' || data?.error?.code === 404) continue;
+
+              if (!res.ok || data.error) {
+                const msg = data?.error?.message || `HTTP ${res.status}`;
+                const isQuota = msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+                if (isQuota) { Logger.warn(`Gemini Vision "${model}": quota habis, coba berikutnya...`); break; }
+                return this._error('Gemini API: ' + msg);
+              }
+
+              const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              parsed    = this._parseResponse(rawText);
+              usedModel = model;
+              Logger.ok(`Gemini Vision: OCR berhasil via "${model}" (${apiVer}).`);
+              break;
+
+            } catch (e) {
+              if (e.name === 'AbortError') return this._error('Dibatalkan');
+              Logger.warn(`Gemini Vision "${model}" ${apiVer}: ${e.message}`);
+            }
+          }
+          if (parsed) break;
+        }
+
+        if (!parsed) return this._error('Semua model Gemini Vision gagal atau quota habis.');
+
+        UIManager.setEngineLed('gemini', 'ok', `OK · ${_modelLabel(usedModel)}`);
+        return this._result(parsed.teks_lengkap || '', 0.95, {
+          soal : parsed.soal || '',
+          a    : parsed.a    || '',
+          b    : parsed.b    || '',
+          c    : parsed.c    || '',
+          d    : parsed.d    || '',
+          splitReady: true,
+        });
+
+      } catch (e) {
+        if (e.name === 'AbortError') return this._error('Dibatalkan');
+        return this._error('Gemini Vision error: ' + e.message);
+      }
+    }
+
+    /** Prompt OCR + split untuk satu gambar */
+    _buildOCRSplitPrompt() {
+      return `Kamu adalah sistem OCR untuk soal ujian pilihan ganda SMP/SMA Indonesia.
+Baca gambar ini dan ekstrak teks soal beserta pilihan jawaban A, B, C, D.
+
+ATURAN:
+- Baca SEMUA teks yang ada di gambar dengan akurat
+- Perbaiki simbol matematika/sains yang umum (=, ≤, ≥, ×, ÷, √, ², ³)
+- Perbaiki notasi kimia (H₂O, CO₂, dll)
+- Isi field "a","b","c","d" TANPA prefix huruf (jangan tulis "A." atau "(A)")
+- Field "teks_lengkap" = seluruh teks termasuk soal dan semua pilihan
+- Jika gambar tidak jelas atau bukan soal ujian, isi dengan string kosong
+
+Balas HANYA dalam format JSON ini:
+{
+  "teks_lengkap": "<seluruh teks di gambar>",
+  "soal": "<teks pertanyaan saja, tanpa pilihan>",
+  "a": "<isi pilihan A tanpa prefix>",
+  "b": "<isi pilihan B tanpa prefix>",
+  "c": "<isi pilihan C tanpa prefix>",
+  "d": "<isi pilihan D tanpa prefix>"
+}`;
+    }
+
+    /** Parse JSON response dari Gemini Vision */
+    _parseResponse(raw) {
+      try {
+        let clean = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'').trim();
+        const jsonMatch = clean.match(/\{[\s\S]*\}/);
+        if (jsonMatch) clean = jsonMatch[0];
+        return JSON.parse(clean);
+      } catch (e) {
+        Logger.warn('Gemini Vision: gagal parse JSON, gunakan teks mentah.');
+        return { teks_lengkap: raw.trim(), soal: raw.trim(), a:'', b:'', c:'', d:'' };
+      }
+    }
+
+    cancel() { super.cancel(); if (this.abortCtrl) this.abortCtrl.abort(); }
+    retry()  { super.retry(); }
+  }
+
   /* ════════════════════════════════════════
      OCRManager — Orkestrasi engine
      ════════════════════════════════════════ */
   const OCRManager = (() => {
     const engines = {
-      gpt:       new GPTVisionEngine(),
-      gcv:       new GoogleVisionEngine(),
-      tesseract: new TesseractEngine(),
+      gpt       : new GPTVisionEngine(),
+      gcv       : new GoogleVisionEngine(),
+      tesseract : new TesseractEngine(),
+      gemini    : new GeminiVisionEngine(),
     };
     let mode = 'auto';
 
@@ -1787,6 +1985,7 @@
         case 'gpt':       return await _runOne('gpt', url);
         case 'gcv':       return await _runOne('gcv', url);
         case 'tesseract': return await _runOne('tesseract', url);
+        case 'gemini':    return await _runOne('gemini', url);
         case 'compare':   return await _compareAll(url);
         default:          return await _autoProcess(url);
       }
@@ -1838,22 +2037,18 @@
     }
 
     async function initAll() {
-      // Selalu init Tesseract terlebih dahulu (butuh waktu muat WASM)
-      // Engine lain (GPT, GCV) diinit saat dibutuhkan (lazy)
       const activeMode = mode;
       if (activeMode === 'tesseract' || activeMode === 'auto' || activeMode === 'compare') {
         await engines.tesseract.initialize();
+      }
+      if (activeMode === 'gemini' || activeMode === 'auto' || activeMode === 'compare') {
+        await engines.gemini.initialize();
       }
       if (activeMode === 'gpt' || activeMode === 'compare') {
         await engines.gpt.initialize();
       }
       if (activeMode === 'gcv' || activeMode === 'compare') {
         await engines.gcv.initialize();
-      }
-      // Auto: pastikan minimal satu engine siap
-      if (activeMode === 'auto') {
-        const anyReady = ENGINES.some(k => engines[k].ready);
-        if (!anyReady) Logger.warn('Peringatan: Tidak ada engine yang siap. Periksa API keys.');
       }
     }
 
@@ -2066,16 +2261,54 @@
           UIManager.updateRow(item.no - 1, 'failed', '', res.engine || '—', dur, res);
           Logger.err(`Gambar ${item.no} GAGAL: ${res.error}`);
         } else if (res.engine === 'compare') {
-          item.qStatus = 'done';
-          item.ocrText = '[compare]';
+          item.qStatus    = 'done';
+          item.ocrText    = '[compare]';
           item.compareData = res.compare;
           UIManager.updateRow(item.no - 1, 'done', '[compare — pilih hasil]', 'Compare', dur, res);
           Logger.ok(`Gambar ${item.no} selesai (Compare All)`);
+        } else if (res.splitReady) {
+          // Gemini Vision — hasil sudah split, simpan langsung ke kolom Soal/A/B/C/D
+          item.qStatus = 'done';
+          item.ocrText = res.text;
+          const rowIndex = item.rowIndex || (item.no + 1);
+          if (SettingsManager.get('autoSave', true) && SpreadsheetManager.isConnected()) {
+            // Simpan OCR backup
+            await SpreadsheetManager.saveResult(rowIndex, res.text, res.engine, res.confidence);
+            // Simpan split via saveSplit endpoint
+            const gasUrl = SpreadsheetManager.getGasUrl();
+            const sheet  = SpreadsheetManager.getSheet();
+            try {
+              const splitRes = await fetch(gasUrl, {
+                method : 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body   : JSON.stringify({
+                  action : 'saveSplit',
+                  sheet,
+                  results: [{
+                    rowIndex,
+                    ocrLengkap : res.text,
+                    soal       : res.soal || '',
+                    a          : res.a    || '',
+                    b          : res.b    || '',
+                    c          : res.c    || '',
+                    d          : res.d    || '',
+                  }],
+                }),
+              });
+              const splitData = await splitRes.json();
+              if (splitData.ok) Logger.ok(`Gambar ${item.no}: split kolom tersimpan.`);
+              else Logger.warn(`Gambar ${item.no} split error: ${splitData.error}`);
+            } catch (e) {
+              Logger.warn(`Gambar ${item.no} saveSplit: ${e.message}`);
+            }
+          }
+          const preview = [res.soal, res.a, res.b, res.c, res.d].filter(Boolean).join(' | ');
+          UIManager.updateRow(item.no - 1, 'done', preview || res.text, res.engine, dur, res);
+          Logger.ok(`Gambar ${item.no} selesai (${res.engine}) · split ✂️ · ${dur}`);
         } else {
           item.qStatus = 'done';
           item.ocrText = res.text;
           if (SettingsManager.get('autoSave', true) && SpreadsheetManager.isConnected()) {
-            // Gunakan rowIndex nyata dari spreadsheet (bukan nomor urut)
             const rowIndex = item.rowIndex || (item.no + 1);
             await SpreadsheetManager.saveResult(rowIndex, res.text, res.engine, res.confidence);
           }
@@ -3309,6 +3542,16 @@ ${numbered}`;
   function _statusLabel(s)    { return { pending:'Pending', done:'Selesai', failed:'Gagal', processing:'Diproses', queued:'Antrian', skipped:'Dilewati' }[s] || s; }
   function _fmtTime(sec)      { const m = Math.floor(sec/60); const s = Math.round(sec%60); return m > 0 ? `${m}m ${s}s` : `${s}s`; }
   function _langLabel(code)   { return { ind:'Indonesia', eng:'Inggris', 'ind+eng':'ID+EN', ara:'Arab' }[code] || code; }
+  function _modelLabel(m)     {
+    return {
+      'gemini-3.1-flash-lite'              : '3.1 Flash Lite ⚡',
+      'gemini-3.1-flash-lite-preview-05-20': '3.1 Flash Lite Preview',
+      'gemini-3-flash-preview'             : '3 Flash Preview',
+      'gemini-3-flash'                     : '3 Flash',
+      'gemini-3.5-flash'                   : '3.5 Flash',
+      'gemini-3.5-flash-preview-05-20'     : '3.5 Flash Preview',
+    }[m] || m;
+  }
 
   /** Muat skrip eksternal secara dinamis (Promise) */
   function _loadScript(src) {
@@ -3366,7 +3609,7 @@ ${numbered}`;
     Logger.info('GPT Vision & Google Vision: menunggu implementasi Tahap 4–5.');
     Logger.info('Langkah: (1) Isi GAS URL → (2) Klik ↻ → (3) Pilih sheet → (4) Hubungkan.');
 
-    // Set LED Tesseract ke "belum dimuat" (dimuat lazy saat Start ditekan)
+    UIManager.setEngineLed('gemini', 'off', 'Isi API Key di panel Gemini');
     UIManager.setEngineLed('tess', 'off', 'Dimuat saat dibutuhkan');
     UIManager.setEngineLed('gpt',  'off', 'Stub — Tahap 5');
     UIManager.setEngineLed('gcv',  'off', 'Stub — Tahap 4');
