@@ -333,8 +333,15 @@ async function runProtect(){
   // PROTEKSI JS
   var jsArr=[];
 
-  if(document.getElementById('o-rightclick').checked)
-    jsArr.push("document.addEventListener('contextmenu',function(e){e.preventDefault();});");
+  if(document.getElementById('o-rightclick').checked){
+    // Deteksi apakah file sudah punya contextmenu listener sendiri
+    // Jika ada, engine tidak menambahkan agar tidak konflik dengan pengecualian yang ada
+    var hasCtxMenu=html.indexOf("addEventListener('contextmenu'")>-1
+      ||html.indexOf('addEventListener("contextmenu"')>-1;
+    if(!hasCtxMenu){
+      jsArr.push("document.addEventListener('contextmenu',function(e){e.preventDefault();});");
+    }
+  }
 
   if(document.getElementById('o-devtools').checked)
     jsArr.push("document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key))||(e.ctrlKey&&e.key==='U')){e.preventDefault();}});");
