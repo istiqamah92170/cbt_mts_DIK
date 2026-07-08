@@ -4973,6 +4973,136 @@ Tulis selengkap mungkin.`;
 }
 
 
+/** Bersihkan hanya area paste tanpa reset tahap */
+function cgptClearPasteOnly() {
+  const el = document.getElementById('cgptPasteArea');
+  if (el) el.value = '';
+  const pg = document.getElementById('cgptPreviewGroup');
+  if (pg) pg.style.display = 'none';
+  const st = document.getElementById('cgptStatus');
+  if (st) st.style.display = 'none';
+}
+
+/** Update tampilan stepper UI sesuai tahap aktif */
+function cgptUpdateStepperUI() {
+  const isRPPM = cgptActiveTab === 'rppm';
+
+  const stepper = document.getElementById('cgptRPPMStepper');
+  if (stepper) stepper.style.display = isRPPM ? 'block' : 'none';
+
+  const step1Actions  = document.getElementById('cgptStep1Actions');
+  const normalActions = document.getElementById('cgptNormalActions');
+  if (isRPPM && cgptTahap === 1) {
+    if (step1Actions)  { step1Actions.style.cssText  = 'display:flex;flex-direction:column;gap:8px;'; }
+    if (normalActions) { normalActions.style.display = 'none'; }
+  } else {
+    if (step1Actions)  { step1Actions.style.display  = 'none'; }
+    if (normalActions) { normalActions.style.display = 'flex'; }
+  }
+
+  if (!isRPPM) return;
+
+  const b1 = document.getElementById('cgptStep1Badge');
+  const n1 = document.getElementById('cgptStepNum1');
+  const c1 = document.getElementById('cgptStep1Card');
+  const b2 = document.getElementById('cgptStep2Badge');
+  const n2 = document.getElementById('cgptStepNum2');
+  const c2 = document.getElementById('cgptStep2Card');
+
+  if (cgptTahap === 1) {
+    if (b1) { b1.textContent = 'Aktif ▶'; b1.style.cssText = 'font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);'; }
+    if (n1) { n1.textContent = '1'; n1.style.background = 'var(--accent)'; n1.style.color = 'white'; }
+    if (c1) { c1.style.borderColor = 'var(--accent)'; c1.style.background = 'rgba(45,212,191,.04)'; }
+    if (b2) { b2.textContent = cgptTPTersimpan ? '⏳ Siap' : 'Menunggu'; b2.style.cssText = cgptTPTersimpan ? 'font-size:10px;background:rgba(16,185,129,.12);color:#065F46;' : 'font-size:10px;background:rgba(100,116,139,.1);color:var(--text-muted);'; }
+    if (n2) { n2.textContent = '2'; n2.style.background = '#94A3B8'; n2.style.color = 'white'; }
+    if (c2) { c2.style.borderColor = 'var(--border)'; c2.style.background = ''; }
+  } else {
+    if (b1) { b1.textContent = '✓ Selesai'; b1.style.cssText = 'font-size:10px;background:rgba(16,185,129,.12);color:#065F46;'; }
+    if (n1) { n1.textContent = '✓'; n1.style.background = '#10B981'; n1.style.color = 'white'; }
+    if (c1) { c1.style.borderColor = '#10B981'; c1.style.background = 'rgba(16,185,129,.04)'; }
+    if (b2) { b2.textContent = 'Aktif ▶'; b2.style.cssText = 'font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);'; }
+    if (n2) { n2.textContent = '2'; n2.style.background = 'var(--accent)'; n2.style.color = 'white'; }
+    if (c2) { c2.style.borderColor = 'var(--accent)'; c2.style.background = 'rgba(45,212,191,.04)'; }
+  }
+
+  const instr = document.getElementById('cgptStepInstruksi');
+  if (instr) {
+    instr.innerHTML = cgptTahap === 1
+      ? `<strong>Tahap 1:</strong> Salin prompt di bawah → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik tombol <strong style="color:var(--accent)">✅ Simpan TP → Lanjut ke Tahap 2</strong>.`
+      : `<strong>Tahap 2:</strong> TP dari Tahap 1 sudah masuk ke prompt. Salin prompt → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik <strong style="color:var(--accent)">✨ Format & Terapkan</strong>.`;
+  }
+
+  const lbl  = document.getElementById('cgptPromptLabel');
+  const hint = document.getElementById('cgptPromptHint');
+  const ptit = document.getElementById('cgptPasteTitle');
+  if (cgptTahap === 1) {
+    if (lbl)  lbl.innerHTML    = '💬 Prompt Tahap 1 — Analisis CP & Buat TP';
+    if (hint) hint.textContent = 'ChatGPT akan menganalisis CP dan menyusun TP operasional beserta topik dan materi pokok.';
+    if (ptit) ptit.textContent = '📥 Tempel Hasil TP dari ChatGPT';
+  } else {
+    if (lbl)  lbl.innerHTML    = '💬 Prompt Tahap 2 — Buat RPPM Lengkap';
+    if (hint) hint.textContent = 'TP dari Tahap 1 sudah masuk. ChatGPT akan buat RPPM KBCDAN PM lengkap (23 field).';
+    if (ptit) ptit.textContent = '📥 Tempel Hasil RPPM dari ChatGPT';
+  }
+}
+
+/** Pindah ke tahap tertentu */
+function cgptSetTahap(n) {
+  if (n === 2 && !cgptTPTersimpan) {
+    showToast('Selesaikan Tahap 1 dulu — simpan TP dari hasil ChatGPT', 'warning');
+    return;
+  }
+  cgptTahap = n;
+  cgptLastResult = null;
+  cgptClearPasteOnly();
+  cgptUpdateStepperUI();
+  cgptUpdatePrompt();
+}
+
+/** Simpan TP dari Tahap 1 ke STATE_ANALISIS dan lanjut ke Tahap 2 */
+function cgptSimpanTP() {
+  const raw = document.getElementById('cgptPasteArea')?.value?.trim();
+  if (!raw) { showToast('Tempel hasil ChatGPT Tahap 1 terlebih dahulu', 'error'); return; }
+
+  const tpMatch    = raw.match(/\[TP HASIL ANALISIS\]([\s\S]*?)\[\/TP HASIL ANALISIS\]/i);
+  const topikMatch = raw.match(/\[TOPIK UTAMA\]([\s\S]*?)\[\/TOPIK UTAMA\]/i);
+  const materiMatch= raw.match(/\[MATERI POKOK\]([\s\S]*?)\[\/MATERI POKOK\]/i);
+
+  if (!tpMatch) {
+    showToast('Format tidak dikenali. Gunakan prompt Tahap 1 yang disediakan.', 'error');
+    return;
+  }
+
+  const tpList = tpMatch[1].trim()
+    .split('\n')
+    .map(l => l.replace(/^TP\d+[:.]\s*/i, '').trim())
+    .filter(l => l.length > 10);
+
+  const topikList = topikMatch
+    ? topikMatch[1].trim().split('\n').map(l => l.replace(/^[-•*\d.]+\s*/,'').trim()).filter(Boolean)
+    : [];
+  const materiList = materiMatch
+    ? materiMatch[1].trim().split('\n').map(l => l.replace(/^[-•*\d.]+\s*/,'').trim()).filter(Boolean)
+    : [];
+
+  if (!tpList.length) { showToast('Tidak ada TP yang ditemukan dalam hasil ChatGPT', 'error'); return; }
+
+  STATE_ANALISIS.tp     = tpList;
+  if (topikList.length)  STATE_ANALISIS.topik  = topikList;
+  if (materiList.length) STATE_ANALISIS.materi = materiList;
+  STATE_ANALISIS.sudahAnalisis = true;
+  syncHiddenFields();
+  renderHasilAnalisis();
+  const panelAn = document.getElementById('panelAnalisis');
+  if (panelAn) panelAn.style.display = 'block';
+
+  cgptTPTersimpan = tpList.join('\n');
+  autoSave();
+
+  showToast(`✅ ${tpList.length} TP tersimpan ke Analisis CP! Beralih ke Tahap 2...`);
+  setTimeout(() => cgptSetTahap(2), 1000);
+}
+
 /** Render tab picker di panel ChatGPT */
 function cgptRenderTabPicker() {
   const el = document.getElementById('cgptTabPicker');
