@@ -736,6 +736,34 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   margin-left: 4px;
 }
 
+/* ---- CHATGPT STEPPER RPPM ---- */
+.cgpt-step-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color var(--t);
+}
+.cgpt-step-card.active { border-color: var(--accent); }
+.cgpt-step-card.done   { border-color: var(--success); }
+.cgpt-step-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer;
+  background: var(--bg-surface);
+  transition: background var(--t);
+}
+.cgpt-step-header:hover { background: var(--bg-base); }
+.cgpt-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent); color: white;
+  font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cgpt-step-num-inactive { background: var(--border); color: var(--text-muted); }
+.cgpt-step-info { flex: 1; }
+.cgpt-step-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.cgpt-step-sub   { font-size: 11.5px; color: var(--text-muted); }
+
 /* ---- CHATGPT IMPORT ---- */
 .cgpt-tab-picker {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -1653,14 +1681,59 @@ h1,h2,h3,h4 { color: var(--text-primary); }
             </div>
           </div>
 
-          <!-- Prompt yang Dihasilkan -->
-          <div class="settings-group" style="margin-top:16px;">
+          <!-- Stepper RPPM — tampil hanya saat tab RPPM aktif -->
+          <div id="cgptRPPMStepper" style="display:none;">
+            <div class="settings-group" style="margin-top:12px;">
+              <div class="settings-group-title">📋 Alur 2 Tahap untuk RPPM</div>
+              <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+
+                <!-- Tahap 1 -->
+                <div class="cgpt-step-card" id="cgptStep1Card">
+                  <div class="cgpt-step-header" onclick="cgptSetTahap(1)">
+                    <div class="cgpt-step-num" id="cgptStepNum1">1</div>
+                    <div class="cgpt-step-info">
+                      <div class="cgpt-step-title">Buat Tujuan Pembelajaran (TP)</div>
+                      <div class="cgpt-step-sub">ChatGPT analisis CP → hasilkan TP</div>
+                    </div>
+                    <span id="cgptStep1Badge" class="badge" style="font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);">Aktif</span>
+                  </div>
+                </div>
+
+                <!-- Panah -->
+                <div style="text-align:center;color:var(--text-muted);font-size:18px;line-height:1;">↓</div>
+
+                <!-- Tahap 2 -->
+                <div class="cgpt-step-card cgpt-step-locked" id="cgptStep2Card">
+                  <div class="cgpt-step-header" onclick="cgptSetTahap(2)">
+                    <div class="cgpt-step-num cgpt-step-num-inactive" id="cgptStepNum2">2</div>
+                    <div class="cgpt-step-info">
+                      <div class="cgpt-step-title">Buat RPPM Lengkap</div>
+                      <div class="cgpt-step-sub">Gunakan TP hasil Tahap 1 → buat RPPM</div>
+                    </div>
+                    <span id="cgptStep2Badge" class="badge" style="font-size:10px;background:var(--border-light);color:var(--text-muted);">Menunggu</span>
+                  </div>
+                </div>
+
+                <!-- Instruksi aktif -->
+                <div id="cgptStepInstruksi" style="
+                  margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);
+                  background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.2);
+                  font-size:12px;line-height:1.6;color:var(--text-secondary);">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prompt -->
+          <div class="settings-group" style="margin-top:12px;">
             <div class="settings-group-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>💬 Prompt untuk ChatGPT</span>
+              <span id="cgptPromptLabel">💬 Prompt untuk ChatGPT</span>
               <button class="btn btn-primary btn-sm" onclick="salinPromptChatGPT()" id="btnSalinPrompt">📋 Salin Prompt</button>
             </div>
             <div style="padding:14px 16px;">
-              <p style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">Prompt ini dibuat otomatis dari data modul Anda. Paste langsung ke ChatGPT.</p>
+              <p style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;" id="cgptPromptHint">
+                Prompt dibuat otomatis dari data modul Anda. Paste langsung ke ChatGPT.
+              </p>
               <div id="cgptPromptBox" style="
                 background:var(--bg-base);border:1px solid var(--border);border-radius:var(--r-sm);
                 padding:12px;font-size:12px;line-height:1.7;color:var(--text-secondary);
@@ -1674,26 +1747,41 @@ h1,h2,h3,h4 { color: var(--text-primary); }
         <!-- KOLOM KANAN: Area Paste + Hasil -->
         <div>
           <div class="settings-group">
-            <div class="settings-group-title">📥 Tempel Hasil dari ChatGPT</div>
+            <div class="settings-group-title" id="cgptPasteTitle">📥 Tempel Hasil dari ChatGPT</div>
             <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-              <p style="font-size:12px;color:var(--text-muted);">Setelah mendapat jawaban dari ChatGPT, copy semua teksnya dan tempel di sini:</p>
+              <p style="font-size:12px;color:var(--text-muted);" id="cgptPasteHint">
+                Setelah mendapat jawaban dari ChatGPT, copy semua teksnya dan tempel di sini:
+              </p>
               <textarea id="cgptPasteArea"
-                placeholder="Tempel hasil ChatGPT di sini...&#10;&#10;AI Lokal akan membacanya dan mengubahnya ke format HTML perangkat pembelajaran yang sesuai."
-                style="min-height:320px;font-size:12.5px;line-height:1.7;resize:vertical;"
+                placeholder="Tempel hasil ChatGPT di sini..."
+                style="min-height:280px;font-size:12.5px;line-height:1.7;resize:vertical;"
                 oninput="cgptOnPaste()"></textarea>
-              <div style="display:flex;gap:8px;">
+
+              <!-- Tombol Tahap 1: Simpan TP ke Analisis -->
+              <div id="cgptStep1Actions" style="display:none;flex-direction:column;gap:8px;">
+                <button class="btn btn-primary" onclick="cgptSimpanTP()" style="width:100%;padding:10px;">
+                  ✅ Simpan TP → Lanjut ke Tahap 2
+                </button>
+                <p style="font-size:11px;color:var(--text-muted);text-align:center;">
+                  TP akan disimpan ke panel Analisis CP. Anda bisa edit sebelum lanjut.
+                </p>
+              </div>
+
+              <!-- Tombol normal (non-RPPM atau Tahap 2) -->
+              <div id="cgptNormalActions" style="display:flex;gap:8px;">
                 <button class="btn btn-secondary btn-sm" onclick="cgptClear()" style="flex:1;">🗑️ Hapus</button>
                 <button class="btn-generate" onclick="cgptFormat()" id="btnCgptFormat"
                   style="flex:2;padding:10px;font-size:14px;margin-top:0;">
                   ✨ Format & Terapkan
                 </button>
               </div>
+
               <div id="cgptStatus" style="display:none;font-size:12px;padding:8px 10px;border-radius:var(--r-sm);"></div>
             </div>
           </div>
 
           <!-- Preview hasil format -->
-          <div class="settings-group" style="margin-top:16px;" id="cgptPreviewGroup" style="display:none;">
+          <div class="settings-group" style="margin-top:16px;display:none;" id="cgptPreviewGroup">
             <div class="settings-group-title">👁️ Preview Hasil Format</div>
             <div id="cgptPreviewBox" style="padding:14px 16px;font-size:13px;line-height:1.8;max-height:400px;overflow-y:auto;"></div>
             <div style="padding:0 16px 14px;display:flex;gap:8px;">
@@ -4543,9 +4631,13 @@ const CGPT_TABS = [
 ];
 
 /** Tab yang sedang aktif di panel ChatGPT */
-let cgptActiveTab  = 'lkpd';
+let cgptActiveTab    = 'rppm';
+/** Tahap aktif untuk RPPM: 1 = buat TP, 2 = buat RPPM */
+let cgptTahap        = 1;
+/** TP hasil Tahap 1 yang sudah disetujui guru */
+let cgptTPTersimpan  = '';
 /** Hasil format terakhir — siap diterapkan ke preview */
-let cgptLastResult = null;
+let cgptLastResult   = null;
 
 /**
  * Prompt per tab — dibuat dari data form yang sudah diisi guru.
@@ -4553,333 +4645,333 @@ let cgptLastResult = null;
  */
 function cgptBuatPrompt(tabId) {
   const d = currentGenerated?.data || UTIL.getFormData();
-  const tp     = d.tp     || STATE_ANALISIS.tp.join('\n')     || '(belum dianalisis)';
   const materi = d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
+  /* Untuk tahap 2, TP pakai yang sudah disimpan dari tahap 1 */
+  const tp = cgptTPTersimpan ||
+    d.tp || STATE_ANALISIS.tp.join('\n') || '(belum ada TP — selesaikan Tahap 1 dulu)';
 
   const konteks = `IDENTITAS PEMBELAJARAN:
-Sekolah     : ${d.sekolah || '—'}
+Sekolah       : ${d.sekolah || '—'}
 Mata Pelajaran: ${d.mapel || '—'}
-Kelas / Fase: ${d.kelas || '—'} / ${d.fase || '—'}
-Semester    : ${d.semester || '—'}
+Kelas / Fase  : ${d.kelas || '—'} / ${d.fase || '—'}
+Semester      : ${d.semester || '—'}
 Tahun Pelajaran: ${d.tahun || '—'}
-Alokasi Waktu: ${d.waktu || '—'}
+Alokasi Waktu : ${d.waktu || '—'}
 Model Pembelajaran: ${d.model || 'PBL'}
-Guru        : ${d.guru || '—'}
+Guru          : ${d.guru || '—'}
 
 CAPAIAN PEMBELAJARAN (CP):
-${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}
+${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}`;
 
-TUJUAN PEMBELAJARAN (TP):
-${tp}
-
-MATERI POKOK:
-${materi}`;
-
-  const prompts = {
-
-    rppm:
-`Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
-Tugas: isi RPPM (Rencana Pelaksanaan Pembelajaran KBC DAN PM) berdasarkan data berikut.
+  /* ═══════════════════════════════════════════════
+     RPPM TAHAP 1 — Buat Tujuan Pembelajaran dari CP
+     ═══════════════════════════════════════════════ */
+  if (tabId === 'rppm' && cgptTahap === 1) {
+    return `Kamu adalah pakar Kurikulum Merdeka Indonesia.
+Tugas: Analisis Capaian Pembelajaran berikut dan susun Tujuan Pembelajaran (TP) yang tepat.
 
 ${konteks}
 
-PENTING: Gunakan format MARKER PERSIS seperti di bawah ini.
-Setiap field diawali [FIELD:nama_field] dan diakhiri [/FIELD].
-Jangan ubah nama marker. Tulis isinya selengkap mungkin. Jangan potong.
+INSTRUKSI:
+1. Baca CP di atas dengan cermat.
+2. Identifikasi elemen-elemen kompetensi dalam CP (pengetahuan, keterampilan, sikap).
+3. Pecah CP menjadi Tujuan Pembelajaran yang:
+   - Operasional dan terukur (gunakan kata kerja Bloom)
+   - Spesifik pada satu kompetensi
+   - Realistis dicapai dalam ${d.waktu || 'satu pertemuan'}
+   - Relevan dengan konteks siswa kelas ${d.kelas || '—'}
+
+FORMAT OUTPUT (tulis persis seperti ini):
+[TP HASIL ANALISIS]
+TP1: (tulis TP pertama lengkap)
+TP2: (tulis TP kedua lengkap)
+TP3: (tulis TP ketiga lengkap, tambah jika perlu)
+[/TP HASIL ANALISIS]
+
+[TOPIK UTAMA]
+(tuliskan topik-topik pembelajaran yang teridentifikasi dari CP, satu per baris)
+[/TOPIK UTAMA]
+
+[MATERI POKOK]
+(tuliskan materi pokok yang perlu diajarkan, satu per baris)
+[/MATERI POKOK]
+
+[CATATAN ANALISIS CP]
+(tuliskan catatan singkat tentang elemen kompetensi yang ditemukan dalam CP)
+[/CATATAN ANALISIS CP]
+
+Tulis selengkap mungkin. Jangan potong.`;
+  }
+
+  /* ═══════════════════════════════════════════════
+     RPPM TAHAP 2 — Buat RPPM Lengkap (TP sudah ada)
+     ═══════════════════════════════════════════════ */
+  if (tabId === 'rppm' && cgptTahap === 2) {
+    return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
+Tugas: Buat RPPM (Rencana Pelaksanaan Pembelajaran KBC DAN PM) yang lengkap berdasarkan data berikut.
+
+${konteks}
+
+TUJUAN PEMBELAJARAN (sudah disusun pada tahap sebelumnya):
+${tp}
+
+MATERI POKOK: ${materi}
+
+PENTING: Gunakan format MARKER PERSIS seperti di bawah.
+Setiap field diawali [FIELD:nama] dan diakhiri [/FIELD].
+Jangan ubah nama marker. Isi selengkap mungkin. JANGAN potong di tengah field.
 
 [FIELD:peserta_didik]
-Tuliskan deskripsi peserta didik kelas ${d.kelas || '—'}, jumlah siswa, karakteristik umum.
+Deskripsikan peserta didik kelas ${d.kelas || '—'} secara lengkap: jumlah siswa, karakteristik, kemampuan awal, kebutuhan belajar.
 [/FIELD]
 
 [FIELD:materi_pelajaran]
-Tuliskan materi pelajaran pokok yang akan dipelajari berdasarkan CP dan TP.
+Tuliskan materi pelajaran pokok yang akan dipelajari secara lengkap dan spesifik.
 [/FIELD]
 
 [FIELD:panca_cinta]
-Pilih dari: Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama Manusia | Cinta Tanah Air
-Tulis hanya yang dipilih, pisah koma. Pilih yang paling relevan dengan materi.
+Pilih nilai Panca Cinta yang relevan dari: Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama Manusia | Cinta Tanah Air
+Pisah koma. Pilih 2-3 yang paling relevan dengan materi "${materi}".
 [/FIELD]
 
 [FIELD:dpl]
-Pilih dari: DPL1 Keimanan dan Ketakwaan | DPL2 Kewargaan | DPL3 Penalaran Kritis | DPL4 Kreativitas | DPL5 Kolaborasi | DPL6 Kemandirian | DPL7 Kesehatan | DPL8 Komunikasi
-Tulis hanya yang dipilih, pisah koma. Pilih 2-3 yang paling relevan dengan model ${d.model || 'PBL'}.
+Pilih DPL yang relevan dari: DPL1 Keimanan dan Ketakwaan | DPL2 Kewargaan | DPL3 Penalaran Kritis | DPL4 Kreativitas | DPL5 Kolaborasi | DPL6 Kemandirian | DPL7 Kesehatan | DPL8 Komunikasi
+Pisah koma. Pilih 2-3 yang sesuai model ${d.model || 'PBL'}.
 [/FIELD]
 
 [FIELD:cp]
-Salin CP di atas persis apa adanya tanpa diubah.
+${d.cp || '(salin CP dari identitas)'}
 [/FIELD]
 
 [FIELD:lintas_disiplin]
-Tuliskan mata pelajaran lain yang berkaitan dengan materi ini.
+Tuliskan mata pelajaran lain yang berkaitan dengan materi ini beserta hubungannya.
 [/FIELD]
 
 [FIELD:tujuan_pembelajaran]
-Tuliskan semua TP dari data di atas, satu per baris, lengkap.
+${tp}
 [/FIELD]
 
 [FIELD:topik]
-Tuliskan topik-topik pembelajaran yang akan dibahas, relevan dengan CP dan TP.
+Tuliskan topik-topik spesifik yang akan dibahas dalam pembelajaran ini.
 [/FIELD]
 
 [FIELD:integrasi_kbc]
-Tuliskan bagaimana nilai KBC (Panca Cinta yang dipilih) diintegrasikan dalam pembelajaran ini. Konkret dan spesifik.
+Jelaskan secara konkret bagaimana nilai KBC diintegrasikan dalam setiap fase pembelajaran. Minimal 100 kata.
 [/FIELD]
 
 [FIELD:praktik_pedagogis]
-Tuliskan model/strategi/metode pembelajaran beserta alasannya. Contoh: ${d.model || 'PBL'} — jelaskan mengapa model ini dipilih untuk materi ini.
+Jelaskan model ${d.model || 'PBL'} yang digunakan, mengapa dipilih untuk materi ini, dan bagaimana sintaksnya diterapkan.
 [/FIELD]
 
 [FIELD:kemitraan]
-Tuliskan mitra kerjasama dalam pembelajaran ini (guru lain, orang tua, komunitas, dll).
+Tuliskan mitra kerjasama pembelajaran (guru lain, orang tua, narasumber, komunitas, dll).
 [/FIELD]
 
 [FIELD:lingkungan]
-Tuliskan lingkungan pembelajaran yang digunakan (ruang fisik, virtual, budaya belajar).
+Tuliskan lingkungan pembelajaran yang digunakan (ruang kelas, laboratorium, alam, virtual, dll).
 [/FIELD]
 
 [FIELD:digital]
-Tuliskan pemanfaatan teknologi digital dalam pembelajaran ini (LMS, aplikasi, platform, dll).
+Tuliskan teknologi digital yang dimanfaatkan dalam pembelajaran ini secara konkret.
 [/FIELD]
 
 [FIELD:dalil]
-Tuliskan ayat Al-Qur'an atau Hadits yang relevan dengan materi "${materi}". Sertakan teks Arab jika ada.
+Tuliskan ayat Al-Qur'an atau Hadits yang relevan dengan materi "${materi}". Sertakan teks Arab.
 [/FIELD]
 
 [FIELD:dalil_sumber]
-Tuliskan sumber dalil di atas (misal: Q.S. Al-Baqarah: 31 atau H.R. Bukhari).
+Sumber dalil di atas (contoh: Q.S. Al-Baqarah: 164 / H.R. Bukhari no. 79).
 [/FIELD]
 
 [FIELD:kegiatan_awal]
-Tuliskan kegiatan AWAL pembelajaran secara lengkap dan detail (orientasi, apersepsi kontekstual, motivasi, penyampaian tujuan). Prinsip: berkesadaran, bermakna, menggembirakan. Minimal 150 kata.
+Tuliskan kegiatan AWAL secara lengkap dan detail (min. 200 kata):
+- Salam, doa, presensi
+- Apersepsi: kaitkan dengan pengalaman nyata siswa tentang ${materi}
+- Motivasi: mengapa materi ini penting
+- Penyampaian TP, alur kegiatan, dan penilaian
+- Prinsip: berkesadaran, bermakna, menggembirakan
 [/FIELD]
 
 [FIELD:memahami]
-Tuliskan kegiatan INTI — fase MEMAHAMI secara lengkap. Aktivitas siswa dan guru yang konkret spesifik pada materi "${materi}". Minimal 150 kata.
+Tuliskan fase MEMAHAMI secara lengkap (min. 200 kata):
+Aktivitas guru dan siswa yang spesifik pada materi "${materi}" menggunakan model ${d.model || 'PBL'}.
+Sertakan: pertanyaan pemantik, sumber belajar, interaksi, dan estimasi waktu.
 [/FIELD]
 
 [FIELD:mengaplikasi]
-Tuliskan kegiatan INTI — fase MENGAPLIKASI secara lengkap. Aktivitas penerapan nyata spesifik pada materi "${materi}". Minimal 150 kata.
+Tuliskan fase MENGAPLIKASI secara lengkap (min. 200 kata):
+Aktivitas penerapan konkret spesifik pada materi "${materi}".
+Sertakan: tugas/proyek, kolaborasi, kreativitas, dan estimasi waktu.
 [/FIELD]
 
 [FIELD:merefleksi]
-Tuliskan kegiatan INTI — fase MEREFLEKSI secara lengkap. Refleksi siswa atas pengalaman belajar. Minimal 100 kata.
+Tuliskan fase MEREFLEKSI secara lengkap (min. 150 kata):
+Refleksi siswa atas pengalaman belajar — apa yang dipahami, apa yang sulit, apa yang ingin diperdalam.
 [/FIELD]
 
 [FIELD:kegiatan_penutup]
-Tuliskan kegiatan PENUTUP secara lengkap. Umpan balik, simpulan, perencanaan selanjutnya, doa penutup. Minimal 100 kata.
+Tuliskan kegiatan PENUTUP secara lengkap (min. 150 kata):
+Simpulan bersama, umpan balik, tindak lanjut (PR/proyek), informasi pertemuan berikutnya, doa penutup.
 [/FIELD]
 
 [FIELD:asesmen_awal]
-Tuliskan asesmen pada AWAL pembelajaran: metode diagnostik, pertanyaan pemantik, cara mengukur kesiapan belajar siswa.
+Tuliskan asesmen AWAL: pertanyaan diagnostik konkret, cara mengukur kesiapan awal siswa tentang ${materi}.
 [/FIELD]
 
 [FIELD:asesmen_proses]
-Tuliskan asesmen pada PROSES pembelajaran: strategi assessment as/for/of learning yang digunakan, kapan dan bagaimana.
+Tuliskan asesmen PROSES: strategi penilaian selama pembelajaran, kapan dan bagaimana dilakukan.
 [/FIELD]
 
 [FIELD:asesmen_akhir]
 Pilih dari: Tes Tertulis | Tes Lisan | Penilaian Kinerja | Penilaian Proyek | Penilaian Produk | Observasi | Portofolio | Peer Assessment | Self Assessment | Penilaian Berbasis Kelas
-Tulis yang dipilih, pisah koma. Pilih yang sesuai model ${d.model || 'PBL'}.
+Tuliskan yang dipilih, pisah koma.
 [/FIELD]
 
-Tulis SEMUA field di atas. Jangan lewati satu pun. Jangan potong di tengah field.`,
+WAJIB: Isi SEMUA 23 field di atas. Jangan lewati satu pun. Jangan potong di tengah field.`;
+  }
 
-    modul:
-`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat LANGKAH PEMBELAJARAN yang detail dan lengkap untuk Modul Ajar.
+  /* ── Prompt tab non-RPPM — menggunakan if/else bukan object literal ── */
+  const konteksNonRPPM = `IDENTITAS PEMBELAJARAN:
+Sekolah       : ${d.sekolah || '—'}
+Mata Pelajaran: ${d.mapel || '—'}
+Kelas / Fase  : ${d.kelas || '—'} / ${d.fase || '—'}
+Alokasi Waktu : ${d.waktu || '—'}
+Model         : ${d.model || 'PBL'}
+Guru          : ${d.guru || '—'}
 
-${konteks}
+CP: ${d.cp || '—'}
+TP: ${tp}
+Materi Pokok  : ${materi}`;
 
-Buat langkah pembelajaran dengan struktur berikut:
-1. PENDAHULUAN (10 menit)
-   - Salam dan doa pembuka
-   - Apersepsi: kaitkan dengan pengalaman nyata siswa terkait ${materi}
-   - Motivasi: manfaat mempelajari materi
-   - Penyampaian tujuan pembelajaran
+  if (tabId === 'lkpd') return `Kamu pakar Kurikulum Merdeka Indonesia. Buat LKPD lengkap dan kontekstual.
 
-2. KEGIATAN INTI (sesuai model ${d.model || 'PBL'})
-   Tulis semua fase/sintaks ${d.model || 'PBL'} secara lengkap:
-   - Nama fase
-   - Aktivitas guru (konkret dan spesifik)
-   - Aktivitas siswa (konkret dan spesifik)
-   - Estimasi waktu
+${konteksNonRPPM}
 
-3. PENUTUP (10 menit)
-   - Refleksi bersama
-   - Simpulan materi
-   - Pemberian tugas/tindak lanjut
-   - Doa penutup
-
-Tulis selengkap mungkin. Setiap aktivitas harus spesifik pada materi ${materi}, bukan generik.`,
-
-    lkpd:
-`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat LKPD (Lembar Kerja Peserta Didik) yang lengkap dan kontekstual.
-
-${konteks}
-
-Buat LKPD dengan 8 bagian berikut (WAJIB semua ada, jangan disingkat):
+Buat LKPD dengan 8 bagian wajib (JANGAN disingkat atau dipotong):
 
 1. IDENTITAS PESERTA DIDIK
-   Nama: _________________ | Kelas: _______ | Kelompok: _______ | Tanggal: _______
+   Nama: _________ | Kelas: _____ | Kelompok: _____ | Tanggal: _____
 
 2. TUJUAN PEMBELAJARAN
-   (salin semua TP di atas)
+   (salin semua TP di atas persis apa adanya)
 
 3. PETUNJUK PENGERJAAN
    (5 poin petunjuk konkret)
 
 4. AKTIVITAS PEMBELAJARAN (model ${d.model || 'PBL'})
-   Buat 3 aktivitas berurutan, tiap aktivitas ada:
-   - Judul & fase
-   - Narasi situasi nyata spesifik pada materi ${materi}
-   - 2-3 pertanyaan/instruksi konkret
+   3 aktivitas berurutan. Tiap aktivitas: judul fase, narasi situasi nyata spesifik materi "${materi}", 2-3 pertanyaan/instruksi konkret.
 
 5. TABEL PENGAMATAN / DATA
-   Tabel dengan header kolom spesifik materi ${materi}, minimal 4 kolom, 5 baris kosong
+   Tabel dengan header kolom spesifik materi "${materi}", minimal 4 kolom, 5 baris kosong.
 
 6. PERTANYAAN ANALISIS
-   4 soal HOTS level C4-C6 spesifik pada materi
-   (tiap soal diikuti: Jawaban: ___________________________)
+   4 soal HOTS level C4-C6, spesifik pada materi.
+   Tiap soal diikuti: Jawaban: ___________________________
 
 7. KESIMPULAN
    "Dari kegiatan ini saya menyimpulkan bahwa..."
    (5 baris kosong)
 
 8. REFLEKSI DIRI
-   3 pertanyaan refleksi
-   (tiap pertanyaan diikuti baris kosong)
+   3 pertanyaan refleksi dengan baris kosong isian.
 
-Tulis lengkap semua bagian. Jangan terpotong di tengah.`,
+Tulis SEMUA bagian. Jangan potong.`;
 
-    rubrik:
-`Kamu adalah pakar asesmen Kurikulum Merdeka Indonesia. Buat RUBRIK PENILAIAN yang lengkap.
+  if (tabId === 'rubrik') return `Kamu pakar asesmen Kurikulum Merdeka Indonesia. Buat RUBRIK PENILAIAN lengkap.
 
-${konteks}
+${konteksNonRPPM}
 
-Buat rubrik penilaian dengan struktur:
+Buat rubrik dengan struktur:
+
 1. RUBRIK PROSES (observasi selama kegiatan)
    Tabel: No | Aspek Penilaian | Sangat Baik (4) | Baik (3) | Cukup (2) | Perlu Bimbingan (1)
-   Minimal 5 aspek yang relevan dengan model ${d.model || 'PBL'} dan materi ${materi}
+   Minimal 5 aspek relevan dengan model ${d.model || 'PBL'} dan materi "${materi}"
 
 2. RUBRIK PRODUK/HASIL KERJA
-   Tabel penilaian hasil LKPD/laporan siswa
+   Tabel penilaian hasil kerja/laporan siswa
 
 3. RUMUS NILAI
-   Cara menghitung nilai akhir
+   Cara menghitung nilai akhir, skala 0-100
 
 4. FORMAT REKAP NILAI
    Tabel: No | Nama Siswa | Skor tiap aspek | Total | Nilai | Predikat
 
-5. PREDIKAT
-   A (≥90), B (75-89), C (60-74), D (<60)
+5. PREDIKAT: A (≥90), B (75-89), C (60-74), D (<60)
 
-Tulis selengkap mungkin dan spesifik pada materi.`,
+Tulis selengkap mungkin.`;
 
-    asesmen:
-`Kamu adalah pakar asesmen Kurikulum Merdeka Indonesia. Buat INSTRUMEN ASESMEN yang lengkap.
+  if (tabId === 'asesmen') return `Kamu pakar asesmen Kurikulum Merdeka Indonesia. Buat INSTRUMEN ASESMEN lengkap.
 
-${konteks}
+${konteksNonRPPM}
 
-Buat instrumen asesmen dengan 3 jenis:
+Buat 4 jenis asesmen:
 
 1. ASESMEN DIAGNOSTIK (sebelum pembelajaran)
-   - 3 pertanyaan lisan untuk mengetahui pemahaman awal tentang ${materi}
-   - Panduan interpretasi jawaban siswa
+   3 pertanyaan lisan untuk mengukur pemahaman awal tentang "${materi}"
+   Panduan interpretasi jawaban
 
 2. ASESMEN FORMATIF (selama pembelajaran)
    Tabel: Strategi | Cara Pelaksanaan | Waktu
-   Minimal 4 strategi berbeda (Exit Ticket, Observasi, Pertanyaan Lisan, dll)
+   Minimal 4 strategi berbeda
 
 3. ASESMEN SUMATIF (setelah pembelajaran)
-   - Bentuk asesmen
-   - Kisi-kisi singkat
-   - KKM dan skala nilai
+   Bentuk asesmen, kisi-kisi singkat, KKM dan skala nilai
 
 4. ASESMEN PROFIL PELAJAR PANCASILA
-   Tabel: Dimensi | Indikator yang Diamati
-   (sesuaikan dengan kegiatan pembelajaran ${materi})
+   Tabel: Dimensi | Indikator yang Diamati (sesuaikan dengan materi)
 
-Tulis lengkap dan spesifik.`,
+Tulis lengkap dan spesifik.`;
 
-    soal:
-`Kamu adalah pakar asesmen Kurikulum Merdeka Indonesia. Buat SOAL EVALUASI lengkap beserta kunci.
+  if (tabId === 'soal') return `Kamu pakar asesmen Kurikulum Merdeka Indonesia. Buat SOAL EVALUASI lengkap beserta kunci.
 
-${konteks}
+${konteksNonRPPM}
 
-Buat soal dengan struktur berikut (WAJIB semua ada):
+Buat 5 bagian wajib (jangan potong):
 
 A. KISI-KISI SOAL
-   Tabel: No | Tujuan Pembelajaran | Indikator Soal | Level Bloom | Bentuk Soal | No Soal
+   Tabel: No | Tujuan Pembelajaran | Indikator | Level Bloom | Bentuk | No Soal
 
 B. SOAL PILIHAN GANDA (5 soal, level C2-C4)
-   Tiap soal:
-   - Nomor dan teks soal (ada konteks nyata spesifik materi ${materi})
-   - Pilihan A, B, C, D (satu benar, pengecoh masuk akal)
+   Tiap soal: konteks nyata spesifik materi "${materi}", pilihan A/B/C/D
 
 C. SOAL URAIAN (3 soal, level C4-C6)
-   Soal terbuka yang mendalam, spesifik pada materi
-   (ada ruang: "Jawaban: ___")
+   Soal terbuka mendalam, ada ruang jawaban
 
 D. KUNCI JAWABAN
-   Tabel: No Soal | Jawaban/Kunci | Skor
-   (PG: masing-masing 4 poin, Uraian: masing-masing 10 poin)
+   Tabel: No | Jawaban/Kunci | Skor (PG: 4 poin, Uraian: 10 poin)
 
 E. PEMBAHASAN SINGKAT
-   Penjelasan mengapa jawaban PG itu benar dan pengecoh lain salah
+   Penjelasan mengapa jawaban PG itu benar
 
-Tulis semua bagian lengkap. Jangan terpotong.`,
+Tulis semua bagian. Jangan potong.`;
 
-    pengayaan:
-`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat PROGRAM PENGAYAAN yang lengkap.
+  if (tabId === 'pengayaan') return `Kamu pakar Kurikulum Merdeka Indonesia. Buat PROGRAM PENGAYAAN lengkap.
 
-${konteks}
+${konteksNonRPPM}
 
-Buat program pengayaan untuk siswa yang sudah melampaui KKM:
+Buat:
+1. TUJUAN PENGAYAAN (spesifik pada "${materi}")
+2. KEGIATAN PENGAYAAN (4 kegiatan: eksplorasi mandiri, soal HOTS C5-C6, proyek mini, tutor sebaya)
+3. PENILAIAN PENGAYAAN — Tabel: Kegiatan | Bobot | Kriteria
+4. SUMBER BELAJAR LANJUTAN — rekomendasi buku/website/video terkait "${materi}"
 
-1. TUJUAN PENGAYAAN
-   (spesifik pada materi ${materi})
+Tulis selengkap mungkin.`;
 
-2. KEGIATAN PENGAYAAN (4 kegiatan berbeda)
-   - Eksplorasi mandiri (sumber belajar lanjutan)
-   - Soal HOTS level C5-C6 (3 soal)
-   - Proyek mini kreatif
-   - Tutor sebaya
+  if (tabId === 'remedial') return `Kamu pakar Kurikulum Merdeka Indonesia. Buat PROGRAM REMEDIAL lengkap.
 
-3. PENILAIAN PENGAYAAN
-   Tabel: Kegiatan | Bobot | Kriteria Penilaian
+${konteksNonRPPM}
 
-4. SUMBER BELAJAR LANJUTAN
-   Rekomendasi buku, website, video terkait ${materi}
+Buat:
+1. IDENTIFIKASI KESULITAN — Tabel: Kemungkinan Kesulitan | Penyebab | Penanganan (min 3 baris)
+2. LANGKAH REMEDIAL (4 langkah: diagnosis ulang, penyampaian ulang, latihan terbimbing, tes remedial)
+3. SOAL REMEDIAL (3 soal tingkat dasar spesifik materi "${materi}")
+4. PENILAIAN REMEDIAL — ketentuan nilai maksimal dan cara pencatatan
 
-Tulis selengkap mungkin.`,
+Tulis selengkap mungkin.`;
 
-    remedial:
-`Kamu adalah pakar Kurikulum Merdeka Indonesia. Buat PROGRAM REMEDIAL yang lengkap.
-
-${konteks}
-
-Buat program remedial untuk siswa yang belum mencapai KKM:
-
-1. IDENTIFIKASI KESULITAN
-   Tabel: Kemungkinan Kesulitan | Penyebab | Penanganan
-   (minimal 3 kesulitan umum terkait materi ${materi})
-
-2. LANGKAH REMEDIAL (4 langkah berurutan)
-   - Diagnosis ulang
-   - Penyampaian ulang dengan pendekatan berbeda
-   - Latihan terbimbing (soal lebih sederhana)
-   - Tes remedial
-
-3. SOAL REMEDIAL (3 soal tingkat dasar)
-   Soal yang lebih mudah, berfokus pada konsep dasar ${materi}
-
-4. PENILAIAN REMEDIAL
-   Ketentuan nilai maksimal dan cara pencatatan
-
-Tulis selengkap mungkin.`,
-  };
-
-  return prompts[tabId] || 'Tab tidak dikenal.';
+  return 'Tab tidak dikenal.';
 }
+
 
 /** Render tab picker di panel ChatGPT */
 function cgptRenderTabPicker() {
@@ -4897,19 +4989,19 @@ function cgptRenderTabPicker() {
 function cgptPilihTab(tabId) {
   cgptActiveTab  = tabId;
   cgptLastResult = null;
-  document.getElementById('cgptPreviewGroup')?.style && (
-    document.getElementById('cgptPreviewGroup').style.display = 'none'
-  );
+  cgptTahap      = 1;
+  if (tabId !== 'rppm') cgptTPTersimpan = '';
+  cgptClearPasteOnly();
   cgptRenderTabPicker();
+  cgptUpdateStepperUI();
   cgptUpdatePrompt();
 }
 
-/** Update tampilan prompt sesuai tab aktif */
+/** Update tampilan prompt sesuai tab dan tahap aktif */
 function cgptUpdatePrompt() {
   const el = document.getElementById('cgptPromptBox');
   if (!el) return;
-  const prompt = cgptBuatPrompt(cgptActiveTab);
-  el.textContent = prompt;
+  el.textContent = cgptBuatPrompt(cgptActiveTab);
 }
 
 /** Salin prompt ke clipboard */
@@ -5384,6 +5476,7 @@ function cgptClear() {
 /** Init halaman ChatGPT saat dibuka */
 function initChatGPTPage() {
   cgptRenderTabPicker();
+  cgptUpdateStepperUI();
   cgptUpdatePrompt();
 }
 
