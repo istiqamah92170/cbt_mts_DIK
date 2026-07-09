@@ -1684,39 +1684,76 @@ h1,h2,h3,h4 { color: var(--text-primary); }
           <!-- Stepper RPPM — tampil hanya saat tab RPPM aktif -->
           <div id="cgptRPPMStepper" style="display:none;">
             <div class="settings-group" style="margin-top:12px;">
-              <div class="settings-group-title">📋 Alur 2 Tahap untuk RPPM</div>
-              <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+              <div class="settings-group-title">📋 Alur 5 Tahap Membuat RPPM</div>
+              <div style="padding:10px 14px;display:flex;flex-direction:column;gap:4px;">
 
                 <!-- Tahap 1 -->
                 <div class="cgpt-step-card" id="cgptStep1Card">
                   <div class="cgpt-step-header" onclick="cgptSetTahap(1)">
                     <div class="cgpt-step-num" id="cgptStepNum1">1</div>
                     <div class="cgpt-step-info">
-                      <div class="cgpt-step-title">Buat Tujuan Pembelajaran (TP)</div>
-                      <div class="cgpt-step-sub">ChatGPT analisis CP → hasilkan TP</div>
+                      <div class="cgpt-step-title">Analisis CP → Buat TP</div>
+                      <div class="cgpt-step-sub">ChatGPT baca CP, susun Tujuan Pembelajaran</div>
                     </div>
-                    <span id="cgptStep1Badge" class="badge" style="font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);">Aktif</span>
+                    <span id="cgptStep1Badge" class="badge" style="font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);">Aktif ▶</span>
                   </div>
                 </div>
+                <div style="text-align:center;color:var(--text-muted);font-size:14px;line-height:1.2;">↓</div>
 
-                <!-- Panah -->
-                <div style="text-align:center;color:var(--text-muted);font-size:18px;line-height:1;">↓</div>
-
-                <!-- Tahap 2 -->
-                <div class="cgpt-step-card cgpt-step-locked" id="cgptStep2Card">
-                  <div class="cgpt-step-header" onclick="cgptSetTahap(2)">
-                    <div class="cgpt-step-num cgpt-step-num-inactive" id="cgptStepNum2">2</div>
+                <!-- Tahap 2a -->
+                <div class="cgpt-step-card" id="cgptStep2aCard">
+                  <div class="cgpt-step-header" onclick="cgptSetTahap('2a')">
+                    <div class="cgpt-step-num cgpt-step-num-inactive" id="cgptStepNum2a">2a</div>
                     <div class="cgpt-step-info">
-                      <div class="cgpt-step-title">Buat RPPM Lengkap</div>
-                      <div class="cgpt-step-sub">Gunakan TP hasil Tahap 1 → buat RPPM</div>
+                      <div class="cgpt-step-title">Bagian 1 — Identitas & Desain</div>
+                      <div class="cgpt-step-sub">15 field: peserta didik, KBC, DPL, CP, TP, topik, dalil…</div>
                     </div>
-                    <span id="cgptStep2Badge" class="badge" style="font-size:10px;background:var(--border-light);color:var(--text-muted);">Menunggu</span>
+                    <span id="cgptStep2aBadge" class="badge" style="font-size:10px;background:rgba(100,116,139,.1);color:var(--text-muted);">Menunggu</span>
+                  </div>
+                </div>
+                <div style="text-align:center;color:var(--text-muted);font-size:14px;line-height:1.2;">↓</div>
+
+                <!-- Tahap 2b -->
+                <div class="cgpt-step-card" id="cgptStep2bCard">
+                  <div class="cgpt-step-header" onclick="cgptSetTahap('2b')">
+                    <div class="cgpt-step-num cgpt-step-num-inactive" id="cgptStepNum2b">2b</div>
+                    <div class="cgpt-step-info">
+                      <div class="cgpt-step-title">Bagian 2 — Kegiatan Pembelajaran</div>
+                      <div class="cgpt-step-sub">5 field: AWAL, Memahami, Mengaplikasi, Merefleksi, PENUTUP</div>
+                    </div>
+                    <span id="cgptStep2bBadge" class="badge" style="font-size:10px;background:rgba(100,116,139,.1);color:var(--text-muted);">Menunggu</span>
+                  </div>
+                </div>
+                <div style="text-align:center;color:var(--text-muted);font-size:14px;line-height:1.2;">↓</div>
+
+                <!-- Tahap 2c -->
+                <div class="cgpt-step-card" id="cgptStep2cCard">
+                  <div class="cgpt-step-header" onclick="cgptSetTahap('2c')">
+                    <div class="cgpt-step-num cgpt-step-num-inactive" id="cgptStepNum2c">2c</div>
+                    <div class="cgpt-step-info">
+                      <div class="cgpt-step-title">Bagian 3 — Asesmen</div>
+                      <div class="cgpt-step-sub">3 field: Asesmen awal, proses, akhir</div>
+                    </div>
+                    <span id="cgptStep2cBadge" class="badge" style="font-size:10px;background:rgba(100,116,139,.1);color:var(--text-muted);">Menunggu</span>
+                  </div>
+                </div>
+                <div style="text-align:center;color:var(--text-muted);font-size:14px;line-height:1.2;">↓</div>
+
+                <!-- Tahap 3 — Gabung & Terapkan -->
+                <div class="cgpt-step-card" id="cgptStep3Card">
+                  <div class="cgpt-step-header" onclick="cgptSetTahap(3)">
+                    <div class="cgpt-step-num cgpt-step-num-inactive" id="cgptStepNum3">3</div>
+                    <div class="cgpt-step-info">
+                      <div class="cgpt-step-title">Gabung & Terapkan ke RPPM</div>
+                      <div class="cgpt-step-sub">Semua bagian digabung otomatis → RPPM terisi</div>
+                    </div>
+                    <span id="cgptStep3Badge" class="badge" style="font-size:10px;background:rgba(100,116,139,.1);color:var(--text-muted);">Menunggu</span>
                   </div>
                 </div>
 
                 <!-- Instruksi aktif -->
                 <div id="cgptStepInstruksi" style="
-                  margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);
+                  margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);
                   background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.2);
                   font-size:12px;line-height:1.6;color:var(--text-secondary);">
                 </div>
@@ -1725,7 +1762,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
           </div>
 
           <!-- Prompt -->
-          <div class="settings-group" style="margin-top:12px;">
+          <div class="settings-group" style="margin-top:12px;" id="cgptPromptGroup">
             <div class="settings-group-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span id="cgptPromptLabel">💬 Prompt untuk ChatGPT</span>
               <button class="btn btn-primary btn-sm" onclick="salinPromptChatGPT()" id="btnSalinPrompt">📋 Salin Prompt</button>
@@ -1774,6 +1811,21 @@ h1,h2,h3,h4 { color: var(--text-primary); }
                   style="flex:2;padding:10px;font-size:14px;margin-top:0;">
                   ✨ Format & Terapkan
                 </button>
+              </div>
+
+              <!-- Tombol Gabung — tampil hanya di Tahap 3 -->
+              <div id="btnCgptGabung" style="display:none;">
+                <button class="btn-generate" onclick="cgptGabung()"
+                  style="width:100%;padding:12px;font-size:14px;margin-top:0;background:linear-gradient(135deg,#10B981,#059669);">
+                  🔗 Gabung Semua Bagian & Parse RPPM
+                </button>
+                <div style="margin-top:8px;padding:8px 10px;border-radius:6px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);font-size:12px;color:#065F46;">
+                  <div id="cgptGabungStatus">
+                    <span id="cgptStatus2a">⏳ Bagian 2a</span> &nbsp;
+                    <span id="cgptStatus2b">⏳ Bagian 2b</span> &nbsp;
+                    <span id="cgptStatus2c">⏳ Bagian 2c</span>
+                  </div>
+                </div>
               </div>
 
               <div id="cgptStatus" style="display:none;font-size:12px;padding:8px 10px;border-radius:var(--r-sm);"></div>
@@ -4633,9 +4685,9 @@ const CGPT_TABS = [
 /** Tab yang sedang aktif di panel ChatGPT */
 let cgptActiveTab    = 'rppm';
 /** Tahap aktif untuk RPPM: 1 = buat TP, 2 = buat RPPM */
-let cgptTahap        = 1;
-/** TP hasil Tahap 1 yang sudah disetujui guru */
+let cgptTahap        = 1;   /* 1=TP, 2a=identitas, 2b=kegiatan, 2c=asesmen, 3=gabung */
 let cgptTPTersimpan  = '';
+let cgptHasil        = { '2a': '', '2b': '', '2c': '' }; /* hasil per bagian */
 /** Hasil format terakhir — siap diterapkan ke preview */
 let cgptLastResult   = null;
 
@@ -4704,43 +4756,40 @@ Tulis selengkap mungkin. Jangan potong.`;
   }
 
   /* ═══════════════════════════════════════════════
-     RPPM TAHAP 2 — Buat RPPM Lengkap (TP sudah ada)
+     RPPM TAHAP 2a — Identitas & Desain (15 field)
      ═══════════════════════════════════════════════ */
-  if (tabId === 'rppm' && cgptTahap === 2) {
+  if (tabId === 'rppm' && cgptTahap === '2a') {
     return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
-Tugas: Buat RPPM (Rencana Pelaksanaan Pembelajaran KBC DAN PM) yang lengkap berdasarkan data berikut.
+Ini adalah BAGIAN 1 dari 3 untuk membuat RPPM. Isi HANYA 15 field berikut dengan format marker.
+Jangan isi field selain yang diminta. Jangan tambahkan penjelasan di luar marker.
 
 ${konteks}
 
-TUJUAN PEMBELAJARAN (sudah disusun pada tahap sebelumnya):
+TUJUAN PEMBELAJARAN (dari tahap sebelumnya):
 ${tp}
 
 MATERI POKOK: ${materi}
 
-PENTING: Gunakan format MARKER PERSIS seperti di bawah.
-Setiap field diawali [FIELD:nama] dan diakhiri [/FIELD].
-Jangan ubah nama marker. Isi selengkap mungkin. JANGAN potong di tengah field.
-
 [FIELD:peserta_didik]
-Deskripsikan peserta didik kelas ${d.kelas || '—'} secara lengkap: jumlah siswa, karakteristik, kemampuan awal, kebutuhan belajar.
+Deskripsikan peserta didik kelas ${d.kelas || '—'}: jumlah siswa, karakteristik umum, kemampuan awal tentang "${materi}".
 [/FIELD]
 
 [FIELD:materi_pelajaran]
-Tuliskan materi pelajaran pokok yang akan dipelajari secara lengkap dan spesifik.
+Tuliskan materi pelajaran pokok yang akan dipelajari secara spesifik dan lengkap.
 [/FIELD]
 
 [FIELD:panca_cinta]
-Pilih nilai Panca Cinta yang relevan dari: Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama Manusia | Cinta Tanah Air
-Pisah koma. Pilih 2-3 yang paling relevan dengan materi "${materi}".
+Pilih dari: Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama Manusia | Cinta Tanah Air
+Tulis yang dipilih, pisah koma. Pilih 2-3 yang paling relevan dengan materi "${materi}".
 [/FIELD]
 
 [FIELD:dpl]
-Pilih DPL yang relevan dari: DPL1 Keimanan dan Ketakwaan | DPL2 Kewargaan | DPL3 Penalaran Kritis | DPL4 Kreativitas | DPL5 Kolaborasi | DPL6 Kemandirian | DPL7 Kesehatan | DPL8 Komunikasi
-Pisah koma. Pilih 2-3 yang sesuai model ${d.model || 'PBL'}.
+Pilih dari: DPL1 Keimanan dan Ketakwaan | DPL2 Kewargaan | DPL3 Penalaran Kritis | DPL4 Kreativitas | DPL5 Kolaborasi | DPL6 Kemandirian | DPL7 Kesehatan | DPL8 Komunikasi
+Tulis yang dipilih, pisah koma. Pilih 2-3 sesuai model ${d.model || 'PBL'}.
 [/FIELD]
 
 [FIELD:cp]
-${d.cp || '(salin CP dari identitas)'}
+${d.cp || '(salin CP dari data di atas)'}
 [/FIELD]
 
 [FIELD:lintas_disiplin]
@@ -4752,82 +4801,131 @@ ${tp}
 [/FIELD]
 
 [FIELD:topik]
-Tuliskan topik-topik spesifik yang akan dibahas dalam pembelajaran ini.
+Tuliskan topik-topik spesifik yang akan dibahas dalam pembelajaran ini, satu per baris.
 [/FIELD]
 
 [FIELD:integrasi_kbc]
-Jelaskan secara konkret bagaimana nilai KBC diintegrasikan dalam setiap fase pembelajaran. Minimal 100 kata.
+Jelaskan secara konkret bagaimana nilai KBC (Panca Cinta yang dipilih) diintegrasikan dalam pembelajaran. Minimal 100 kata, spesifik pada materi "${materi}".
 [/FIELD]
 
 [FIELD:praktik_pedagogis]
-Jelaskan model ${d.model || 'PBL'} yang digunakan, mengapa dipilih untuk materi ini, dan bagaimana sintaksnya diterapkan.
+Jelaskan model ${d.model || 'PBL'} yang digunakan, alasan pemilihan, dan bagaimana sintaksnya diterapkan pada materi "${materi}". Minimal 80 kata.
 [/FIELD]
 
 [FIELD:kemitraan]
-Tuliskan mitra kerjasama pembelajaran (guru lain, orang tua, narasumber, komunitas, dll).
+Tuliskan mitra kerjasama pembelajaran (guru lain, orang tua, narasumber, komunitas, dll) beserta perannya.
 [/FIELD]
 
 [FIELD:lingkungan]
-Tuliskan lingkungan pembelajaran yang digunakan (ruang kelas, laboratorium, alam, virtual, dll).
+Tuliskan lingkungan pembelajaran yang digunakan (ruang kelas, lab, alam, virtual, dll) beserta alasannya.
 [/FIELD]
 
 [FIELD:digital]
-Tuliskan teknologi digital yang dimanfaatkan dalam pembelajaran ini secara konkret.
+Tuliskan teknologi digital yang dimanfaatkan dalam pembelajaran ini secara konkret beserta cara penggunaannya.
 [/FIELD]
 
 [FIELD:dalil]
-Tuliskan ayat Al-Qur'an atau Hadits yang relevan dengan materi "${materi}". Sertakan teks Arab.
+Tuliskan ayat Al-Qur'an atau Hadits yang relevan dengan materi "${materi}". Sertakan teks Arab jika ada.
 [/FIELD]
 
 [FIELD:dalil_sumber]
-Sumber dalil di atas (contoh: Q.S. Al-Baqarah: 164 / H.R. Bukhari no. 79).
+Tuliskan sumber dalil di atas (contoh: Q.S. Al-Baqarah: 164 / H.R. Bukhari no. 79).
 [/FIELD]
 
+SELESAI BAGIAN 1. Jangan lanjutkan ke field lain.`;
+  }
+
+  /* ═══════════════════════════════════════════════
+     RPPM TAHAP 2b — Kegiatan Pembelajaran (5 field)
+     ═══════════════════════════════════════════════ */
+  if (tabId === 'rppm' && cgptTahap === '2b') {
+    return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
+Ini adalah BAGIAN 2 dari 3 untuk membuat RPPM. Isi HANYA 5 field kegiatan pembelajaran berikut.
+Setiap field WAJIB minimal 200 kata. Jangan kurangi. Jangan tambahkan penjelasan di luar marker.
+
+${konteks}
+
+TUJUAN PEMBELAJARAN:
+${tp}
+
+MATERI POKOK: ${materi}
+MODEL PEMBELAJARAN: ${d.model || 'PBL'}
+
 [FIELD:kegiatan_awal]
-Tuliskan kegiatan AWAL secara lengkap dan detail (min. 200 kata):
-- Salam, doa, presensi
-- Apersepsi: kaitkan dengan pengalaman nyata siswa tentang ${materi}
-- Motivasi: mengapa materi ini penting
-- Penyampaian TP, alur kegiatan, dan penilaian
+Tuliskan kegiatan AWAL pembelajaran secara lengkap dan detail (minimal 200 kata):
+- Salam, doa, presensi, pengkondisian kelas
+- Apersepsi: pertanyaan pemantik yang mengaitkan pengalaman nyata siswa dengan "${materi}"
+- Motivasi: mengapa materi ini penting bagi kehidupan siswa
+- Penyampaian tujuan pembelajaran, alur kegiatan, dan bentuk penilaian
 - Prinsip: berkesadaran, bermakna, menggembirakan
 [/FIELD]
 
 [FIELD:memahami]
-Tuliskan fase MEMAHAMI secara lengkap (min. 200 kata):
-Aktivitas guru dan siswa yang spesifik pada materi "${materi}" menggunakan model ${d.model || 'PBL'}.
-Sertakan: pertanyaan pemantik, sumber belajar, interaksi, dan estimasi waktu.
+Tuliskan fase MEMAHAMI dalam kegiatan INTI (minimal 200 kata):
+Aktivitas guru dan siswa yang konkret dan spesifik pada materi "${materi}" menggunakan model ${d.model || 'PBL'}.
+Sertakan: pertanyaan pemantik, sumber belajar yang digunakan, bentuk interaksi siswa, estimasi waktu.
 [/FIELD]
 
 [FIELD:mengaplikasi]
-Tuliskan fase MENGAPLIKASI secara lengkap (min. 200 kata):
+Tuliskan fase MENGAPLIKASI dalam kegiatan INTI (minimal 200 kata):
 Aktivitas penerapan konkret spesifik pada materi "${materi}".
-Sertakan: tugas/proyek, kolaborasi, kreativitas, dan estimasi waktu.
+Sertakan: tugas/proyek yang dikerjakan, bentuk kolaborasi, unsur kreativitas, estimasi waktu.
 [/FIELD]
 
 [FIELD:merefleksi]
-Tuliskan fase MEREFLEKSI secara lengkap (min. 150 kata):
-Refleksi siswa atas pengalaman belajar — apa yang dipahami, apa yang sulit, apa yang ingin diperdalam.
+Tuliskan fase MEREFLEKSI dalam kegiatan INTI (minimal 150 kata):
+Refleksi siswa atas pengalaman belajar tentang "${materi}" — apa yang dipahami, apa yang masih sulit, apa yang ingin diperdalam lebih lanjut.
 [/FIELD]
 
 [FIELD:kegiatan_penutup]
-Tuliskan kegiatan PENUTUP secara lengkap (min. 150 kata):
-Simpulan bersama, umpan balik, tindak lanjut (PR/proyek), informasi pertemuan berikutnya, doa penutup.
+Tuliskan kegiatan PENUTUP secara lengkap (minimal 150 kata):
+- Simpulan bersama antara guru dan siswa
+- Umpan balik guru atas proses pembelajaran
+- Tindak lanjut: PR, proyek, atau persiapan pertemuan berikutnya
+- Informasi materi pertemuan berikutnya
+- Doa penutup dan salam
 [/FIELD]
 
+SELESAI BAGIAN 2. Jangan lanjutkan ke field asesmen.`;
+  }
+
+  /* ═══════════════════════════════════════════════
+     RPPM TAHAP 2c — Asesmen (3 field)
+     ═══════════════════════════════════════════════ */
+  if (tabId === 'rppm' && cgptTahap === '2c') {
+    return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
+Ini adalah BAGIAN 3 dari 3 untuk membuat RPPM. Isi HANYA 3 field asesmen berikut.
+Tulis selengkap mungkin. Jangan tambahkan penjelasan di luar marker.
+
+${konteks}
+
+TUJUAN PEMBELAJARAN:
+${tp}
+
+MATERI POKOK: ${materi}
+
 [FIELD:asesmen_awal]
-Tuliskan asesmen AWAL: pertanyaan diagnostik konkret, cara mengukur kesiapan awal siswa tentang ${materi}.
+Tuliskan asesmen AWAL pembelajaran (diagnostik) secara lengkap:
+- Minimal 3 pertanyaan lisan/tertulis yang mengukur pemahaman awal siswa tentang "${materi}"
+- Cara guru menginterpretasi jawaban siswa
+- Tindak lanjut berdasarkan hasil diagnostik (diferensiasi pembelajaran jika perlu)
 [/FIELD]
 
 [FIELD:asesmen_proses]
-Tuliskan asesmen PROSES: strategi penilaian selama pembelajaran, kapan dan bagaimana dilakukan.
+Tuliskan asesmen PROSES pembelajaran (formatif) secara lengkap:
+- Strategi penilaian yang digunakan (observasi, pertanyaan lisan, exit ticket, dll)
+- Kapan masing-masing dilakukan dalam pembelajaran
+- Instrumen atau rubrik singkat yang dipakai
+- Bagaimana hasilnya digunakan untuk menyesuaikan pembelajaran
 [/FIELD]
 
 [FIELD:asesmen_akhir]
-Pilih dari: Tes Tertulis | Tes Lisan | Penilaian Kinerja | Penilaian Proyek | Penilaian Produk | Observasi | Portofolio | Peer Assessment | Self Assessment | Penilaian Berbasis Kelas
-Tuliskan yang dipilih, pisah koma.
+Pilih jenis asesmen akhir yang sesuai dari daftar berikut, pisah koma:
+Tes Tertulis | Tes Lisan | Penilaian Kinerja | Penilaian Proyek | Penilaian Produk | Observasi | Portofolio | Peer Assessment | Self Assessment | Penilaian Berbasis Kelas
+Pilih yang sesuai dengan model ${d.model || 'PBL'} dan karakteristik materi "${materi}".
 [/FIELD]
 
-WAJIB: Isi SEMUA 23 field di atas. Jangan lewati satu pun. Jangan potong di tengah field.`;
+SELESAI BAGIAN 3. RPPM sudah lengkap — hasil ketiga bagian siap digabung.`;
   }
 
   /* ── Prompt tab non-RPPM — menggunakan if/else bukan object literal ── */
@@ -4983,7 +5081,21 @@ function cgptClearPasteOnly() {
   if (st) st.style.display = 'none';
 }
 
-/** Update tampilan stepper UI sesuai tahap aktif */
+/** Helper: set style satu step card */
+function _cgptStepStyle(numEl, cardEl, badgeEl, numTxt, state, badgeTxt) {
+  /* state: 'done' | 'active' | 'waiting' */
+  const colors = {
+    done:    { bg:'#10B981', border:'#10B981', cardBg:'rgba(16,185,129,.04)', badgeBg:'rgba(16,185,129,.12)', badgeColor:'#065F46' },
+    active:  { bg:'var(--accent)', border:'var(--accent)', cardBg:'rgba(45,212,191,.04)', badgeBg:'rgba(45,212,191,.15)', badgeColor:'var(--accent-dark)' },
+    waiting: { bg:'#94A3B8', border:'var(--border)', cardBg:'', badgeBg:'rgba(100,116,139,.1)', badgeColor:'var(--text-muted)' },
+  };
+  const c = colors[state] || colors.waiting;
+  if (numEl)  { numEl.textContent = numTxt; numEl.style.background = c.bg; numEl.style.color = 'white'; }
+  if (cardEl) { cardEl.style.borderColor = c.border; cardEl.style.background = c.cardBg; }
+  if (badgeEl){ badgeEl.textContent = badgeTxt; badgeEl.style.cssText = `font-size:10px;background:${c.badgeBg};color:${c.badgeColor};`; }
+}
+
+/** Update tampilan stepper UI sesuai tahap aktif — 5 tahap */
 function cgptUpdateStepperUI() {
   const isRPPM = cgptActiveTab === 'rppm';
 
@@ -4992,66 +5104,144 @@ function cgptUpdateStepperUI() {
 
   const step1Actions  = document.getElementById('cgptStep1Actions');
   const normalActions = document.getElementById('cgptNormalActions');
+
+  /* Tahap 1: tombol Simpan TP */
   if (isRPPM && cgptTahap === 1) {
-    if (step1Actions)  { step1Actions.style.cssText  = 'display:flex;flex-direction:column;gap:8px;'; }
-    if (normalActions) { normalActions.style.display = 'none'; }
+    if (step1Actions)  step1Actions.style.cssText  = 'display:flex;flex-direction:column;gap:8px;';
+    if (normalActions) normalActions.style.display = 'none';
   } else {
-    if (step1Actions)  { step1Actions.style.display  = 'none'; }
-    if (normalActions) { normalActions.style.display = 'flex'; }
+    if (step1Actions)  step1Actions.style.display  = 'none';
+    if (normalActions) normalActions.style.display = 'flex';
   }
 
   if (!isRPPM) return;
 
-  const b1 = document.getElementById('cgptStep1Badge');
-  const n1 = document.getElementById('cgptStepNum1');
-  const c1 = document.getElementById('cgptStep1Card');
-  const b2 = document.getElementById('cgptStep2Badge');
-  const n2 = document.getElementById('cgptStepNum2');
-  const c2 = document.getElementById('cgptStep2Card');
+  /* Tentukan state setiap tahap */
+  const tahapOrder = [1, '2a', '2b', '2c', 3];
+  const curIdx     = tahapOrder.indexOf(cgptTahap);
 
-  if (cgptTahap === 1) {
-    if (b1) { b1.textContent = 'Aktif ▶'; b1.style.cssText = 'font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);'; }
-    if (n1) { n1.textContent = '1'; n1.style.background = 'var(--accent)'; n1.style.color = 'white'; }
-    if (c1) { c1.style.borderColor = 'var(--accent)'; c1.style.background = 'rgba(45,212,191,.04)'; }
-    if (b2) { b2.textContent = cgptTPTersimpan ? '⏳ Siap' : 'Menunggu'; b2.style.cssText = cgptTPTersimpan ? 'font-size:10px;background:rgba(16,185,129,.12);color:#065F46;' : 'font-size:10px;background:rgba(100,116,139,.1);color:var(--text-muted);'; }
-    if (n2) { n2.textContent = '2'; n2.style.background = '#94A3B8'; n2.style.color = 'white'; }
-    if (c2) { c2.style.borderColor = 'var(--border)'; c2.style.background = ''; }
-  } else {
-    if (b1) { b1.textContent = '✓ Selesai'; b1.style.cssText = 'font-size:10px;background:rgba(16,185,129,.12);color:#065F46;'; }
-    if (n1) { n1.textContent = '✓'; n1.style.background = '#10B981'; n1.style.color = 'white'; }
-    if (c1) { c1.style.borderColor = '#10B981'; c1.style.background = 'rgba(16,185,129,.04)'; }
-    if (b2) { b2.textContent = 'Aktif ▶'; b2.style.cssText = 'font-size:10px;background:rgba(45,212,191,.15);color:var(--accent-dark);'; }
-    if (n2) { n2.textContent = '2'; n2.style.background = 'var(--accent)'; n2.style.color = 'white'; }
-    if (c2) { c2.style.borderColor = 'var(--accent)'; c2.style.background = 'rgba(45,212,191,.04)'; }
-  }
+  const stepDefs = [
+    { num: '1',  cardId: 'cgptStep1Card',  numId: 'cgptStepNum1',  badgeId: 'cgptStep1Badge'  },
+    { num: '2a', cardId: 'cgptStep2aCard', numId: 'cgptStepNum2a', badgeId: 'cgptStep2aBadge' },
+    { num: '2b', cardId: 'cgptStep2bCard', numId: 'cgptStepNum2b', badgeId: 'cgptStep2bBadge' },
+    { num: '2c', cardId: 'cgptStep2cCard', numId: 'cgptStepNum2c', badgeId: 'cgptStep2cBadge' },
+    { num: '3',  cardId: 'cgptStep3Card',  numId: 'cgptStepNum3',  badgeId: 'cgptStep3Badge'  },
+  ];
 
+  stepDefs.forEach((s, idx) => {
+    const numEl   = document.getElementById(s.numId);
+    const cardEl  = document.getElementById(s.cardId);
+    const badgeEl = document.getElementById(s.badgeId);
+    /* Cek apakah bagian ini sudah ada hasilnya */
+    const isDone2a = cgptHasil['2a']?.length > 0;
+    const isDone2b = cgptHasil['2b']?.length > 0;
+    const isDone2c = cgptHasil['2c']?.length > 0;
+    const isDoneTP = cgptTPTersimpan.length > 0;
+
+    let state, badge;
+    if (idx < curIdx) {
+      /* Tahap sebelumnya */
+      const doneMark = [isDoneTP, isDone2a, isDone2b, isDone2c, false];
+      state = doneMark[idx] ? 'done' : 'waiting';
+      badge = doneMark[idx] ? '✓ Selesai' : 'Terlewat';
+    } else if (idx === curIdx) {
+      state = 'active'; badge = 'Aktif ▶';
+    } else {
+      /* Tahap berikutnya */
+      const readyMark = [isDoneTP, isDone2a, isDone2b, isDone2c, false];
+      state = readyMark[idx] ? 'Siap' : 'waiting';
+      badge = readyMark[idx-1] ? '⏳ Siap' : 'Menunggu';
+      state = 'waiting';
+    }
+    const numShow = state === 'done' ? '✓' : s.num;
+    _cgptStepStyle(numEl, cardEl, badgeEl, numShow, state, badge);
+  });
+
+  /* Instruksi per tahap */
+  const instrMap = {
+    1:    `<strong>Tahap 1:</strong> Salin prompt → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik <strong style="color:var(--accent)">✅ Simpan TP → Lanjut ke Tahap 2a</strong>.`,
+    '2a': `<strong>Tahap 2a (Bagian 1/3):</strong> Salin prompt → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik <strong style="color:var(--accent)">✨ Simpan Bagian 1 → Lanjut</strong>.`,
+    '2b': `<strong>Tahap 2b (Bagian 2/3):</strong> Salin prompt → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik <strong style="color:var(--accent)">✨ Simpan Bagian 2 → Lanjut</strong>.`,
+    '2c': `<strong>Tahap 2c (Bagian 3/3):</strong> Salin prompt → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik <strong style="color:var(--accent)">✨ Simpan Bagian 3 → Gabung</strong>.`,
+    3:    `<strong>Tahap 3:</strong> Semua bagian sudah terkumpul. Klik <strong style="color:var(--accent)">✅ Gabung & Terapkan ke RPPM</strong> untuk menerapkan hasilnya.`,
+  };
   const instr = document.getElementById('cgptStepInstruksi');
-  if (instr) {
-    instr.innerHTML = cgptTahap === 1
-      ? `<strong>Tahap 1:</strong> Salin prompt di bawah → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik tombol <strong style="color:var(--accent)">✅ Simpan TP → Lanjut ke Tahap 2</strong>.`
-      : `<strong>Tahap 2:</strong> TP dari Tahap 1 sudah masuk ke prompt. Salin prompt → paste ke ChatGPT → copy hasilnya → paste di kolom kanan → klik <strong style="color:var(--accent)">✨ Format & Terapkan</strong>.`;
+  if (instr) instr.innerHTML = instrMap[cgptTahap] || '';
+
+  /* Label prompt */
+  const labelMap = {
+    1:    ['💬 Prompt Tahap 1 — Analisis CP & Buat TP',          'ChatGPT akan menganalisis CP dan menyusun TP operasional.',           '📥 Tempel Hasil TP dari ChatGPT'],
+    '2a': ['💬 Prompt Tahap 2a — Identitas & Desain (15 field)', 'ChatGPT isi 15 field identitas dan desain pembelajaran.',             '📥 Tempel Hasil Bagian 1 dari ChatGPT'],
+    '2b': ['💬 Prompt Tahap 2b — Kegiatan Pembelajaran (5 field)','ChatGPT isi 5 field kegiatan: AWAL, Inti, PENUTUP.',                '📥 Tempel Hasil Bagian 2 dari ChatGPT'],
+    '2c': ['💬 Prompt Tahap 2c — Asesmen (3 field)',             'ChatGPT isi 3 field asesmen: awal, proses, akhir.',                   '📥 Tempel Hasil Bagian 3 dari ChatGPT'],
+    3:    ['✅ Tahap 3 — Gabung & Terapkan',                     'Semua bagian siap digabung. Tidak perlu prompt tambahan.',            '📋 Tidak perlu paste — langsung klik Gabung'],
+  };
+  const lm  = labelMap[cgptTahap] || labelMap[1];
+  const lbl = document.getElementById('cgptPromptLabel');
+  const hnt = document.getElementById('cgptPromptHint');
+  const ptt = document.getElementById('cgptPasteTitle');
+  if (lbl) lbl.innerHTML    = lm[0];
+  if (hnt) hnt.textContent  = lm[1];
+  if (ptt) ptt.textContent  = lm[2];
+
+  /* Tahap 3: sembunyikan box prompt, tampilkan tombol Gabung */
+  const promptGroup = document.getElementById('cgptPromptGroup');
+  const pasteArea   = document.getElementById('cgptPasteArea');
+  const btnGabung   = document.getElementById('btnCgptGabung');
+  if (cgptTahap === 3) {
+    if (promptGroup) promptGroup.style.display = 'none';
+    if (pasteArea)   pasteArea.style.display   = 'none';
+    if (btnGabung)   btnGabung.style.display   = 'block';
+    if (normalActions) normalActions.style.display = 'none';
+  } else {
+    if (promptGroup) promptGroup.style.display = '';
+    if (pasteArea)   pasteArea.style.display   = '';
+    if (btnGabung)   btnGabung.style.display   = 'none';
   }
 
-  const lbl  = document.getElementById('cgptPromptLabel');
-  const hint = document.getElementById('cgptPromptHint');
-  const ptit = document.getElementById('cgptPasteTitle');
-  if (cgptTahap === 1) {
-    if (lbl)  lbl.innerHTML    = '💬 Prompt Tahap 1 — Analisis CP & Buat TP';
-    if (hint) hint.textContent = 'ChatGPT akan menganalisis CP dan menyusun TP operasional beserta topik dan materi pokok.';
-    if (ptit) ptit.textContent = '📥 Tempel Hasil TP dari ChatGPT';
-  } else {
-    if (lbl)  lbl.innerHTML    = '💬 Prompt Tahap 2 — Buat RPPM Lengkap';
-    if (hint) hint.textContent = 'TP dari Tahap 1 sudah masuk. ChatGPT akan buat RPPM KBCDAN PM lengkap (23 field).';
-    if (ptit) ptit.textContent = '📥 Tempel Hasil RPPM dari ChatGPT';
+  /* Update indikator bagian di Tahap 3 */
+  if (cgptTahap === 3) {
+    const s2a = document.getElementById('cgptStatus2a');
+    const s2b = document.getElementById('cgptStatus2b');
+    const s2c = document.getElementById('cgptStatus2c');
+    const ok2a = !!cgptHasil['2a'];
+    const ok2b = !!cgptHasil['2b'];
+    const ok2c = !!cgptHasil['2c'];
+    if (s2a) {
+      s2a.textContent = (ok2a ? '✅' : '❌') + ' Bagian 2a';
+      s2a.style.color = ok2a ? '#065F46' : '#991B1B';
+    }
+    if (s2b) {
+      s2b.textContent = (ok2b ? '✅' : '❌') + ' Bagian 2b';
+      s2b.style.color = ok2b ? '#065F46' : '#991B1B';
+    }
+    if (s2c) {
+      s2c.textContent = (ok2c ? '✅' : '❌') + ' Bagian 2c';
+      s2c.style.color = ok2c ? '#065F46' : '#991B1B';
+    }
   }
 }
 
 /** Pindah ke tahap tertentu */
 function cgptSetTahap(n) {
-  if (n === 2 && !cgptTPTersimpan) {
-    showToast('Selesaikan Tahap 1 dulu — simpan TP dari hasil ChatGPT', 'warning');
-    return;
+  const order = [1, '2a', '2b', '2c', 3];
+  const curIdx = order.indexOf(cgptTahap);
+  const newIdx = order.indexOf(n);
+
+  /* Validasi: tidak bisa lompat ke depan kalau belum selesai */
+  if (newIdx > 0 && !cgptTPTersimpan) {
+    showToast('Selesaikan Tahap 1 dulu — simpan TP terlebih dahulu', 'warning'); return;
   }
+  if (newIdx > 1 && !cgptHasil['2a']) {
+    showToast('Selesaikan Tahap 2a dulu', 'warning'); return;
+  }
+  if (newIdx > 2 && !cgptHasil['2b']) {
+    showToast('Selesaikan Tahap 2b dulu', 'warning'); return;
+  }
+  if (newIdx > 3 && !cgptHasil['2c']) {
+    showToast('Selesaikan Tahap 2c dulu', 'warning'); return;
+  }
+
   cgptTahap = n;
   cgptLastResult = null;
   cgptClearPasteOnly();
@@ -5120,7 +5310,10 @@ function cgptPilihTab(tabId) {
   cgptActiveTab  = tabId;
   cgptLastResult = null;
   cgptTahap      = 1;
-  if (tabId !== 'rppm') cgptTPTersimpan = '';
+  if (tabId !== 'rppm') {
+    cgptTPTersimpan = '';
+    cgptHasil = { '2a': '', '2b': '', '2c': '' };
+  }
   cgptClearPasteOnly();
   cgptRenderTabPicker();
   cgptUpdateStepperUI();
@@ -5161,59 +5354,118 @@ function cgptOnPaste() {
   if (btn) btn.style.opacity = val ? '1' : '0.6';
 }
 
-/** Format teks ChatGPT → HTML perangkat pembelajaran */
+/** Format teks ChatGPT → HTML atau simpan bagian RPPM */
 function cgptFormat() {
   const raw = document.getElementById('cgptPasteArea')?.value?.trim();
   if (!raw) { showToast('Tempel hasil ChatGPT terlebih dahulu', 'error'); return; }
 
   const btn = document.getElementById('btnCgptFormat');
-  if (btn) { btn.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:middle;margin-right:6px;"></div>Memformat...'; btn.disabled = true; }
+  if (btn) { btn.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:middle;margin-right:6px;"></div>Memproses...'; btn.disabled = true; }
 
   setTimeout(() => {
     try {
-      let html;
+      /* ── Tahap 2a / 2b / 2c: simpan teks mentah ke cgptHasil ── */
+      if (['2a','2b','2c'].includes(cgptTahap)) {
+        /* Validasi ada marker */
+        if (!raw.includes('[FIELD:') || !raw.includes('[/FIELD]')) {
+          showToast('Format tidak dikenali — gunakan prompt yang disediakan', 'error');
+          if (btn) { btn.innerHTML = '✨ Format & Terapkan'; btn.disabled = false; }
+          return;
+        }
+        cgptHasil[cgptTahap] = raw;
 
-      /* RPPM: gunakan parser marker khusus */
+        const namaMap = { '2a':'Identitas & Desain (15 field)', '2b':'Kegiatan Pembelajaran (5 field)', '2c':'Asesmen (3 field)' };
+        const nextMap = { '2a':'2b', '2b':'2c', '2c':3 };
+        const next    = nextMap[cgptTahap];
+
+        showToast(`✅ Bagian ${cgptTahap} (${namaMap[cgptTahap]}) tersimpan! Beralih ke tahap berikutnya...`);
+
+        /* Tampilkan status */
+        const st = document.getElementById('cgptStatus');
+        if (st) {
+          st.style.cssText = 'display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;font-size:12px;padding:8px 10px;border-radius:6px;';
+          st.textContent = `✅ ${namaMap[cgptTahap]} tersimpan. ${next === 3 ? 'Lanjut ke Tahap 3 untuk menggabungkan semua bagian.' : `Lanjut ke Tahap ${next}.`}`;
+        }
+
+        if (btn) { btn.innerHTML = '✨ Format & Terapkan'; btn.disabled = false; }
+        setTimeout(() => cgptSetTahap(next), 1000);
+        return;
+      }
+
+      /* ── Tab RPPM Tahap 1 tidak masuk sini (ada tombol sendiri) ── */
+      /* ── Tab non-RPPM atau RPPM yang tidak dikenal: parse HTML biasa ── */
+      let html;
       if (cgptActiveTab === 'rppm') {
         const hasMarker = raw.includes('[FIELD:') && raw.includes('[/FIELD]');
         if (hasMarker) {
           html = cgptParseRPPM(raw);
-          if (!html) {
-            /* Marker ada tapi tidak cukup field — fallback ke parser HTML */
-            html = cgptTeksKeHTML(raw, cgptActiveTab);
-          }
+          if (!html) html = cgptTeksKeHTML(raw, cgptActiveTab);
         } else {
-          /* Tidak ada marker — kemungkinan format lama, pakai parser HTML biasa */
           html = cgptTeksKeHTML(raw, cgptActiveTab);
-          showToast('⚠️ Gunakan prompt terbaru agar field RPPM terisi otomatis', 'warning');
+          showToast('⚠️ Gunakan prompt yang disediakan agar field RPPM terisi otomatis', 'warning');
         }
       } else {
         html = cgptTeksKeHTML(raw, cgptActiveTab);
       }
 
       cgptLastResult = html;
-
-      /* Tampilkan preview */
       const pg = document.getElementById('cgptPreviewGroup');
       const pb = document.getElementById('cgptPreviewBox');
       if (pg) pg.style.display = 'block';
       if (pb) pb.innerHTML = html;
 
-      /* Status sukses */
       const st = document.getElementById('cgptStatus');
       if (st) {
-        const isRPPM = cgptActiveTab === 'rppm' && raw.includes('[FIELD:');
         st.style.cssText = 'display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;font-size:12px;padding:8px 10px;border-radius:6px;';
-        st.textContent = isRPPM
-          ? `✅ RPPM terformat! Semua field diisi otomatis dari hasil ChatGPT. Klik "Terapkan" untuk melihat di tab RPPM.`
-          : `✅ Format selesai — ${cgptHitungKata(raw)} kata. Klik "Terapkan ke Tab Preview".`;
+        st.textContent = `✅ Format selesai — ${cgptHitungKata(raw)} kata. Klik "Terapkan ke Tab Preview".`;
       }
       showToast('✅ Format selesai! Klik Terapkan.');
     } catch(e) {
-      showToast(`❌ Gagal memformat: ${e.message}`, 'error');
+      showToast(`❌ Gagal: ${e.message}`, 'error');
     }
     if (btn) { btn.innerHTML = '✨ Format & Terapkan'; btn.disabled = false; }
-  }, 400);
+  }, 300);
+}
+
+
+
+/** Gabung semua bagian 2a+2b+2c → parse → terapkan ke RPPM */
+function cgptGabung() {
+  const a = cgptHasil['2a'], b = cgptHasil['2b'], c = cgptHasil['2c'];
+  const missing = [];
+  if (!a) missing.push('2a (Identitas & Desain)');
+  if (!b) missing.push('2b (Kegiatan Pembelajaran)');
+  if (!c) missing.push('2c (Asesmen)');
+  if (missing.length) {
+    showToast(`❌ Belum selesai: ${missing.join(', ')}`, 'error');
+    return;
+  }
+
+  /* Gabung semua teks marker */
+  const gabungan = a + '\n' + b + '\n' + c;
+
+  /* Parse ke field RPPM */
+  const html = cgptParseRPPM(gabungan);
+  if (!html) { showToast('Gagal mem-parse hasil. Periksa apakah semua bagian menggunakan format marker.', 'error'); return; }
+
+  cgptLastResult = html;
+
+  /* Tampilkan preview */
+  const pg = document.getElementById('cgptPreviewGroup');
+  const pb = document.getElementById('cgptPreviewBox');
+  if (pg) pg.style.display = 'block';
+  if (pb) pb.innerHTML = html;
+
+  /* Status */
+  const st = document.getElementById('cgptStatus');
+  if (st) {
+    st.style.cssText = 'display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;font-size:12px;padding:8px 10px;border-radius:6px;';
+    st.textContent = '✅ Semua bagian berhasil digabung! RPPM lengkap siap diterapkan. Klik "Terapkan ke Tab Preview".';
+  }
+  /* Tampilkan kembali tombol Terapkan */
+  const normalActions = document.getElementById('cgptNormalActions');
+  if (normalActions) { normalActions.style.display = 'flex'; }
+  showToast('✅ RPPM lengkap dari 3 bagian ChatGPT berhasil digabung!');
 }
 
 /** Hitung jumlah kata */
