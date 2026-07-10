@@ -4715,10 +4715,15 @@ Guru          : ${d.guru || '—'}
 CAPAIAN PEMBELAJARAN (CP):
 ${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}`;
 
+  /* Normalisasi tahap: '1' → 1, dst */
+  const tahap = cgptTahap == 1 ? 1 :
+                cgptTahap == 3 ? 3 :
+                String(cgptTahap);
+
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 1 — Buat Tujuan Pembelajaran dari CP
      ═══════════════════════════════════════════════ */
-  if (tabId === 'rppm' && cgptTahap === 1) {
+  if (tabId === 'rppm' && tahap === 1) {
     return `Kamu adalah pakar Kurikulum Merdeka Indonesia.
 Tugas: Analisis Capaian Pembelajaran berikut dan susun Tujuan Pembelajaran (TP) yang tepat.
 
@@ -4758,7 +4763,7 @@ Tulis selengkap mungkin. Jangan potong.`;
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 2a — Identitas & Desain (15 field)
      ═══════════════════════════════════════════════ */
-  if (tabId === 'rppm' && cgptTahap === '2a') {
+  if (tabId === 'rppm' && tahap === '2a') {
     return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
 Ini adalah BAGIAN 1 dari 3 untuk membuat RPPM. Isi HANYA 15 field berikut dengan format marker.
 Jangan isi field selain yang diminta. Jangan tambahkan penjelasan di luar marker.
@@ -4838,7 +4843,7 @@ SELESAI BAGIAN 1. Jangan lanjutkan ke field lain.`;
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 2b — Kegiatan Pembelajaran (5 field)
      ═══════════════════════════════════════════════ */
-  if (tabId === 'rppm' && cgptTahap === '2b') {
+  if (tabId === 'rppm' && tahap === '2b') {
     return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
 Ini adalah BAGIAN 2 dari 3 untuk membuat RPPM. Isi HANYA 5 field kegiatan pembelajaran berikut.
 Setiap field WAJIB minimal 200 kata. Jangan kurangi. Jangan tambahkan penjelasan di luar marker.
@@ -4892,7 +4897,7 @@ SELESAI BAGIAN 2. Jangan lanjutkan ke field asesmen.`;
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 2c — Asesmen (3 field)
      ═══════════════════════════════════════════════ */
-  if (tabId === 'rppm' && cgptTahap === '2c') {
+  if (tabId === 'rppm' && tahap === '2c') {
     return `Kamu adalah pakar Kurikulum Merdeka dan KBCDAN PM Indonesia.
 Ini adalah BAGIAN 3 dari 3 untuk membuat RPPM. Isi HANYA 3 field asesmen berikut.
 Tulis selengkap mungkin. Jangan tambahkan penjelasan di luar marker.
@@ -5067,7 +5072,16 @@ Buat:
 
 Tulis selengkap mungkin.`;
 
-  return 'Tab tidak dikenal.';
+  if (tabId === 'rppm' && tahap === 3) {
+    return `(Tahap 3 tidak memerlukan prompt — klik tombol "Gabung & Terapkan ke RPPM" di kolom kanan.)`;
+  }
+
+  /* Fallback debug — tampilkan state saat ini */
+  if (tabId === 'rppm') {
+    return `(Debug: tabId="${tabId}", cgptTahap="${cgptTahap}" tidak dikenali. Coba refresh halaman atau pilih ulang tab RPPM.)`;
+  }
+
+  return `Tab "${tabId}" tidak memiliki prompt. Pilih tab perangkat di atas.`;
 }
 
 
@@ -5224,9 +5238,12 @@ function cgptUpdateStepperUI() {
 
 /** Pindah ke tahap tertentu */
 function cgptSetTahap(n) {
+  /* Normalisasi: angka 1 dan 3 tetap number, yang lain jadi string */
+  const norm = (n == 1) ? 1 : (n == 3) ? 3 : String(n);
   const order = [1, '2a', '2b', '2c', 3];
-  const curIdx = order.indexOf(cgptTahap);
-  const newIdx = order.indexOf(n);
+  const newIdx = order.indexOf(norm);
+
+  if (newIdx < 0) return; /* nilai tidak valid */
 
   /* Validasi: tidak bisa lompat ke depan kalau belum selesai */
   if (newIdx > 0 && !cgptTPTersimpan) {
@@ -5242,7 +5259,7 @@ function cgptSetTahap(n) {
     showToast('Selesaikan Tahap 2c dulu', 'warning'); return;
   }
 
-  cgptTahap = n;
+  cgptTahap = norm;
   cgptLastResult = null;
   cgptClearPasteOnly();
   cgptUpdateStepperUI();
@@ -5857,6 +5874,17 @@ function cgptClear() {
 
 /** Init halaman ChatGPT saat dibuka */
 function initChatGPTPage() {
+  /* Pastikan state awal benar */
+  if (!cgptActiveTab) cgptActiveTab = 'rppm';
+
+  /* Jika tab bukan rppm, reset tahap ke 1 */
+  if (cgptActiveTab !== 'rppm') cgptTahap = 1;
+
+  /* Jika tab rppm dan tahap masih valid, pertahankan */
+  /* Jika tahap tidak valid, reset ke 1 */
+  const validTahap = [1, '2a', '2b', '2c', 3];
+  if (!validTahap.includes(cgptTahap)) cgptTahap = 1;
+
   cgptRenderTabPicker();
   cgptUpdateStepperUI();
   cgptUpdatePrompt();
