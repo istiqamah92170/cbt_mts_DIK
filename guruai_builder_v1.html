@@ -5306,8 +5306,8 @@ function cgptSimpanTP() {
   cgptTPTersimpan = tpList.join('\n');
   autoSave();
 
-  showToast(`✅ ${tpList.length} TP tersimpan ke Analisis CP! Beralih ke Tahap 2...`);
-  setTimeout(() => cgptSetTahap(2), 1000);
+  showToast(`✅ ${tpList.length} TP tersimpan ke Analisis CP! Beralih ke Tahap 2a...`);
+  setTimeout(() => cgptSetTahap('2a'), 1000);
 }
 
 /** Render tab picker di panel ChatGPT */
@@ -5381,27 +5381,30 @@ function cgptFormat() {
 
   setTimeout(() => {
     try {
+      /* Normalisasi cgptTahap untuk perbandingan konsisten */
+      const tahapNorm = cgptTahap == 1 ? 1 : cgptTahap == 3 ? 3 : String(cgptTahap);
+
       /* ── Tahap 2a / 2b / 2c: simpan teks mentah ke cgptHasil ── */
-      if (['2a','2b','2c'].includes(cgptTahap)) {
+      if (['2a','2b','2c'].includes(tahapNorm)) {
         /* Validasi ada marker */
         if (!raw.includes('[FIELD:') || !raw.includes('[/FIELD]')) {
           showToast('Format tidak dikenali — gunakan prompt yang disediakan', 'error');
           if (btn) { btn.innerHTML = '✨ Format & Terapkan'; btn.disabled = false; }
           return;
         }
-        cgptHasil[cgptTahap] = raw;
+        cgptHasil[tahapNorm] = raw;
 
         const namaMap = { '2a':'Identitas & Desain (15 field)', '2b':'Kegiatan Pembelajaran (5 field)', '2c':'Asesmen (3 field)' };
         const nextMap = { '2a':'2b', '2b':'2c', '2c':3 };
-        const next    = nextMap[cgptTahap];
+        const next    = nextMap[tahapNorm];
 
-        showToast(`✅ Bagian ${cgptTahap} (${namaMap[cgptTahap]}) tersimpan! Beralih ke tahap berikutnya...`);
+        showToast(`✅ Bagian ${tahapNorm} (${namaMap[tahapNorm]}) tersimpan! Beralih ke tahap berikutnya...`);
 
         /* Tampilkan status */
         const st = document.getElementById('cgptStatus');
         if (st) {
           st.style.cssText = 'display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#065F46;font-size:12px;padding:8px 10px;border-radius:6px;';
-          st.textContent = `✅ ${namaMap[cgptTahap]} tersimpan. ${next === 3 ? 'Lanjut ke Tahap 3 untuk menggabungkan semua bagian.' : `Lanjut ke Tahap ${next}.`}`;
+          st.textContent = `✅ ${namaMap[tahapNorm]} tersimpan. ${next === 3 ? 'Lanjut ke Tahap 3 untuk menggabungkan semua bagian.' : `Lanjut ke Tahap ${next}.`}`;
         }
 
         if (btn) { btn.innerHTML = '✨ Format & Terapkan'; btn.disabled = false; }
