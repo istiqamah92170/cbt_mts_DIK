@@ -2643,7 +2643,7 @@ const BLOOM_SCORE={C1:1,C2:2,C3:3,C4:4,C5:5,C6:6};
 const DIFF_SCORE={'Sangat Mudah':1,'Mudah':2,'Sedang':3,'Sulit':4,'Sangat Sulit':5};
 const KD_MAP={'Sangat Mudah':'Mudah','Mudah':'Mudah','Sedang':'Sedang','Sulit':'Sulit','Sangat Sulit':'Sulit'};
 const MAX_RETRY=3;
-let workbook=null,sheetData=[],resultData=[],abortFlag=false,origHeaders=[];
+let workbook=null,sheetData=[],resultData=[],abortFlag=false,origHeaders=[],origHeadersRaw=[];
 
 window.addEventListener('DOMContentLoaded',function(){
   // Fungsi tunggal: clone DEFAULT_DB DAN pastikan setiap item materi
@@ -2748,7 +2748,11 @@ function handleFile(file){
 }
 function validateFile(json,file){
   if(!json||json.length<2){showV('error','File kosong.');return;}
-  origHeaders=json[0].map(function(h){return String(h).trim();});
+  // Simpan header asli (untuk output Excel) dan header ternormalisasi (untuk akses internal)
+  var rawHeaders=json[0].map(function(h){return String(h).trim();});
+  origHeaders=rawHeaders.map(function(h){return h.toLowerCase();});
+  // Peta normalisasi: lowercase → asli, untuk keperluan output Excel tetap pakai nama asli
+  origHeadersRaw=rawHeaders;
   const missing=['tipe','pertanyaan'].filter(function(h){return !origHeaders.includes(h);});
   if(missing.length){let msg='<strong>Kolom wajib tidak ditemukan:</strong><ul>';missing.forEach(function(h){msg+='<li><code>'+h+'</code></li>';});showV('error',msg+'</ul>');return;}
   sheetData=json.slice(1).map(function(row,ri){
@@ -2759,7 +2763,7 @@ function validateFile(json,file){
   checkRunnable();
 }
 function showV(type,html){const b=$id('aVbox');b.className='vbox '+type;b.innerHTML=html;}
-function doResetAFile(){workbook=null;sheetData=[];origHeaders=[];$id('aFileInput').value='';$id('aFileInfo').classList.remove('show');$id('aVbox').className='vbox';$id('aVbox').innerHTML='';checkRunnable();}
+function doResetAFile(){workbook=null;sheetData=[];origHeaders=[];origHeadersRaw=[];$id('aFileInput').value='';$id('aFileInfo').classList.remove('show');$id('aVbox').className='vbox';$id('aVbox').innerHTML='';checkRunnable();}
 function checkRunnable(){const apiOk=aMode==='local'||$id('apiKey').value.trim();const mapelOk=$id('aMapel').value&&$id('aKelas').value;$id('btnRun').disabled=!(apiOk&&sheetData.length>0&&mapelOk);}
 
 async function startAnalysis(){
@@ -4865,53 +4869,52 @@ function buildJejak(row, res) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Patch doDownload — tambahkan sheet _Metadata_Analisis
-var _origDoDownload = doDownload;
-doDownload = function() {
-  _origDoDownload();
-  // Setelah download selesai, jika ada session aktif, simpan ringkasan
-  if (_currentSession && _currentSession.status === 'selesai') {
-    // Session sudah di-push saat finalize, tidak perlu push ulang
-  }
-};
+// doDownload: implementasi aktif ada di patch di bawah.
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH doDownload — tambahkan sheet metadata ke Excel
+// PATCH doDownload — bangun Excel langsung dari resultData (andal, tidak perlu re-match)
 // ─────────────────────────────────────────────────────────────────────────────
 doDownload = function() {
   if (!workbook || !resultData.length) { alert('Tidak ada data.'); return; }
   try {
-    const ws      = workbook.Sheets[workbook.SheetNames[0]];
-    const json    = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-    const hdrs    = json[0].map(function(h){ return String(h).trim(); });
-    const outHdrs = hdrs.slice();
-    OUT_COLS.forEach(function(c){ if (!outHdrs.includes(c)) outHdrs.push(c); });
-    const pertIdx = hdrs.indexOf('pertanyaan');
-    const rMap    = new Map();
+    // Header output: pakai nama asli dari file (origHeadersRaw) + kolom hasil analisis
+    const displayHdrs = (origHeadersRaw.length ? origHeadersRaw : origHeaders).slice();
+    OUT_COLS.forEach(function(c){ if (!displayHdrs.map(function(h){return h.toLowerCase();}).includes(c.toLowerCase())) displayHdrs.push(c); });
+    const baseHdrs = displayHdrs.map(function(h){return h.toLowerCase();}); // key internal (lowercase)
+
+    // Bangun baris dari resultData — data analisis sudah ada di sini via applyResult
+    const outRows = [displayHdrs];
     resultData.forEach(function(row) {
-      if (row['_ri'] !== undefined) rMap.set('ri:' + row['_ri'], row);
-      var key = String(row['pertanyaan'] || '').trim();
-      if (key && !rMap.has('q:' + key)) rMap.set('q:' + key, row);
-    });
-    const outRows = [outHdrs];
-    json.slice(1).forEach(function(r, rowIdx) {
-      const outRow = outHdrs.map(function(h, i){ return i < hdrs.length ? (r[i] !== undefined ? r[i] : '') : ''; });
-      var found    = rMap.get('ri:' + (rowIdx + 1));
-      if (!found) {
-        var qkey = String(r[pertIdx] || '').trim();
-        if (qkey) found = rMap.get('q:' + qkey);
-      }
-      if (found) OUT_COLS.forEach(function(col){ var idx = outHdrs.indexOf(col); if (idx >= 0) outRow[idx] = found[col] || ''; });
+      var outRow = baseHdrs.map(function(h) {
+        var val = row[h];
+        if (val === undefined || val === null) val = '';
+        return val;
+      });
       outRows.push(outRow);
     });
 
     const newWb = XLSX.utils.book_new();
     const newWs = XLSX.utils.aoa_to_sheet(outRows);
+
+    // Auto-width kolom: lebar berdasarkan konten terpanjang
+    var colWidths = baseHdrs.map(function(h) { return { wch: Math.max(h.length, 10) }; });
+    outRows.slice(1).forEach(function(r) {
+      r.forEach(function(cell, ci) {
+        var len = String(cell||'').length;
+        if (len > (colWidths[ci] ? colWidths[ci].wch : 0)) {
+          colWidths[ci] = { wch: Math.min(len, 60) };
+        }
+      });
+    });
+    newWs['!cols'] = colWidths;
+
     XLSX.utils.book_append_sheet(newWb, newWs, workbook.SheetNames[0]);
 
     // ── Sheet _Metadata_Analisis ─────────────────────────────────────────────
     var metaRows = _buildMetadataSheet();
     if (metaRows.length) {
       var metaWs = XLSX.utils.aoa_to_sheet(metaRows);
+      metaWs['!cols'] = [{wch:28},{wch:60}];
       XLSX.utils.book_append_sheet(newWb, metaWs, '_Metadata_Analisis');
     }
 
@@ -4924,160 +4927,9 @@ doDownload = function() {
     document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 5000);
     const b = $id('dlBanner');
-    b.style.display = 'block';
-    b.innerHTML = '<strong>&#x1F4E5; ' + fname + '</strong><br>' +
-      '<span style="color:var(--text2)">Termasuk sheet <code>_Metadata_Analisis</code> untuk audit.</span>';
-  } catch(e) { alert('Gagal: ' + e.message); }
+    if (b) { b.style.display='block'; b.innerHTML='<strong>📥 '+fname+'</strong><br><span style="color:var(--text2)">Cek folder Download atau menu ⋮ → Downloads di browser.</span>'; }
+  } catch(e) { alert('Gagal download: '+e.message); }
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BANGUN KONTEN SHEET _Metadata_Analisis
-// ─────────────────────────────────────────────────────────────────────────────
-function _buildMetadataSheet() {
-  var sess = _currentSession;
-  var rows = [];
-
-  rows.push(['=== METADATA ANALISIS — Knowledge Engine Analyzer ===', '']);
-  rows.push(['', '']);
-
-  // Identitas sesi
-  rows.push(['IDENTITAS SESI', '']);
-  rows.push(['Session ID',       sess ? sess.session_id         : 'tidak ada']);
-  rows.push(['Tipe Analisis',    sess ? sess.tipe               : '']);
-  rows.push(['Dijalankan Pada',  sess ? sess.dijalankan_pada    : '']);
-  rows.push(['Status',           sess ? sess.status             : '']);
-  rows.push(['', '']);
-
-  // Versi aplikasi
-  var appSnap = sess ? sess.snapshot_aplikasi : null;
-  rows.push(['VERSI APLIKASI', '']);
-  rows.push(['Versi Aplikasi',   appSnap ? appSnap.versi_aplikasi : APP_VERSION]);
-  rows.push(['Schema Session',   appSnap ? appSnap.schema_version : SESSION_SCHEMA]);
-  rows.push(['', '']);
-
-  // Konteks analisis
-  var ctx = sess ? sess.konteks_analisis : {};
-  rows.push(['KONTEKS ANALISIS', '']);
-  rows.push(['Mata Pelajaran',   ctx.mapel  || '']);
-  rows.push(['Kelas',            ctx.kelas  || '']);
-  rows.push(['', '']);
-
-  // File input
-  var inp = sess ? sess.input : {};
-  rows.push(['FILE INPUT', '']);
-  rows.push(['Nama File',        inp.file_input    || '']);
-  rows.push(['Ukuran (bytes)',    inp.file_ukuran   || '']);
-  rows.push(['Terakhir Diubah',  inp.file_modified ? new Date(inp.file_modified).toISOString() : '']);
-  rows.push(['', '']);
-
-  // Prompt engine
-  var promptSnap = sess ? sess.snapshot_prompt : null;
-  rows.push(['PROMPT ENGINE', '']);
-  rows.push(['Versi Prompt',     promptSnap ? promptSnap.prompt_version    : PROMPT_VERSION]);
-  rows.push(['Instruksi',        promptSnap ? promptSnap.instruksi_ringkas : '']);
-  rows.push(['Provider AI',      promptSnap ? (promptSnap.parameter_ai.provider || '') : '']);
-  rows.push(['Model AI',         promptSnap ? (promptSnap.parameter_ai.model    || '') : '']);
-  rows.push(['Mode',             promptSnap ? (promptSnap.parameter_ai.mode     || '') : '']);
-  rows.push(['', '']);
-
-  // Knowledge Engine
-  var keSnap = sess ? sess.snapshot_ke : KnowledgeEngine.getSnapshotAll();
-  rows.push(['KNOWLEDGE ENGINE', '']);
-  ['TKB','BKB','DKB','PKB','RKB'].forEach(function(eng) {
-    var s = keSnap[eng] || {};
-    rows.push([eng,
-      'versi=' + (s.versi || 'null') +
-      ' | status=' + (s.status || 'unknown') +
-      (s.catatan ? ' | ' + s.catatan : '')
-    ]);
-  });
-  rows.push(['', '']);
-
-  // Snapshot Materi
-  var matSnap = sess ? sess.snapshot_materi : [];
-  rows.push(['SNAPSHOT MATERI (' + matSnap.length + ' item)', '']);
-  rows.push(['ID Materi', 'Nama Materi', 'Versi', 'Diperbarui']);
-  matSnap.forEach(function(m) {
-    rows.push([m.materi_id || '—', m.nama_materi || '', m.content_version || '', m.content_updated_at || '']);
-  });
-  rows.push(['', '']);
-
-  // Snapshot Kurikulum
-  var kurSnap = sess ? sess.snapshot_kurikulum : null;
-  rows.push(['SNAPSHOT KURIKULUM', '']);
-  rows.push(['Versi DB Kurikulum',   kurSnap ? kurSnap.database_version    : (DB_KUR.database_version || '1.0')]);
-  rows.push(['DB Kurikulum Diperbarui', kurSnap ? kurSnap.database_updated_at : (DB_KUR.database_updated_at || '')]);
-  if (kurSnap && kurSnap.entitas) {
-    var entIds = Object.keys(kurSnap.entitas);
-    rows.push(['Entitas direferensikan (' + entIds.length + ')', '']);
-    rows.push(['ID', 'Tipe', 'Versi', 'Narasi']);
-    entIds.forEach(function(eid) {
-      var e = kurSnap.entitas[eid];
-      rows.push([eid, e.type || '', e.versi || '', (e.narasi || '').slice(0,100)]);
-    });
-  }
-  rows.push(['', '']);
-
-  // Ringkasan hasil
-  var ring = sess ? sess.ringkasan_hasil : null;
-  rows.push(['RINGKASAN HASIL', '']);
-  if (ring) {
-    rows.push(['Total Soal',  ring.total_soal]);
-    rows.push(['Berhasil',    ring.berhasil]);
-    rows.push(['Gagal',       ring.gagal]);
-    rows.push(['Dilewati',    ring.dilewati]);
-    rows.push(['', '']);
-    rows.push(['DISTRIBUSI BLOOM', '']);
-    ['C1','C2','C3','C4','C5','C6'].forEach(function(c) {
-      rows.push([c, ring.distribusi_bloom[c] || 0]);
-    });
-    rows.push(['', '']);
-    rows.push(['DISTRIBUSI KESULITAN', '']);
-    Object.keys(ring.distribusi_kesulitan).forEach(function(k) {
-      rows.push([k, ring.distribusi_kesulitan[k]]);
-    });
-  }
-
-  rows.push(['', '']);
-  rows.push(['--- Dokumen ini dibuat otomatis oleh Knowledge Engine Analyzer ---', '']);
-  rows.push(['--- Jangan mengubah isi sheet ini secara manual ---', '']);
-
-  return rows;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH startAnalysis — wrap untuk inject Session Record
-// (sebelumnya salah menargetkan "runAnalysis" yang tidak pernah didefinisikan —
-//  fungsi nyata yang dipanggil tombol Mulai Analisis adalah startAnalysis)
-// ─────────────────────────────────────────────────────────────────────────────
-var _origStartAnalysisFn = startAnalysis;
-startAnalysis = async function() {
-  // Ambil file info dari workbook (sudah ada di memori)
-  var fileInfo = null;
-  var fileInput = document.getElementById('aFile');
-  if (fileInput && fileInput.files && fileInput.files[0]) {
-    var f = fileInput.files[0];
-    fileInfo = { name: f.name, size: f.size, lastModified: f.lastModified };
-  }
-
-  var mapel  = ($id('aMapel') && $id('aMapel').value)  || '';
-  var kelas  = ($id('aKelas') && $id('aKelas').value)  || '';
-  var model  = activeModel || ($id('aModel') && $id('aModel').value) || '';
-  var mode   = aMode || 'gemini';
-
-  // Buat session baru
-  createSession('batch', mapel, kelas, fileInfo, model, mode);
-
-  // Jalankan analisis asli
-  await _origStartAnalysisFn();
-
-  // Finalisasi session
-  var total  = parseInt($id('sTotal') && $id('sTotal').textContent) || 0;
-  var status = parseInt($id('sErr') && $id('sErr').textContent) > 0 ? 'sebagian' : 'selesai';
-  finalizeSession(total, status);
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // PATCH applyResult — rekam setiap soal ke Soal Record
 // ─────────────────────────────────────────────────────────────────────────────
 var _origApplyResult = applyResult;
@@ -5675,7 +5527,10 @@ function panduanTab(name, btn) {
 var _origValidateFile = validateFile;
 validateFile = function(json, file) {
   if (!json || json.length < 2) { showV('error', 'File kosong.'); return; }
-  origHeaders = json[0].map(function(h) { return String(h).trim(); });
+  // Simpan header asli untuk output Excel, normalisasi ke lowercase untuk akses internal
+  var rawHeaders = json[0].map(function(h) { return String(h).trim(); });
+  origHeadersRaw = rawHeaders;
+  origHeaders = rawHeaders.map(function(h) { return h.toLowerCase(); });
 
   // Kolom wajib: hanya 'tipe' — 'pertanyaan' opsional jika ada vrl_gambar
   var missingRequired = ['tipe'].filter(function(h) { return !origHeaders.includes(h); });
