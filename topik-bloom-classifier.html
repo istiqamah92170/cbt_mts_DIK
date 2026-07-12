@@ -4670,6 +4670,80 @@ function _buildSnapshotKurikulum(mapel, kelas) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// _buildMetadataSheet — bangun data sheet audit trail untuk Excel download
+// ─────────────────────────────────────────────────────────────────────────────
+function _buildMetadataSheet() {
+  var rows = [];
+  var now = new Date().toLocaleString('id-ID');
+
+  rows.push(['METADATA ANALISIS BLOOM', '']);
+  rows.push(['Diekspor pada', now]);
+  rows.push(['Versi Aplikasi', typeof APP_VERSION !== 'undefined' ? APP_VERSION : '—']);
+  rows.push(['Versi Prompt', typeof PROMPT_VERSION !== 'undefined' ? PROMPT_VERSION : '—']);
+  rows.push(['', '']);
+
+  // Info sesi terakhir jika ada
+  try {
+    var sessions = typeof getSessionHistory === 'function' ? getSessionHistory() : [];
+    if (sessions.length) {
+      var s = sessions[0];
+      rows.push(['SESSION TERAKHIR', '']);
+      rows.push(['Session ID', s.session_id || '—']);
+      rows.push(['Dijalankan pada', s.dijalankan_pada ? new Date(s.dijalankan_pada).toLocaleString('id-ID') : '—']);
+      rows.push(['Mata Pelajaran', (s.konteks && s.konteks.mapel) || '—']);
+      rows.push(['Kelas', (s.konteks && s.konteks.kelas) || '—']);
+      rows.push(['Model AI', (s.konteks && s.konteks.model) || '—']);
+      rows.push(['Total Soal', (s.ringkasan && s.ringkasan.total_soal) || '—']);
+      rows.push(['Berhasil', (s.ringkasan && s.ringkasan.berhasil) || '—']);
+      rows.push(['', '']);
+    }
+  } catch(e) {}
+
+  // Distribusi Bloom dari resultData
+  if (typeof resultData !== 'undefined' && resultData.length) {
+    rows.push(['DISTRIBUSI BLOOM', '']);
+    var bloomCount = {};
+    resultData.forEach(function(r) {
+      var b = r['Bloom'] || r['bloom'] || '';
+      if (b) bloomCount[b] = (bloomCount[b] || 0) + 1;
+    });
+    var total = resultData.length;
+    ['C1','C2','C3','C4','C5','C6'].forEach(function(lvl) {
+      var n = bloomCount[lvl] || 0;
+      if (n > 0) rows.push([lvl, n + ' soal (' + Math.round(n/total*100) + '%)']);
+    });
+    rows.push(['', '']);
+
+    // Distribusi Kesulitan
+    rows.push(['DISTRIBUSI KESULITAN', '']);
+    var diffCount = {};
+    resultData.forEach(function(r) {
+      var d = r['Kesulitan'] || r['kesulitan'] || '';
+      if (d) diffCount[d] = (diffCount[d] || 0) + 1;
+    });
+    Object.keys(diffCount).forEach(function(d) {
+      var n = diffCount[d];
+      rows.push([d, n + ' soal (' + Math.round(n/total*100) + '%)']);
+    });
+    rows.push(['', '']);
+  }
+
+  // Versi Knowledge Engine aktif
+  try {
+    if (typeof KnowledgeEngine !== 'undefined') {
+      rows.push(['KNOWLEDGE ENGINE', '']);
+      ['TKB','BKB','DKB','PKB','RKB'].forEach(function(eng) {
+        var v = KnowledgeEngine[eng] ? KnowledgeEngine[eng].getVersion() : null;
+        rows.push([eng, v ? (v.versi || '—') + ' (' + (v.status || '—') + ')' : '—']);
+      });
+      rows.push(['', '']);
+    }
+  } catch(e) {}
+
+  return rows;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BUAT SESSION RECORD
 // ─────────────────────────────────────────────────────────────────────────────
 function createSession(tipe, mapel, kelas, fileInfo, model, mode) {
