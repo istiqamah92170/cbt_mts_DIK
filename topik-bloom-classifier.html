@@ -2637,7 +2637,7 @@ function taeResolve(topikRaw, materiList) {
 
 
 const AI_COLS=['tipe','pertanyaan','vrl_gambar','opsi_a','opsi_b','opsi_c','opsi_d','kunci'];
-const OUT_COLS=['Topik','Bloom','Kesulitan','Confidence','Kunci_AI','Status_Kunci','Rekomendasi_Poin'];
+const OUT_COLS=['topik','bloom','kesulitan','confidence','kunci_ai','status_kunci','rekomendasi_poin'];
 const ESAI=['esai','essay','uraian','esai_gambar','essay_gambar','isian'];
 const BLOOM_SCORE={C1:1,C2:2,C3:3,C4:4,C5:5,C6:6};
 const DIFF_SCORE={'Sangat Mudah':1,'Mudah':2,'Sedang':3,'Sulit':4,'Sangat Sulit':5};
@@ -2777,12 +2777,22 @@ async function startAnalysis(){
   abortFlag=false;resultData=JSON.parse(JSON.stringify(sheetData));
   $id('btnRun').disabled=true;$id('aProgress').classList.add('show');$id('aResults').classList.remove('show');clearLog();
   let ok=0,err=0,skip=0;const total=resultData.length;let i=0;
+
+  // Buat session record untuk riwayat sesi
+  var fileInfo=null;
+  var fileInput=$id('aFileInput');
+  if(fileInput&&fileInput.files&&fileInput.files[0]){
+    var f=fileInput.files[0];
+    fileInfo={name:f.name,size:f.size,lastModified:f.lastModified};
+  }
+  if(typeof createSession==='function') createSession('batch',mapel,kelas,fileInfo,model,aMode||'gemini');
+
   while(i<total){
     if(abortFlag){addLog('warn','\u23F9 Dihentikan.');break;}
     const batch=[];let j=i;
     while(j<total&&batch.length<batchSize){
       const row=resultData[j];
-      if(skipFilled&&row['Topik']&&row['Bloom']&&row['Kunci_AI']){skip++;addLog('info','\u27B6 Soal #'+(row['no']||j+1)+': dilewati');updateProg(j+1,total);j++;continue;}
+      if(skipFilled&&row['topik']&&row['bloom']&&row['kunci_ai']){skip++;addLog('info','\u27B6 Soal #'+(row['no']||j+1)+': dilewati');updateProg(j+1,total);j++;continue;}
       batch.push({idx:j,row});j++;
     }
     i=j;if(!batch.length)continue;
@@ -2805,17 +2815,22 @@ async function startAnalysis(){
   }
   $id('sTotal').textContent=total;$id('sOk').textContent=ok;$id('sErr').textContent=err;$id('sSkip').textContent=skip;
   $id('aResults').classList.add('show');setProgLabel('Selesai \u2014 '+ok+' berhasil, '+err+' gagal, '+skip+' dilewati');
+
+  // Finalisasi session record
+  var status=err>0?(ok>0?'sebagian':'gagal'):'selesai';
+  if(typeof finalizeSession==='function') finalizeSession(total,status);
+
   renderPreview(materiList);
 }
 function applyResult(row,res){
-  row['Topik']=res.topik||'';row['Bloom']=res.bloom||'';
-  row['Kesulitan']=KD_MAP[res.kesulitan]||res.kesulitan||'';
-  row['Confidence']=(res.confidence||0)+'%';row['Kunci_AI']=res.kunci_ai||'';
+  row['topik']=res.topik||'';row['bloom']=res.bloom||'';
+  row['kesulitan']=KD_MAP[res.kesulitan]||res.kesulitan||'';
+  row['confidence']=(res.confidence||0)+'%';row['kunci_ai']=res.kunci_ai||'';
   const _isEsaiRow=ESAI.includes(String(row['tipe']||'').toLowerCase().trim());
   const kA=String(row['kunci']||'').trim().toUpperCase(),kAI=String(res.kunci_ai||'').trim().toUpperCase();
-  row['Status_Kunci']=_isEsaiRow?'Esai_AI':(!kA?'Dibuat_AI':kA===kAI?'Cocok':'Berbeda');
+  row['status_kunci']=_isEsaiRow?'Esai_AI':(!kA?'Dibuat_AI':kA===kAI?'Cocok':'Berbeda');
   const bs=BLOOM_SCORE[res.bloom]||1,ds=DIFF_SCORE[res.kesulitan]||1,k=bs+ds;
-  row['Rekomendasi_Poin']=k<=3?'1-2 poin':k<=5?'2-3 poin':k<=8?'3-4 poin':'4-5 poin';
+  row['rekomendasi_poin']=k<=3?'1-2 poin':k<=5?'2-3 poin':k<=8?'3-4 poin':'4-5 poin';
   // Store TKB metadata for explainability
   if(res.tkb_result) row['_tkb']={
     source:        res.tkb_result.source,
@@ -2950,8 +2965,8 @@ function renderPreview(materiList){
   // For large sets (>200): use DocumentFragment for performance
   const frag=document.createDocumentFragment();
   resultData.forEach(function(row,ri){
-    const bloom=String(row['Bloom']||'').toUpperCase(),kd=String(row['Kesulitan']||''),status=row['Status_Kunci']||'';
-    const conf=parseInt(row['Confidence'])||0,topikRaw=String(row['Topik']||'');
+    const bloom=String(row['bloom']||'').toUpperCase(),kd=String(row['kesulitan']||''),status=row['status_kunci']||'';
+    const conf=parseInt(row['confidence'])||0,topikRaw=String(row['topik']||'');
     const parts=topikRaw.split('|'),topikName=parts[0].trim(),topikKw=parts[1]?parts[1].trim():'';
     const pert=String(row['pertanyaan']||'').replace(/^\[SOAL UTUH[^\]]*\]\n?/,''); // strip QBE prefix for display
     let topikCell='<div class="td-sel"><select onchange="updateTopik('+ri+',this.value,\''+topikKw.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">'; 
@@ -2968,7 +2983,7 @@ function renderPreview(materiList){
     const stB=status==='Cocok'?'<span class="badge b-cocok">&#x2713; Cocok</span>':status==='Berbeda'?'<span class="badge b-berbeda">&#x26A0; Berbeda</span>':status==='Dibuat_AI'?'<span class="badge b-dibuat">&#x2756; Dibuat AI</span>':status==='Esai_AI'?'<span class="badge b-dibuat">&#x270F; Jawaban Esai</span>':'—';
     const confH=conf>0?'<span class="'+(conf<70?'conf-warn':'conf-ok')+'">'+(conf<70?'&#x26A0; ':'')+conf+'%</span>':'—';
     const tr=document.createElement('tr');
-    tr.innerHTML='<td>'+esc(String(row['no']||ri+1))+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['tipe']||'')+'</td><td class="q-cell" title="'+esc(pert)+'">'+esc(pert.slice(0,55))+(pert.length>55?'&#x2026;':'')+'</td><td style="min-width:160px">'+topikCell+'</td><td>'+bloomB+'</td><td>'+kdB+'</td><td>'+confH+'</td><td style="font-weight:700;color:var(--text2)">'+esc(String(row['kunci']||'—').toUpperCase())+'</td><td style="font-weight:700;color:#4ade80">'+esc(row['Kunci_AI']||'—')+'</td><td>'+stB+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['Rekomendasi_Poin']||'—')+'</td>';
+    tr.innerHTML='<td>'+esc(String(row['no']||ri+1))+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['tipe']||'')+'</td><td class="q-cell" title="'+esc(pert)+'">'+esc(pert.slice(0,55))+(pert.length>55?'&#x2026;':'')+'</td><td style="min-width:160px">'+topikCell+'</td><td>'+bloomB+'</td><td>'+kdB+'</td><td>'+confH+'</td><td style="font-weight:700;color:var(--text2)">'+esc(String(row['kunci']||'—').toUpperCase())+'</td><td style="font-weight:700;color:#4ade80">'+esc(row['kunci_ai']||'—')+'</td><td>'+stB+'</td><td style="font-size:10px;color:var(--text2)">'+esc(row['rekomendasi_poin']||'—')+'</td>';
     frag.appendChild(tr);
   });
   tbody.appendChild(frag);
@@ -4763,7 +4778,9 @@ function createSession(tipe, mapel, kelas, fileInfo, model, mode) {
 
     konteks_analisis: {
       mapel:  mapel,
-      kelas:  kelas
+      kelas:  kelas,
+      model:  model || null,
+      mode:   mode  || null
     },
 
     snapshot_aplikasi:     _buildSnapshotAplikasi(),
@@ -4888,11 +4905,32 @@ function _buildSoalSnapshotRef(materiId, bloom) {
 function finalizeSession(totalSoal, status) {
   if (!_currentSession) return;
   _currentSession.status = status || 'selesai';
-  _currentSession.ringkasan_hasil.total_soal = totalSoal || _soalRecords.length;
-  _currentSession.soal_count = _soalRecords.length;
   _currentSession.diselesaikan_pada = new Date().toISOString();
 
-  // Simpan ringkasan ke localStorage
+  // Hitung ringkasan dari resultData yang sudah diisi applyResult
+  var ring = _currentSession.ringkasan_hasil;
+  ring.total_soal = totalSoal || 0;
+  ring.berhasil   = 0;
+  ring.gagal      = 0;
+  ring.dilewati   = 0;
+  ring.distribusi_bloom     = { C1:0, C2:0, C3:0, C4:0, C5:0, C6:0 };
+  ring.distribusi_kesulitan = {};
+
+  if (typeof resultData !== 'undefined') {
+    resultData.forEach(function(row) {
+      var bloom = row['bloom'] || '';
+      var kesulitan = row['kesulitan'] || '';
+      if (bloom) {
+        ring.berhasil++;
+        if (ring.distribusi_bloom[bloom] !== undefined) ring.distribusi_bloom[bloom]++;
+        if (kesulitan) ring.distribusi_kesulitan[kesulitan] = (ring.distribusi_kesulitan[kesulitan] || 0) + 1;
+      } else {
+        ring.gagal++;
+      }
+    });
+  }
+
+  _currentSession.soal_count = ring.berhasil;
   _pushSessionSummary(_currentSession);
 }
 
@@ -4952,8 +4990,16 @@ doDownload = function() {
   if (!workbook || !resultData.length) { alert('Tidak ada data.'); return; }
   try {
     // Header output: pakai nama asli dari file (origHeadersRaw) + kolom hasil analisis
+    // OUT_COLS berisi key lowercase — tampilkan dengan nama rapi untuk header Excel
+    const OUT_DISPLAY = {
+      'topik':'Topik','bloom':'Bloom','kesulitan':'Kesulitan','confidence':'Confidence',
+      'kunci_ai':'Kunci_AI','status_kunci':'Status_Kunci','rekomendasi_poin':'Rekomendasi_Poin'
+    };
     const displayHdrs = (origHeadersRaw.length ? origHeadersRaw : origHeaders).slice();
-    OUT_COLS.forEach(function(c){ if (!displayHdrs.map(function(h){return h.toLowerCase();}).includes(c.toLowerCase())) displayHdrs.push(c); });
+    OUT_COLS.forEach(function(c){
+      if (!displayHdrs.map(function(h){return h.toLowerCase();}).includes(c.toLowerCase()))
+        displayHdrs.push(OUT_DISPLAY[c] || c);
+    });
     const baseHdrs = displayHdrs.map(function(h){return h.toLowerCase();}); // key internal (lowercase)
 
     // Bangun baris dari resultData — data analisis sudah ada di sini via applyResult
@@ -5035,7 +5081,7 @@ applyResult = function(row, res) {
     kesulitan:    res.kesulitan   || '',
     confidence:   res.confidence  || 0,
     kunci_ai:     res.kunci_ai    || '',
-    status_kunci: row['Status_Kunci'] || ''
+    status_kunci: row['status_kunci'] || ''
   };
 
   var jejak = buildJejak(row, res);
