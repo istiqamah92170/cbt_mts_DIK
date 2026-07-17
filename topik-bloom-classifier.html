@@ -2711,9 +2711,9 @@ window.addEventListener('DOMContentLoaded',function(){
   $id('aKelas').addEventListener('change',onAKelasChange);
   $id('btnRun').addEventListener('click',startAnalysis);
   $id('btnStop').addEventListener('click',function(){abortFlag=true;});
-  $id('btnDownload').addEventListener('click',doDownload);
+  $id('btnDownload').addEventListener('click',function(){ doDownload(); });
   $id('btnReset').addEventListener('click',function(){doResetAFile();$id('aProgress').classList.remove('show');$id('aResults').classList.remove('show');resultData=[];abortFlag=false;});
-  $id('btnAnalyze').addEventListener('click',doSingleAnalyze);
+  $id('btnAnalyze').addEventListener('click',function(){ doSingleAnalyze(); });
 });
 
 function syncKey(v){
@@ -2996,90 +2996,7 @@ function renderPreview(materiList){
 
 function updateTopik(ri,name,kw){resultData[ri]['Topik']=name+(kw?' | '+kw:'');}
 
-function doDownload(){
-  if(!workbook||!resultData.length){alert('Tidak ada data.');return;}
-  try{
-    const ws=workbook.Sheets[workbook.SheetNames[0]];
-    const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-    const hdrs=json[0].map(function(h){return String(h).trim();});
-    const outHdrs=hdrs.slice();OUT_COLS.forEach(function(c){if(!outHdrs.includes(c))outHdrs.push(c);});
-    const pertIdx=hdrs.indexOf('pertanyaan');
-    // Use _ri (row index) as unique key — fixes pg_gambar rows with empty pertanyaan
-    const rMap=new Map();
-    resultData.forEach(function(row){
-      // Primary key: _ri (1-based row index from validateFile)
-      if(row['_ri']!==undefined) rMap.set('ri:'+row['_ri'], row);
-      // Secondary key: pertanyaan text (for rows without _ri)
-      var key=String(row['pertanyaan']||'').trim();
-      if(key&&!rMap.has('q:'+key)) rMap.set('q:'+key, row);
-    });
-    const outRows=[outHdrs];
-    json.slice(1).forEach(function(r, rowIdx){
-      const outRow=outHdrs.map(function(h,i){return i<hdrs.length?(r[i]!==undefined?r[i]:''):'';});
-      // Try _ri match first (1-based: rowIdx+1 maps to json row, but json[0]=header so rowIdx+1 = data row)
-      var found = rMap.get('ri:'+(rowIdx+1));
-      // Fallback: pertanyaan text match
-      if(!found){
-        var qkey=String(r[pertIdx]||'').trim();
-        if(qkey) found=rMap.get('q:'+qkey);
-      }
-      if(found)OUT_COLS.forEach(function(col){var idx=outHdrs.indexOf(col);if(idx>=0)outRow[idx]=found[col]||'';});
-      outRows.push(outRow);
-    });
-    const newWs=XLSX.utils.aoa_to_sheet(outRows),newWb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(newWb,newWs,workbook.SheetNames[0]);
-    const fname='analisis_bloom_'+new Date().toISOString().slice(0,10)+'.xlsx';
-    const wbout=XLSX.write(newWb,{bookType:'xlsx',type:'array'});
-    const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fname;a.style.display='none';
-    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},5000);
-    const b=$id('dlBanner');b.style.display='block';b.innerHTML='<strong>📥 '+fname+'</strong><br><span style="color:var(--text2)">Cek folder Download atau menu ⋮ → Downloads di browser.</span>';
-  }catch(e){alert('Gagal: '+e.message);}
-}
 
-async function doSingleAnalyze(){
-  const mapel=$id('sMapel').value,kelas=$id('sKelas').value;
-  if(!mapel||!kelas){showSErr('Pilih Mapel dan Kelas.');return;}
-  const materiList=getMateriListForKelas(mapel,kelas);
-  if(!materiList.length){showSErr('Tidak ada materi.');return;}
-  const row={tipe:currentTipe,pertanyaan:currentTipe==='pg_gambar'?'':$id('sPert').value.trim(),vrl_gambar:currentTipe==='pg_gambar'?$id('sPgGambar').value.trim():$id('sGambar').value.trim(),opsi_a:$id('sA')?$id('sA').value.trim():'',opsi_b:$id('sB')?$id('sB').value.trim():'',opsi_c:$id('sC')?$id('sC').value.trim():'',opsi_d:$id('sD')?$id('sD').value.trim():'',kunci:currentTipe==='pg_gambar'?$id('sPgKunci').value.trim():$id('sKunci').value.trim()};
-  if(!row.pertanyaan&&!row.vrl_gambar){showSErr('Pertanyaan atau URL gambar wajib diisi.');return;}
-  $id('sResult').classList.add('show');$id('sLoading').style.display='block';$id('sContent').style.display='none';$id('sError').style.display='none';
-  try{
-    let res;
-    if(sMode==='local'){res=localAnalyze(row,mapel,kelas,materiList);}
-    else{const apiKey=$id('sApiKey').value.trim();if(!apiKey){showSErr('API key diperlukan.');return;}const results=await callGemini(apiKey,$id('sModel').value,[row],mapel,kelas,materiList);res=results[0];}
-    if(res.error){showSErr(res.error);return;}
-    const _isEsaiSingle=ESAI.includes(String(row['tipe']||'').toLowerCase().trim());
-    const kA=String(row['kunci']||'').trim().toUpperCase(),kAI=String(res.kunci_ai||'').trim().toUpperCase();
-    const status=_isEsaiSingle?'Esai_AI':(!kA?'Dibuat_AI':kA===kAI?'Cocok':'Berbeda');
-    const bs=BLOOM_SCORE[res.bloom]||1,ds=DIFF_SCORE[res.kesulitan]||1,k=bs+ds;
-    const rekPoin=k<=3?'1-2 poin':k<=5?'2-3 poin':k<=8?'3-4 poin':'4-5 poin';
-    const kdOut=KD_MAP[res.kesulitan]||res.kesulitan;
-    $id('rTopik').textContent=res.topik;
-    $id('rBloom').innerHTML='<span class="badge b-'+res.bloom.toLowerCase()+'">'+res.bloom+'</span>';
-    $id('rKesulitan').innerHTML='<span class="badge b-'+kdOut.toLowerCase()+'">'+kdOut+'</span>';
-    $id('rConf').innerHTML='<span class="'+(res.confidence<70?'conf-warn':'conf-ok')+'">'+(res.confidence<70?'⚠ ':'')+res.confidence+'%</span>';
-    $id('rKunciAI').textContent=res.kunci_ai||'—';
-    $id('rStatus').innerHTML=status==='Cocok'?'<span class="badge b-cocok">✓ Cocok</span>':status==='Berbeda'?'<span class="badge b-berbeda">⚠ Berbeda</span>':status==='Esai_AI'?'<span class="badge b-dibuat">✏ Jawaban Esai</span>':'<span class="badge b-dibuat">✦ Dibuat AI</span>';
-    $id('rPoin').textContent=rekPoin;$id('rKompleks').textContent='Bloom '+bs+' + Diff '+ds+' = '+k;
-    $id('rNote').textContent='Mode: '+(sMode==='local'?'AI Lokal':'Gemini AI')+' · '+mapel+' · Kelas '+kelas;
-    // TKB explainability for single analysis
-    if(res.tkb_result){
-      var tkb=res.tkb_result;
-      var tkbLines=[];
-      tkbLines.push('TKB Prototype ('+tkb.source+')');
-      if(tkb.level) tkbLines.push('TKB Level: '+tkb.level+(tkb.confidence!=null?' (confidence: '+tkb.confidence+'%)':''));
-      if(res.tkb_override) tkbLines.push('⚠ TKB koreksi: '+res.bloom_original+' → '+res.bloom+' | Alasan: '+res.tkb_override.alasan);
-      if(res.tkb_confirms) tkbLines.push('✓ TKB mengkonfirmasi level Gemini');
-      if(tkb.matched_rules&&tkb.matched_rules.length) tkbLines.push('Rules cocok: '+tkb.matched_rules.join(', '));
-      if(tkb.reasons&&tkb.reasons.length) tkbLines.push('Alasan: '+tkb.reasons.slice(0,3).join(' | '));
-      if(tkb.ambiguous) tkbLines.push('⚠ Ambiguitas C1/C2 terdeteksi — pertimbangkan verifikasi manual');
-      $id('rNote').textContent+=' | '+tkbLines.join(' · ');
-    }
-    $id('sLoading').style.display='none';$id('sContent').style.display='block';
-  }catch(e){showSErr(e.message);}
-}
 function showSErr(msg){$id('sResult').classList.add('show');$id('sLoading').style.display='none';$id('sContent').style.display='none';const el=$id('sError');el.style.display='block';el.textContent='✗ '+msg;}
 
 function saveDB(){
@@ -3443,25 +3360,94 @@ function populateSingleTopikDropdown(mapel, kelas, currentTopik) {
   $id('rTopikOverrideRow').style.display = 'flex';
 }
 
-// ─── PATCH doSingleAnalyze to use singleState + topik override UI ─────────────
-var _origDoSingleAnalyze = doSingleAnalyze;
-doSingleAnalyze = async function() {
-  // Reset override state for new analysis
+// ─── doSingleAnalyze — implementasi lengkap Analisis 1 Soal ──────────────────
+async function doSingleAnalyze() {
+  var mapel = ($id('sMapel') && $id('sMapel').value) || '';
+  var kelas = ($id('sKelas') && $id('sKelas').value) || '';
+  var apiKey = ($id('sApiKey') && $id('sApiKey').value.trim()) || ($id('apiKey') && $id('apiKey').value.trim()) || '';
+  var model = ($id('sModel') && $id('sModel').value) || activeModel || 'gemini-2.5-flash';
+
+  if (!mapel || !kelas) { showSErr('Pilih Mata Pelajaran dan Kelas terlebih dahulu.'); return; }
+  if (sMode === 'gemini' && !apiKey) { showSErr('Masukkan API key Gemini terlebih dahulu.'); return; }
+
+  var materiList = getMateriListForKelas(mapel, kelas);
+  if (!materiList.length) { showSErr('Tidak ada daftar materi untuk ' + mapel + ' Kelas ' + kelas + '.'); return; }
+
+  // Bangun row dari form input
+  var row = {
+    tipe:       currentTipe || 'pg_teks',
+    pertanyaan: ($id('sPert') && $id('sPert').value.trim()) || '',
+    vrl_gambar: ($id('sGambar') && $id('sGambar').value.trim()) || '',
+    opsi_a:     ($id('sA') && $id('sA').value.trim()) || '',
+    opsi_b:     ($id('sB') && $id('sB').value.trim()) || '',
+    opsi_c:     ($id('sC') && $id('sC').value.trim()) || '',
+    opsi_d:     ($id('sD') && $id('sD').value.trim()) || '',
+    kunci:      ($id('sKunci') && $id('sKunci').value.trim()) || '',
+    no: 1
+  };
+
+  if (!row.pertanyaan && !row.vrl_gambar) { showSErr('Isi pertanyaan terlebih dahulu.'); return; }
+
+  // Reset state override topik
   singleState.override_by_user = false;
-  $id('rTopikOverrideBadge').style.display = 'none';
+  if ($id('rTopikOverrideBadge')) $id('rTopikOverrideBadge').style.display = 'none';
 
-  await _origDoSingleAnalyze();
+  // Tampilkan loading
+  $id('sResult').classList.add('show');
+  $id('sLoading').style.display = 'block';
+  $id('sContent').style.display = 'none';
+  $id('sError').style.display = 'none';
 
-  // After analysis completes, populate topik dropdown if result visible
-  if ($id('sContent').style.display !== 'none') {
-    var mapel = $id('sMapel').value, kelas = $id('sKelas').value;
-    var topikText = $id('rTopik').textContent || '';
-    var topikName = topikText.split('|')[0].trim();
+  try {
+    var res;
+    if (sMode === 'local') {
+      res = localAnalyze(row, mapel, kelas, materiList);
+    } else {
+      var results = await callGemini(apiKey, model, [row], mapel, kelas, materiList);
+      res = results[0];
+    }
+
+    $id('sLoading').style.display = 'none';
+
+    if (!res || res.error) {
+      showSErr(res ? res.error : 'Analisis gagal.');
+      return;
+    }
+
+    // Tulis hasil ke row dan tampilkan
+    applyResult(row, res);
+
+    $id('sContent').style.display = 'block';
+    $id('rTopik').textContent = res.topik || '—';
+    $id('rBloom').innerHTML = res.bloom ? '<span class="badge b-' + res.bloom.toLowerCase() + '">' + res.bloom + '</span>' : '—';
+    var kdOut = KD_MAP[res.kesulitan] || res.kesulitan || '';
+    $id('rKesulitan').innerHTML = kdOut ? '<span class="badge b-' + kdOut.toLowerCase() + '">' + kdOut + '</span>' : '—';
+    $id('rConf').innerHTML = res.confidence !== undefined
+      ? '<span class="' + (res.confidence < 70 ? 'conf-warn' : 'conf-ok') + '">' + (res.confidence < 70 ? '⚠ ' : '') + res.confidence + '%</span>'
+      : '—';
+    $id('rKunciAI').textContent = res.kunci_ai || '—';
+
+    var status = row['status_kunci'] || '';
+    $id('rStatus').innerHTML = status === 'Cocok'
+      ? '<span class="badge b-cocok">✓ Cocok</span>'
+      : status === 'Berbeda' ? '<span class="badge b-berbeda">⚠ Berbeda</span>'
+      : status === 'Esai_AI' ? '<span class="badge b-dibuat">✏ Jawaban Esai</span>'
+      : '<span class="badge b-dibuat">✦ Dibuat AI</span>';
+
+    $id('rPoin').textContent = row['rekomendasi_poin'] || '—';
+    if ($id('rKompleks')) $id('rKompleks').textContent = '—';
+
+    // Populate dropdown override topik
+    var topikName = res.topik ? res.topik.split('|')[0].trim() : '';
     singleState.topik_ai = topikName;
     singleState.topik_final = topikName;
     populateSingleTopikDropdown(mapel, kelas, topikName);
+
+  } catch(e) {
+    $id('sLoading').style.display = 'none';
+    showSErr(e.message);
   }
-};
+}
 
 // ─── WIRE UP BUTTONS (after DOM ready — patch DOMContentLoaded listener) ──────
 document.addEventListener('DOMContentLoaded', function() {
@@ -4685,75 +4671,143 @@ function _buildSnapshotKurikulum(mapel, kelas) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// _buildMetadataSheet — bangun data sheet audit trail untuk Excel download
+// _buildMetadataSheet — bangun sheet audit trail persis seperti format resmi
 // ─────────────────────────────────────────────────────────────────────────────
 function _buildMetadataSheet() {
   var rows = [];
-  var now = new Date().toLocaleString('id-ID');
+  var sess = typeof _currentSession !== 'undefined' ? _currentSession : null;
+  var app  = sess ? sess.snapshot_aplikasi : null;
+  var pmt  = sess ? sess.snapshot_prompt   : null;
+  var mat  = sess ? sess.snapshot_materi   : [];
+  var kur  = sess ? sess.snapshot_kurikulum: null;
+  var keSnap = sess ? sess.snapshot_ke     : null;
+  var ring = sess ? sess.ringkasan_hasil   : null;
+  var ctx  = sess ? sess.konteks_analisis  : null;
 
-  rows.push(['METADATA ANALISIS BLOOM', '']);
-  rows.push(['Diekspor pada', now]);
-  rows.push(['Versi Aplikasi', typeof APP_VERSION !== 'undefined' ? APP_VERSION : '—']);
-  rows.push(['Versi Prompt', typeof PROMPT_VERSION !== 'undefined' ? PROMPT_VERSION : '—']);
+  // ── Header ────────────────────────────────────────────────────────────────
+  rows.push(['=== METADATA ANALISIS — Knowledge Engine Analyzer ===', '']);
   rows.push(['', '']);
 
-  // Info sesi terakhir jika ada
+  // ── Identitas Sesi ────────────────────────────────────────────────────────
+  rows.push(['IDENTITAS SESI', '']);
+  rows.push(['Session ID',   sess ? sess.session_id         : '—']);
+  rows.push(['Tipe Analisis', sess ? (sess.tipe || 'batch') : '—']);
+  rows.push(['Dijalankan',   sess ? sess.dijalankan_pada    : '—']);
+  rows.push(['Status',       sess ? (sess.status || '—')    : '—']);
+  rows.push(['', '']);
+
+  // ── Versi Aplikasi ────────────────────────────────────────────────────────
+  rows.push(['VERSI APLIKASI', '']);
+  rows.push(['Versi Aplikasi', app ? app.versi_aplikasi : (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '—')]);
+  rows.push(['Schema Sesi',    app ? app.schema_version : (typeof SESSION_SCHEMA !== 'undefined' ? SESSION_SCHEMA : '—')]);
+  rows.push(['', '']);
+
+  // ── Konteks Analisis ──────────────────────────────────────────────────────
+  rows.push(['KONTEKS ANALISIS', '']);
+  rows.push(['Mata Pelajaran', ctx ? ctx.mapel : '—']);
+  rows.push(['Kelas',          ctx ? ctx.kelas : '—']);
+  rows.push(['', '']);
+
+  // ── File Input ────────────────────────────────────────────────────────────
+  rows.push(['FILE INPUT', '']);
+  var fi = sess ? sess.input : null;
+  rows.push(['Nama File',       fi && fi.file_input    ? fi.file_input    : '—']);
+  rows.push(['Ukuran (bytes)',   fi && fi.file_ukuran   ? fi.file_ukuran   : '—']);
+  rows.push(['Terakhir Diubah', fi && fi.file_modified ? new Date(fi.file_modified).toLocaleString('id-ID') : '—']);
+  rows.push(['', '']);
+
+  // ── Prompt Engine ─────────────────────────────────────────────────────────
+  rows.push(['PROMPT ENGINE', '']);
+  rows.push(['Versi Prompt',    pmt ? pmt.prompt_version    : (typeof PROMPT_VERSION !== 'undefined' ? PROMPT_VERSION : '—')]);
+  rows.push(['Instruksi',       pmt ? pmt.instruksi_ringkas : 'Analisis Bloom, Kesulitan, Topik, Kunci AI per soal berbasis daftar materi']);
+  rows.push(['Provider AI',     pmt && pmt.parameter_ai ? pmt.parameter_ai.provider : '—']);
+  rows.push(['Model AI',        ctx ? (ctx.model || '—') : '—']);
+  rows.push(['Mode',            ctx ? (ctx.mode  || '—') : '—']);
+  rows.push(['', '']);
+
+  // ── Knowledge Engine ──────────────────────────────────────────────────────
+  rows.push(['KNOWLEDGE ENGINE', '']);
   try {
-    var sessions = typeof getSessionHistory === 'function' ? getSessionHistory() : [];
-    if (sessions.length) {
-      var s = sessions[0];
-      rows.push(['SESSION TERAKHIR', '']);
-      rows.push(['Session ID', s.session_id || '—']);
-      rows.push(['Dijalankan pada', s.dijalankan_pada ? new Date(s.dijalankan_pada).toLocaleString('id-ID') : '—']);
-      rows.push(['Mata Pelajaran', (s.konteks && s.konteks.mapel) || '—']);
-      rows.push(['Kelas', (s.konteks && s.konteks.kelas) || '—']);
-      rows.push(['Model AI', (s.konteks && s.konteks.model) || '—']);
-      rows.push(['Total Soal', (s.ringkasan && s.ringkasan.total_soal) || '—']);
-      rows.push(['Berhasil', (s.ringkasan && s.ringkasan.berhasil) || '—']);
-      rows.push(['', '']);
-    }
-  } catch(e) {}
-
-  // Distribusi Bloom dari resultData
-  if (typeof resultData !== 'undefined' && resultData.length) {
-    rows.push(['DISTRIBUSI BLOOM', '']);
-    var bloomCount = {};
-    resultData.forEach(function(r) {
-      var b = r['Bloom'] || r['bloom'] || '';
-      if (b) bloomCount[b] = (bloomCount[b] || 0) + 1;
-    });
-    var total = resultData.length;
-    ['C1','C2','C3','C4','C5','C6'].forEach(function(lvl) {
-      var n = bloomCount[lvl] || 0;
-      if (n > 0) rows.push([lvl, n + ' soal (' + Math.round(n/total*100) + '%)']);
-    });
-    rows.push(['', '']);
-
-    // Distribusi Kesulitan
-    rows.push(['DISTRIBUSI KESULITAN', '']);
-    var diffCount = {};
-    resultData.forEach(function(r) {
-      var d = r['Kesulitan'] || r['kesulitan'] || '';
-      if (d) diffCount[d] = (diffCount[d] || 0) + 1;
-    });
-    Object.keys(diffCount).forEach(function(d) {
-      var n = diffCount[d];
-      rows.push([d, n + ' soal (' + Math.round(n/total*100) + '%)']);
-    });
-    rows.push(['', '']);
-  }
-
-  // Versi Knowledge Engine aktif
-  try {
-    if (typeof KnowledgeEngine !== 'undefined') {
-      rows.push(['KNOWLEDGE ENGINE', '']);
+    if (keSnap && typeof keSnap === 'object') {
+      // Dari snapshot sesi
+      ['TKB','BKB','DKB','PKB','RKB'].forEach(function(eng) {
+        var v = keSnap[eng] || {};
+        rows.push([eng, 'versi=' + (v.versi || '—') + ' | status=' + (v.status || '—')]);
+      });
+    } else if (typeof KnowledgeEngine !== 'undefined') {
+      // Dari KnowledgeEngine aktif saat ini
       ['TKB','BKB','DKB','PKB','RKB'].forEach(function(eng) {
         var v = KnowledgeEngine[eng] ? KnowledgeEngine[eng].getVersion() : null;
-        rows.push([eng, v ? (v.versi || '—') + ' (' + (v.status || '—') + ')' : '—']);
+        rows.push([eng, v ? 'versi=' + (v.versi || '—') + ' | status=' + (v.status || '—') : '—']);
       });
-      rows.push(['', '']);
     }
   } catch(e) {}
+  rows.push(['', '']);
+
+  // ── Snapshot Materi ───────────────────────────────────────────────────────
+  rows.push(['SNAPSHOT MATERI (' + (mat ? mat.length : 0) + ' item)', '']);
+  rows.push(['ID Materi', 'Nama Materi', 'Versi', 'Diperbarui']);
+  if (mat && mat.length) {
+    mat.forEach(function(m) {
+      rows.push([m.materi_id || m.id || '—', m.nama_materi || m.materi || '—', m.content_version || '1.0', m.content_updated_at || '—']);
+    });
+  }
+  rows.push(['', '']);
+
+  // ── Snapshot Kurikulum ────────────────────────────────────────────────────
+  rows.push(['SNAPSHOT KURIKULUM', '']);
+  rows.push(['Versi DB Kurikulum',  kur ? (kur.database_version || '—')    : '—']);
+  rows.push(['DB Kurikulum Update', kur ? (kur.database_updated_at || '—') : '—']);
+  var entitas = kur ? (kur.entitas || {}) : {};
+  var entKeys = Object.keys(entitas);
+  rows.push(['Entitas direferensikan (' + entKeys.length + ')', '']);
+  if (entKeys.length) {
+    rows.push(['ID', 'Tipe', 'Versi', 'Narasi']);
+    entKeys.forEach(function(id) {
+      var e = entitas[id];
+      rows.push([id, e.type || '—', e.versi || '—', (e.narasi || e.elemen || '').slice(0, 80)]);
+    });
+  }
+  rows.push(['', '']);
+
+  // ── Ringkasan Hasil ───────────────────────────────────────────────────────
+  rows.push(['RINGKASAN HASIL', '']);
+  rows.push(['Total Soal',  ring ? (ring.total_soal || 0) : (typeof resultData !== 'undefined' ? resultData.length : '—')]);
+  rows.push(['Berhasil',    ring ? (ring.berhasil   || 0) : '—']);
+  rows.push(['Gagal',       ring ? (ring.gagal       || 0) : '—']);
+  rows.push(['Dilewati',    ring ? (ring.dilewati    || 0) : '—']);
+  rows.push(['', '']);
+
+  // ── Distribusi Bloom ──────────────────────────────────────────────────────
+  rows.push(['DISTRIBUSI BLOOM', '']);
+  var db = ring ? ring.distribusi_bloom : {};
+  if (!db || !Object.keys(db).length) {
+    // Hitung langsung dari resultData jika ring tidak ada
+    db = { C1:0, C2:0, C3:0, C4:0, C5:0, C6:0 };
+    if (typeof resultData !== 'undefined') {
+      resultData.forEach(function(r) { var b = r['bloom'] || ''; if (db[b] !== undefined) db[b]++; });
+    }
+  }
+  ['C1','C2','C3','C4','C5','C6'].forEach(function(lvl) { rows.push([lvl, db[lvl] || 0]); });
+  rows.push(['', '']);
+
+  // ── Distribusi Kesulitan ──────────────────────────────────────────────────
+  rows.push(['DISTRIBUSI KESULITAN', '']);
+  var dk = ring ? ring.distribusi_kesulitan : {};
+  if (!dk || !Object.keys(dk).length) {
+    dk = {};
+    if (typeof resultData !== 'undefined') {
+      resultData.forEach(function(r) { var d = r['kesulitan'] || ''; if (d) dk[d] = (dk[d] || 0) + 1; });
+    }
+  }
+  ['Sangat Mudah','Mudah','Sedang','Sulit','Sangat Sulit'].forEach(function(lvl) {
+    if (dk[lvl]) rows.push([lvl, dk[lvl]]);
+  });
+  rows.push(['', '']);
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  rows.push(['--- Dokumen ini dibuat otomatis oleh Knowledge Engine Analyzer ---', '']);
+  rows.push(['--- Jangan mengubah isi sheet ini secara manual ---', '']);
 
   return rows;
 }
@@ -4986,7 +5040,7 @@ function buildJejak(row, res) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH doDownload — bangun Excel langsung dari resultData (andal, tidak perlu re-match)
 // ─────────────────────────────────────────────────────────────────────────────
-doDownload = function() {
+var doDownload = function() {
   if (!workbook || !resultData.length) { alert('Tidak ada data.'); return; }
   try {
     // Header output: pakai nama asli dari file (origHeadersRaw) + kolom hasil analisis
