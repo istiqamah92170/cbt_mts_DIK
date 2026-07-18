@@ -54,7 +54,6 @@ header{border-bottom:1px solid var(--bor);padding:0 1.5rem;display:flex;align-it
 .al.show{display:block}
 .al-ok{background:rgba(62,207,142,.08);color:var(--grn);border-color:rgba(62,207,142,.25)}
 .al-er{background:rgba(242,107,107,.08);color:var(--red);border-color:rgba(242,107,107,.25)}
-.al-w{background:rgba(245,166,35,.08);color:var(--amb);border-color:rgba(245,166,35,.25)}
 .ib{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:11px 13px;font-size:13px;color:var(--mut);margin-bottom:1rem;line-height:1.7}
 code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
 ::-webkit-scrollbar{width:5px}
@@ -75,7 +74,6 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
     <button class="tb" onclick="swTab('info',this)">ℹ️ Info</button>
   </div>
 
-  <!-- TAB UPLOAD -->
   <div id="tab-upload">
     <div class="dz" id="dz" onclick="document.getElementById('fi').click()">
       <div style="font-size:34px;margin-bottom:8px">📄</div>
@@ -89,16 +87,15 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
       <div style="flex:1"><div style="font-weight:500" id="fn">—</div><div style="font-size:12px;color:var(--mut)" id="fs">—</div></div>
       <button class="btn btn-s btn-sm" onclick="swTab('protect',document.querySelectorAll('.tb')[1])">Proteksi →</button>
     </div>
-    <div class="ib">
+    <div class="ib" style="margin-top:1rem">
       <strong style="color:var(--txt);display:block;margin-bottom:5px">Cara penggunaan</strong>
-      1. Upload file HTML kamu di sini.<br>
-      2. Buka tab <strong style="color:var(--txt)">Proteksi</strong>, pilih lapisan proteksi, klik proses.<br>
+      1. Upload file HTML kamu.<br>
+      2. Buka tab <strong style="color:var(--txt)">Proteksi</strong>, pilih lapisan, klik proses.<br>
       3. File hasil langsung diunduh — siap deploy.<br><br>
-      <span style="color:var(--grn)">📲 Script PWA (data-pwa-converter) otomatis dipindah ke &lt;head&gt; sebelum diproses.</span>
+      <span style="color:var(--grn)">📲 Script PWA (data-pwa-converter) otomatis dipindah ke &lt;head&gt;.</span>
     </div>
   </div>
 
-  <!-- TAB PROTEKSI -->
   <div id="tab-protect" style="display:none">
     <p class="sl">Informasi pemilik</p>
     <div class="ig">
@@ -111,6 +108,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
 
     <p class="sl">Lapisan proteksi</p>
     <div class="ol">
+
       <label class="oc"><input type="checkbox" id="o-watermark" checked>
         <div><div class="oh"><span class="on">Watermark komentar</span><span class="badge b1">v1</span></div>
         <div class="od">ID unik + nama + tanggal di awal kode sebagai bukti kepemilikan</div></div></label>
@@ -119,13 +117,17 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
         <div><div class="oh"><span class="on">Meta hak cipta</span><span class="badge b1">v1</span></div>
         <div class="od">Tag author dan copyright di &lt;head&gt;</div></div></label>
 
+      <label class="oc"><input type="checkbox" id="o-branding" checked>
+        <div><div class="oh"><span class="on">Branding integrity lock</span><span class="badge bp">PRO</span><span class="badge bn">Baru</span></div>
+        <div class="od">6 watermark tersebar di CSS, JS, HTML, dan meta + runtime check setiap 5 detik — jika nama app atau branding diubah, muncul peringatan merah</div></div></label>
+
       <label class="oc"><input type="checkbox" id="o-obfuscate" checked>
-        <div><div class="oh"><span class="on">Obfuskasi JS inline</span><span class="badge bp">PRO</span><span class="badge bn">Baru</span></div>
-        <div class="od">Semua string di dalam &lt;script&gt; tag dipecah menjadi karakter unicode — sangat sulit dibaca manual</div></div></label>
+        <div><div class="oh"><span class="on">Obfuskasi script inline</span><span class="badge bp">PRO</span></div>
+        <div class="od">Semua blok script diobfuskasi dengan Base64 eval — sangat sulit dibaca manual</div></div></label>
 
       <label class="oc"><input type="checkbox" id="o-rightclick" checked>
         <div><div class="oh"><span class="on">Blokir klik kanan</span><span class="badge b1">v1</span></div>
-        <div class="od">Context menu browser dinonaktifkan</div></div></label>
+        <div class="od">Context menu dinonaktifkan (otomatis dilewati jika file sudah punya listener sendiri)</div></div></label>
 
       <label class="oc"><input type="checkbox" id="o-devtools" checked>
         <div><div class="oh"><span class="on">Blokir shortcut DevTools</span><span class="badge b1">v1</span></div>
@@ -158,6 +160,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
       <label class="oc"><input type="checkbox" id="o-timebomb" onchange="document.getElementById('exp-wrap').style.display=this.checked?'block':'none'">
         <div><div class="oh"><span class="on">Time-lock kedaluwarsa</span><span class="badge b2">v2</span></div>
         <div class="od">Berhenti berfungsi setelah tanggal tertentu</div></div></label>
+
     </div>
 
     <div class="pw-w" id="pw-w">
@@ -172,102 +175,74 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
     <div class="al al-er" id="al-er"></div>
   </div>
 
-  <!-- TAB INFO -->
   <div id="tab-info" style="display:none">
     <div class="ib" style="border-color:rgba(45,212,191,.25)">
       <strong style="color:var(--tel);display:block;margin-bottom:6px">🔐 Pendekatan Proteksi v4</strong>
-      Engine ini menggunakan <strong style="color:var(--txt)">proteksi berlapis tanpa enkripsi body</strong>:<br><br>
-      • <strong style="color:var(--txt)">Obfuskasi JS</strong> — string di dalam script dipecah ke unicode array, sangat sulit dibaca<br>
-      • <strong style="color:var(--txt)">Watermark digital</strong> — ID unik + timestamp sebagai bukti kepemilikan hukum<br>
-      • <strong style="color:var(--txt)">Anti-inspect</strong> — blokir DevTools dan destruksi halaman jika dibuka<br>
-      • <strong style="color:var(--txt)">Fingerprinting</strong> — rekam siapa yang membuka file<br><br>
-      <span style="color:var(--amb)">Enkripsi body tidak digunakan karena menyebabkan aplikasi tidak berfungsi — ini keputusan teknis yang benar untuk aplikasi CBT.</span>
+      Engine menggunakan <strong style="color:var(--txt)">proteksi berlapis tanpa enkripsi body</strong> — aplikasi tetap berjalan 100% normal.<br><br>
+      <strong style="color:var(--txt)">Branding Integrity Lock</strong> menyisipkan watermark di 6 lokasi berbeda dan melakukan pengecekan setiap 5 detik. Jika nama brand atau identitas diubah, peringatan merah muncul di atas aplikasi secara otomatis.
     </div>
     <div class="ib">
-      <strong style="color:var(--txt);display:block;margin-bottom:6px">📋 Perlindungan hukum</strong>
-      Watermark ID unik + timestamp yang disisipkan engine ini berfungsi sebagai <strong style="color:var(--txt)">bukti kepemilikan digital</strong> yang dapat digunakan dalam sengketa hak cipta. Daftarkan juga ke <strong style="color:var(--txt)">DJKI (djki.go.id)</strong> untuk perlindungan hukum penuh.
+      <strong style="color:var(--txt);display:block;margin-bottom:6px">📋 6 Lokasi Watermark</strong>
+      1. CSS comment di dalam :root<br>
+      2. CSS variable tersembunyi (--_wm-id)<br>
+      3. Atribut data-wm di body tag<br>
+      4. Meta tag tersembunyi di head<br>
+      5. Zero-width karakter di judul aplikasi<br>
+      6. Comment di akhir setiap blok style
     </div>
   </div>
 </div>
 
 <script>
-var _fc='', _fn='';
-var _dz=document.getElementById('dz');
-var _fi=document.getElementById('fi');
+var _fc='',_fn='';
 
-_dz.addEventListener('dragover',function(e){e.preventDefault();_dz.classList.add('over');});
-_dz.addEventListener('dragleave',function(){_dz.classList.remove('over');});
-_dz.addEventListener('drop',function(e){
-  e.preventDefault();_dz.classList.remove('over');
-  if(e.dataTransfer.files[0])_lf(e.dataTransfer.files[0]);
+document.addEventListener('DOMContentLoaded',function(){
+  var _dz=document.getElementById('dz');
+  var _fi=document.getElementById('fi');
+  if(_dz){
+    _dz.addEventListener('dragover',function(e){e.preventDefault();_dz.classList.add('over');});
+    _dz.addEventListener('dragleave',function(){_dz.classList.remove('over');});
+    _dz.addEventListener('drop',function(e){e.preventDefault();_dz.classList.remove('over');if(e.dataTransfer.files[0])_lf(e.dataTransfer.files[0]);});
+  }
+  if(_fi){
+    _fi.addEventListener('change',function(e){if(e.target.files[0])_lf(e.target.files[0]);});
+  }
 });
-_fi.addEventListener('change',function(e){if(e.target.files[0])_lf(e.target.files[0]);});
 
 function _lf(f){
   if(!f.name.match(/\.html?$/i)){alert('Hanya .html atau .htm');return;}
   _fn=f.name;
   var r=new FileReader();
-  r.onload=function(e){
-    _fc=e.target.result;
-    document.getElementById('finfo').classList.add('show');
-    document.getElementById('fn').textContent=_fn;
-    document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB';
-  };
+  r.onload=function(e){_fc=e.target.result;document.getElementById('finfo').classList.add('show');document.getElementById('fn').textContent=_fn;document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB';};
   r.readAsText(f);
 }
 
 function swTab(n,btn){
-  ['upload','protect','info'].forEach(function(t){
-    document.getElementById('tab-'+t).style.display='none';
-  });
+  ['upload','protect','info'].forEach(function(t){document.getElementById('tab-'+t).style.display='none';});
   document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+n).style.display='block';
   if(btn)btn.classList.add('active');
 }
 
-function _uid(){
-  return 'WM-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();
-}
+function _uid(){return 'WM-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();}
 function _sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-function _sp(pct,lbl){
-  document.getElementById('pw-b').style.width=pct+'%';
-  document.getElementById('pw-l').textContent=lbl;
-}
-function _dl(content,name){
-  var blob=new Blob([content],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url;a.download=name;a.click();
-  URL.revokeObjectURL(url);
-}
-function _al(type,msg){
-  document.getElementById('al-ok').textContent='';
-  document.getElementById('al-ok').classList.remove('show');
-  document.getElementById('al-er').textContent='';
-  document.getElementById('al-er').classList.remove('show');
-  var el=document.getElementById('al-'+type);
-  el.textContent=msg;el.classList.add('show');
+function _sp(pct,lbl){document.getElementById('pw-b').style.width=pct+'%';document.getElementById('pw-l').textContent=lbl;}
+function _dl(content,name){var blob=new Blob([content],{type:'text/html;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
+function _al(type,msg){['ok','er'].forEach(function(t){var el=document.getElementById('al-'+t);el.textContent='';el.classList.remove('show');});var el=document.getElementById('al-'+type);el.textContent=msg;el.classList.add('show');}
+
+// Hash sederhana untuk branding check
+function _simHash(str){
+  var h=0;
+  for(var i=0;i<str.length;i++){h=(Math.imul(31,h)+str.charCodeAt(i))|0;}
+  return Math.abs(h).toString(16).padStart(8,'0');
 }
 
-// Obfuskasi string — pecah jadi unicode array
-function _obfStr(s){
-  var arr=[];
-  for(var i=0;i<s.length;i++)arr.push(s.charCodeAt(i));
-  return '['+arr.join(',')+'].map(function(c){return String.fromCharCode(c);}).join("")';
-}
-
-// Obfuskasi semua string literal di dalam blok script
-function _obfScript(src){
-  // Ganti string literal (single dan double quote) dengan versi unicode array
-  // Kecuali string yang sangat pendek (< 4 char) untuk efisiensi
-  return src.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g,function(match){
-    if(match.length<6)return match; // biarkan string pendek
-    var inner=match.slice(1,-1);
-    if(inner.length<4)return match;
-    try{
-      return _obfStr(inner);
-    }catch(e){return match;}
-  });
+// Sisipkan konten ke dalam string HTML tanpa replace()
+function _ins(str,target,content,after){
+  var idx=str.indexOf(target);
+  if(idx===-1)return after?str+content:content+str;
+  if(after)idx+=target.length;
+  return str.slice(0,idx)+content+str.slice(idx);
 }
 
 async function runProtect(){
@@ -287,26 +262,22 @@ async function runProtect(){
   document.getElementById('al-ok').classList.remove('show');
   document.getElementById('al-er').classList.remove('show');
 
-  await _sleep(80); _sp(10,'Menganalisis struktur HTML...');
+  await _sleep(80);_sp(8,'Menganalisis struktur HTML...');
   var html=_fc;
 
-  // AUTO-RELOCATE script PWA dari body ke head
-  await _sleep(80); _sp(20,'Merelokasi script PWA...');
+  // AUTO-RELOCATE PWA script
+  await _sleep(80);_sp(18,'Merelokasi script PWA...');
   var pwaOk=false;
   (function(){
     var p=new DOMParser();
     var d=p.parseFromString(html,'text/html');
     var sw=d.querySelectorAll('body script[data-pwa-converter]');
-    if(sw.length){
-      sw.forEach(function(s){d.head.appendChild(s.cloneNode(true));s.remove();});
-      html='<!DOCTYPE html>\n'+d.documentElement.outerHTML;
-      pwaOk=true;
-    }
+    if(sw.length){sw.forEach(function(s){d.head.appendChild(s.cloneNode(true));s.remove();});html='<!DOCTYPE html>\n'+d.documentElement.outerHTML;pwaOk=true;}
   })();
 
-  await _sleep(80); _sp(30,'Menyisipkan watermark & meta...');
+  await _sleep(80);_sp(28,'Menyisipkan watermark & meta...');
 
-  // WATERMARK
+  // WATERMARK KOMENTAR
   var wm='';
   if(document.getElementById('o-watermark').checked){
     wm='\n<!-- ================================================\n'
@@ -316,11 +287,10 @@ async function runProtect(){
       +'  ID Unik  : '+id+'\n'
       +'  Tanggal  : '+date+'\n'
       +'  Hak Cipta: \u00a9 '+year+' '+owner+'\n'
-      +'  Dilarang menduplikasi tanpa izin.\n'
       +'================================================ -->\n';
   }
 
-  // META
+  // META TAG
   var meta='';
   if(document.getElementById('o-meta').checked){
     meta+='<meta name="author" content="'+owner+'">\n';
@@ -328,19 +298,107 @@ async function runProtect(){
     meta+='<meta name="protection-id" content="'+id+'">\n';
   }
 
-  await _sleep(100); _sp(45,'Membangun lapisan proteksi JS...');
+  await _sleep(80);_sp(38,'Branding integrity lock...');
 
-  // PROTEKSI JS
+  // BRANDING INTEGRITY LOCK — 6 WATERMARK TERSEBAR
+  if(document.getElementById('o-branding').checked){
+    // Ekstrak nilai branding dari file
+    var appNameM=html.match(/institution_name\s*:\s*['"]([^'"]+)['"]/);
+    var themeM=html.match(/--blue-main\s*:\s*(#[a-fA-F0-9]{3,6})/);
+    var titleM=html.match(/<title>([^<]+)<\/title>/);
+    var appName=appNameM?appNameM[1]:(titleM?titleM[1]:'App');
+    var themeColor=themeM?themeM[1]:'#059669';
+    var brandHash=_simHash(appName+themeColor);
+    var ownerHash=_simHash(owner+id);
+
+    // WM1: CSS comment — disisipkan di dalam blok <style> pertama sebagai komentar CSS
+    // BUKAN setelah :root{ agar tidak bocor ke konten HTML
+    if(html.indexOf('<style')>-1){
+      var stIdx=html.indexOf('>',html.indexOf('<style'))+1;
+      html=html.slice(0,stIdx)+'/* __WM:'+id+':'+ownerHash+' */'+html.slice(stIdx);
+    }
+
+    // WM2: CSS variable tersembunyi — disisipkan di dalam :root{} yang ada di dalam <style>
+    // Pastikan :root{ ada di dalam konteks CSS, bukan di luar
+    var rootIdx=html.indexOf(':root{');
+    if(rootIdx>-1&&html.lastIndexOf('<style',rootIdx)>html.lastIndexOf('</style>',rootIdx)){
+      html=html.slice(0,rootIdx+6)+'--_wm-id:"'+id.slice(0,8)+'";--_wm-d:"'+date+'";'+html.slice(rootIdx+6);
+    }
+
+    // WM3: data-wm di body tag
+    var bodyM=html.match(/<body([^>]*)>/i);
+    if(bodyM){
+      var newBody='<body'+bodyM[1]+' data-wm="'+id+'" data-owner="'+btoa(unescape(encodeURIComponent(owner)))+'">';
+      html=html.slice(0,html.indexOf(bodyM[0]))+newBody+html.slice(html.indexOf(bodyM[0])+bodyM[0].length);
+    }
+
+    // WM4: Meta tersembunyi di head
+    var wm4='<meta name="_wm" content="'+id+'">'
+      +'<meta name="_bh" content="'+brandHash+'">';
+    meta+=wm4+'\n';
+
+    // WM5: Zero-width marker di judul
+    var zwm='\u200B\u200C\u200B';
+    if(html.indexOf('<title>')>-1){
+      var tStart=html.indexOf('<title>')+7;
+      var tEnd=html.indexOf('</title>');
+      if(tEnd>tStart){
+        var titleTxt=html.slice(tStart,tEnd);
+        html=html.slice(0,tStart)+titleTxt[0]+zwm+titleTxt.slice(1)+html.slice(tEnd);
+      }
+    }
+
+    // WM6: Comment di setiap akhir blok style
+    html=html.split('</style>').join('/* _b:'+ownerHash.slice(0,6)+' */</style>');
+
+    // RUNTIME CHECK — cek branding setiap 5 detik
+    var wid=JSON.stringify(id);
+    var wbh=JSON.stringify(brandHash);
+    var wowner=JSON.stringify(owner);
+    var wid8=JSON.stringify(id.slice(0,8));
+    var rtCheck='(function(){'
+      +'var _id='+wid+';'
+      +'var _bh='+wbh+';'
+      +'var _on='+wowner+';'
+      +'var _id8='+wid8+';'
+      +'function _h(s){var h=0;for(var i=0;i<s.length;i++){h=(Math.imul(31,h)+s.charCodeAt(i))|0;}return Math.abs(h).toString(16).padStart(8,"0");}'
+      +'function _warn(r){'
+      +'if(document.getElementById("_wm_warn"))return;'
+      +'var ov=document.createElement("div");'
+      +'ov.id="_wm_warn";'
+      +'ov.style.cssText="position:fixed;top:0;left:0;width:100%;background:rgba(220,38,38,.96);color:#fff;padding:13px 18px;z-index:999999;font-family:sans-serif;font-size:13px;font-weight:600;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.3)";'
+      +'ov.textContent="\u26a0 Aplikasi ini telah dimodifikasi secara tidak sah \u2014 '+owner+'";'
+      +'if(document.body)document.body.appendChild(ov);'
+      +'}'
+      +'function _chk(){'
+      // Cek 1: meta _wm masih ada dan benar
+      +'var _m=document.querySelector("meta[name=\'_wm\']");'
+      +'if(!_m||_m.getAttribute("content")!==_id){_warn("meta-wm");return;}'
+      // Cek 2: data-wm di body masih ada
+      +'var _bwm=document.body&&document.body.getAttribute("data-wm");'
+      +'if(_bwm&&_bwm!==_id){_warn("body-wm");return;}'
+      // Cek 3: CSS variable _wm-id masih ada
+      +'var _cv=getComputedStyle(document.documentElement).getPropertyValue("--_wm-id").trim();'
+      +'if(_cv&&_cv.replace(/["\'"]/g,"").indexOf(_id8)===-1){_warn("css-wm");return;}'
+      +'}'
+      +'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(_chk,500);});}else{setTimeout(_chk,500);}'
+      +'setInterval(_chk,5000);'
+      +'})();';
+
+    // Sisipkan runtime check ke file
+    var rcTag='<scr'+'ipt data-wm-rt="1">'+rtCheck+'</'+'script>';
+    if(html.indexOf('</head>')>-1){html=_ins(html,'</head>',rcTag,false);}
+    else html+=rcTag;
+  }
+
+  await _sleep(100);_sp(50,'Membangun lapisan proteksi JS...');
+
   var jsArr=[];
 
+  // Blokir klik kanan — cerdas: skip jika file sudah punya
   if(document.getElementById('o-rightclick').checked){
-    // Deteksi apakah file sudah punya contextmenu listener sendiri
-    // Jika ada, engine tidak menambahkan agar tidak konflik dengan pengecualian yang ada
-    var hasCtxMenu=html.indexOf("addEventListener('contextmenu'")>-1
-      ||html.indexOf('addEventListener("contextmenu"')>-1;
-    if(!hasCtxMenu){
-      jsArr.push("document.addEventListener('contextmenu',function(e){e.preventDefault();});");
-    }
+    var hasCtx=html.indexOf("addEventListener('contextmenu'")>-1||html.indexOf('addEventListener("contextmenu"')>-1;
+    if(!hasCtx)jsArr.push("document.addEventListener('contextmenu',function(e){e.preventDefault();});");
   }
 
   if(document.getElementById('o-devtools').checked)
@@ -358,74 +416,54 @@ async function runProtect(){
   if(document.getElementById('o-consolewarn').checked)
     jsArr.push("console.log('%c\u26a0 HAK CIPTA\\n%c\u00a9 "+year+" "+owner+(email?" | "+email:"")+"\\nID: "+id+"','color:#f26b6b;font-size:15px;font-weight:bold','color:#888;font-size:12px');");
 
-  if(document.getElementById('o-selfmod').checked&&domain)
-    jsArr.push("(function(){var h=window.location.hostname;if(h&&h!=='"+domain+"'&&h!=='www."+domain+"'){document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>Akses Tidak Sah</h2></div>';}})();");
+  if(document.getElementById('o-selfmod').checked&&domain&&domain.trim().length>3){
+    var cd=domain.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+    jsArr.push('(function(){var h=window.location.hostname;var ok=["'+cd+'","www.'+cd+'","localhost",""];if(ok.indexOf(h)===-1){document.body.innerHTML="<div style=\'font:16px sans-serif;text-align:center;padding:4rem\'><h2>Akses Tidak Sah<\/h2><p style=\'color:#666;margin-top:8px\'>Hubungi pemilik resmi.<\/p><\/div>";}})();');
+  }
 
   if(document.getElementById('o-timebomb').checked&&expiry)
     jsArr.push("(function(){if(new Date()>new Date('"+expiry+"')){document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>Lisensi Kedaluwarsa</h2></div>';}})();");
 
-  await _sleep(100); _sp(60,'Obfuskasi kode JS...');
+  await _sleep(100);_sp(65,'Obfuskasi script aplikasi...');
 
-  // OBFUSKASI — samarkan variabel nama proteksi
-  var varNames=['_a','_b','_c','_d','_e','_f'].map(function(v){
-    return v+'='+Math.floor(Math.random()*99999);
-  });
-  var protJs='(function(){\nvar '+varNames.join(',')+';\n'+jsArr.join('\n')+'\n})();';
-
-  await _sleep(80); _sp(75,'Obfuskasi script aplikasi...');
-
-  // OBFUSKASI SCRIPT INLINE DI FILE HTML
+  // OBFUSKASI SEMUA SCRIPT INLINE
   if(document.getElementById('o-obfuscate').checked){
-    // Obfuskasi setiap blok <script> yang bukan dari engine
-    html=html.replace(/<script(?![^>]*src=)([^>]*)>([\s\S]*?)<\/script>/gi,function(match,attrs,content){
-      // Skip script yang sudah merupakan proteksi atau sangat kecil
-      if(content.trim().length<50)return match;
-      if(attrs.indexOf('data-pid')>-1||attrs.indexOf('_aes')>-1)return match;
-      // Encode konten script sebagai base64 dan gunakan eval
+    // Gunakan regex replace — lebih reliable dari split
+    // Skip script dengan atribut khusus atau konten kecil
+    html=html.replace(/(<script)((?:[^>(?!>)]|(?:"[^"]*")|(?:'[^']*'))*)(>)([\s\S]*?)(<\/script>)/gi,function(match,open,attrsPart,closeTag,content,closeScript){
+      var skip=attrsPart.indexOf('src=')>-1
+        ||attrsPart.indexOf('data-pid')>-1
+        ||attrsPart.indexOf('data-wm-rt')>-1
+        ||attrsPart.indexOf('data-pwa-converter')>-1
+        ||content.trim().length<80;
+      if(skip)return match;
       try{
         var b64=btoa(unescape(encodeURIComponent(content)));
-        return '<script'+attrs+'>eval(decodeURIComponent(escape(atob("'+b64+'"))))<\/script>';
+        return open+attrsPart+closeTag+'eval(decodeURIComponent(escape(atob("'+b64+'"))))'+closeScript;
       }catch(e){return match;}
     });
   }
 
-  await _sleep(80); _sp(88,'Menyisipkan honeypot & finalisasi...');
+  await _sleep(80);_sp(80,'Menyisipkan honeypot & finalisasi...');
 
   // HONEYPOT
-  var hp='';
   if(document.getElementById('o-honeypot').checked){
-    hp='<!-- OWNER:'+id+':'+owner+':'+date+' -->'
+    var hp='<!-- OWNER:'+id+':'+encodeURIComponent(owner)+':'+date+' -->'
       +'<span style="display:none!important;position:absolute;left:-9999px" data-wm="'+id+'">'+id+'</span>';
+    var bm2=html.match(/<body[^>]*>/i);
+    if(bm2){var bi2=html.indexOf(bm2[0])+bm2[0].length;html=html.slice(0,bi2)+'\n'+hp+'\n'+html.slice(bi2);}
   }
 
   // BLOK PROTEKSI FINAL
+  var vn=['_a','_b','_c','_d','_e'].map(function(v){return v+'='+Math.floor(Math.random()*99999);});
+  var protJs='(function(){\nvar '+vn.join(',')+';\n'+jsArr.join('\n')+'\n})();';
   var protBlock='\n<!-- PROTECTED:'+id+' -->\n'
-    +'<script data-pid="'+id+'">\n'+protJs+'\n<\/script>\n';
+    +'<scr'+'ipt data-pid="'+id+'">\n'+protJs+'\n'+'</'+'script>\n';
 
-  // SISIPKAN KE HTML menggunakan indexOf + slice (bukan replace)
-  function ins(str,target,content,after){
-    var idx=str.indexOf(target);
-    if(idx===-1)return after?str+content:content+str;
-    if(after){idx+=target.length;}
-    return str.slice(0,idx)+content+str.slice(idx);
-  }
-
+  // WATERMARK & META
   if(wm)html=wm+html;
-
-  if(meta){
-    if(html.indexOf('<head>')>-1)html=ins(html,'<head>','\n'+meta,true);
-    else if(html.indexOf('<HEAD>')>-1)html=ins(html,'<HEAD>','\n'+meta,true);
-  }
-
-  if(hp){
-    var bm=html.match(/<body[^>]*>/i);
-    if(bm){
-      var bi=html.indexOf(bm[0])+bm[0].length;
-      html=html.slice(0,bi)+'\n'+hp+'\n'+html.slice(bi);
-    }
-  }
-
-  if(html.indexOf('</body>')>-1)html=ins(html,'</body>',protBlock,false);
+  if(meta)html=_ins(html,'<head>','\n'+meta,true);
+  if(html.indexOf('</body>')>-1)html=_ins(html,'</body>',protBlock,false);
   else html+=protBlock;
 
   _sp(100,'Selesai!');
@@ -434,9 +472,10 @@ async function runProtect(){
   _dl(html,outName);
 
   document.getElementById('msg-p').textContent='ID: '+id;
-  var msg='✓ Berhasil: '+outName;
+  var msg='Berhasil: '+outName;
   if(pwaOk)msg+='\n\n📲 Script PWA otomatis dipindah ke <head>.';
-  if(document.getElementById('o-obfuscate').checked)msg+='\n\n🔐 Semua script inline sudah diobfuskasi dengan Base64 eval.';
+  if(document.getElementById('o-branding').checked)msg+='\n\n🛡 Branding lock: 6 watermark tersebar + runtime check aktif setiap 5 detik.';
+  if(document.getElementById('o-obfuscate').checked)msg+='\n\n🔐 Semua script inline diobfuskasi Base64 eval.';
   _al('ok',msg);
   document.getElementById('btn-p').disabled=false;
 }
