@@ -787,6 +787,116 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 }
 .cgpt-tab-btn .cgpt-tab-icon { font-size: 15px; display: block; margin-bottom: 3px; }
 
+/* ---- ATP & PERTEMUAN ---- */
+.atp-body { flex:1; overflow-y:auto; padding:20px; }
+.atp-grid { display:grid; grid-template-columns:340px 1fr; gap:16px; align-items:start; }
+.atp-card {
+  background:var(--bg-surface); border:1px solid var(--border);
+  border-radius:var(--r-md); overflow:hidden;
+  box-shadow:var(--shadow-sm); margin-bottom:14px;
+}
+.atp-card-head {
+  background:var(--bg-base); border-bottom:1px solid var(--border);
+  padding:10px 14px; font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; color:var(--text-secondary);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.atp-card-body { padding:14px; }
+/* Kalkulator hasil */
+.atp-stat-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 0; border-bottom:1px solid var(--border-light);
+  font-size:13px;
+}
+.atp-stat-row:last-child { border-bottom:none; }
+.atp-stat-label { color:var(--text-secondary); }
+.atp-stat-val { font-weight:700; color:var(--text-primary); }
+.atp-stat-val.accent { color:var(--accent); font-size:15px; }
+.atp-stat-val.amber  { color:var(--amber); }
+.atp-stat-val.danger { color:var(--danger); }
+/* Progress bar semester */
+.atp-sem-bar {
+  height:10px; border-radius:5px; overflow:hidden;
+  background:var(--border); margin:4px 0;
+}
+.atp-sem-fill {
+  height:100%; border-radius:5px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-dark));
+  transition:width .4s ease;
+}
+/* Daftar TP */
+.tp-row {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 12px; border-radius:var(--r-sm);
+  border:1px solid var(--border); margin-bottom:8px;
+  background:var(--bg-surface); transition:border-color var(--t);
+  cursor:pointer;
+}
+.tp-row:hover { border-color:var(--accent); }
+.tp-row.done  { border-color:var(--success,#10B981); background:rgba(16,185,129,.04); }
+.tp-row.active{ border-color:var(--amber); background:rgba(245,158,11,.04); }
+.tp-status-dot {
+  width:22px; height:22px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:white; margin-top:1px;
+}
+.tp-status-dot.done   { background:#10B981; }
+.tp-status-dot.active { background:var(--amber); }
+.tp-status-dot.todo   { background:var(--border); color:var(--text-muted); }
+.tp-info { flex:1; }
+.tp-title { font-size:13px; font-weight:600; color:var(--text-primary); line-height:1.4; }
+.tp-meta  { font-size:11.5px; color:var(--text-muted); margin-top:3px; }
+.tp-pertemuan-input {
+  width:46px; padding:4px 6px; font-size:12px; font-weight:700;
+  text-align:center; border-radius:var(--r-sm);
+  border:1.5px solid var(--border); background:var(--bg-base);
+  color:var(--text-primary); flex-shrink:0;
+}
+.tp-pertemuan-input:focus { border-color:var(--accent); outline:none; }
+/* Pertemuan timeline */
+.ptm-item {
+  display:flex; gap:10px; padding:9px 12px;
+  border-radius:var(--r-sm); border:1px solid var(--border);
+  margin-bottom:6px; background:var(--bg-surface);
+  align-items:center; transition:all var(--t);
+}
+.ptm-item.done    { border-color:#10B981; background:rgba(16,185,129,.04); }
+.ptm-item.current { border-color:var(--amber); background:rgba(245,158,11,.06); }
+.ptm-item.todo    { opacity:.75; }
+.ptm-num {
+  width:28px; height:28px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:800; color:white;
+}
+.ptm-num.done    { background:#10B981; }
+.ptm-num.current { background:var(--amber); }
+.ptm-num.todo    { background:var(--border); color:var(--text-muted); }
+.ptm-info  { flex:1; }
+.ptm-title { font-size:12.5px; font-weight:600; }
+.ptm-sub   { font-size:11.5px; color:var(--text-muted); }
+.btn-buat-rppm {
+  padding:5px 12px; border-radius:var(--r-sm);
+  font-size:12px; font-weight:700;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  color:white; flex-shrink:0;
+  box-shadow:0 2px 6px rgba(45,212,191,.3);
+  transition:all var(--t);
+}
+.btn-buat-rppm:hover { box-shadow:0 3px 10px rgba(45,212,191,.45); transform:translateY(-1px); }
+.btn-buat-rppm:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+/* Distribusi visual */
+.dist-bar-wrap { margin:8px 0; }
+.dist-bar-label {
+  display:flex; justify-content:space-between;
+  font-size:11.5px; margin-bottom:3px;
+  color:var(--text-secondary);
+}
+.dist-bar {
+  height:8px; border-radius:4px;
+  background:linear-gradient(90deg,var(--accent),var(--amber));
+  transition:width .3s ease;
+}
+
 /* ---- MODEL PICKER ---- */
 .model-option {
   display: flex; align-items: center; gap: 12px;
@@ -952,6 +1062,9 @@ h1,h2,h3,h4 { color: var(--text-primary); }
     </div>
     <div class="nav-item" onclick="goPage('chatgpt')" data-page="chatgpt">
       <span class="nav-icon">📋</span> Impor ChatGPT
+    </div>
+    <div class="nav-item" onclick="goPage('atp')" data-page="atp">
+      <span class="nav-icon">📆</span> ATP & Pertemuan
     </div>
 
     <div class="sidebar-bottom">
@@ -1845,6 +1958,165 @@ h1,h2,h3,h4 { color: var(--text-primary); }
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ========== ATP & PERTEMUAN ========== -->
+    <div class="page" id="page-atp">
+      <div class="page-topbar">
+        <div>
+          <h2>ATP & Pertemuan</h2>
+          <p>Kalkulator pertemuan efektif → distribusi TP → buat RPPM satu pertemuan sekaligus</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="atpReset()" title="Reset semua data ATP">↺ Reset</button>
+          <button class="btn btn-primary btn-sm" onclick="atpHitung()">🧮 Hitung Ulang</button>
+        </div>
+      </div>
+
+      <div class="atp-body">
+        <div class="atp-grid">
+
+          <!-- KOLOM KIRI: Pengaturan + Kalkulator -->
+          <div>
+
+            <!-- Pengaturan Tahun Ajaran -->
+            <div class="atp-card">
+              <div class="atp-card-head">
+                📅 Pengaturan Tahun Ajaran
+                <span class="badge badge-teal" id="atpJenjangBadge">MTs</span>
+              </div>
+              <div class="atp-card-body">
+                <div class="form-group" style="margin-bottom:10px;">
+                  <label>Jenjang Sekolah</label>
+                  <select id="atp-jenjang" onchange="atpJenjangChange();atpHitung()">
+                    <option value="mts">MTs (Kemenag) — min. 34 minggu/tahun</option>
+                    <option value="smp">SMP (Kemendikbud) — min. 36 minggu/tahun</option>
+                    <option value="ma">MA (Kemenag) — min. 34 minggu/tahun</option>
+                    <option value="sma">SMA (Kemendikbud) — min. 36 minggu/tahun</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                  <label>Pertemuan per Minggu (mapel ini)</label>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="range" id="atp-ptmMinggu" min="1" max="5" value="2"
+                      oninput="document.getElementById('atp-ptmMingguVal').textContent=this.value;atpHitung()"
+                      style="flex:1;accent-color:var(--accent);">
+                    <span id="atp-ptmMingguVal" style="font-weight:800;font-size:16px;color:var(--accent);min-width:20px;">2</span>
+                    <span style="font-size:12px;color:var(--text-muted);">×/minggu</span>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                  <label>Semester yang Direncanakan</label>
+                  <select id="atp-semester" onchange="atpHitung()">
+                    <option value="both">Semester 1 + 2 (1 tahun penuh)</option>
+                    <option value="1">Semester 1 saja (Ganjil)</option>
+                    <option value="2">Semester 2 saja (Genap)</option>
+                  </select>
+                </div>
+
+                <div class="divider-label"><span>Pengurangan Minggu Tidak Efektif</span></div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div class="form-group">
+                    <label>Libur Semester (minggu)</label>
+                    <input type="number" id="atp-liburSem" value="2" min="0" max="6"
+                      oninput="atpHitung()" style="text-align:center;">
+                  </div>
+                  <div class="form-group">
+                    <label>Libur Nasional (minggu)</label>
+                    <input type="number" id="atp-liburNas" value="2" min="0" max="6"
+                      oninput="atpHitung()" style="text-align:center;">
+                  </div>
+                  <div class="form-group">
+                    <label>PTS/PAS (minggu)</label>
+                    <input type="number" id="atp-ujian" value="3" min="0" max="8"
+                      oninput="atpHitung()" style="text-align:center;">
+                  </div>
+                  <div class="form-group">
+                    <label>Kegiatan Sekolah (minggu)</label>
+                    <input type="number" id="atp-kegiatan" value="2" min="0" max="6"
+                      oninput="atpHitung()" style="text-align:center;">
+                  </div>
+                  <div class="form-group">
+                    <label>Penilaian Harian (minggu)</label>
+                    <input type="number" id="atp-ph" value="2" min="0" max="6"
+                      oninput="atpHitung()" style="text-align:center;">
+                  </div>
+                  <div class="form-group">
+                    <label>Cadangan (minggu)</label>
+                    <input type="number" id="atp-cadangan" value="1" min="0" max="4"
+                      oninput="atpHitung()" style="text-align:center;">
+                  </div>
+                </div>
+                <p class="text-muted" style="margin-top:8px;">
+                  💡 Nilai default berdasarkan aturan Kemenag/Kemendikbud. Edit sesuai kondisi sekolah Anda.
+                </p>
+              </div>
+            </div>
+
+            <!-- Hasil Kalkulator -->
+            <div class="atp-card">
+              <div class="atp-card-head">🧮 Hasil Kalkulator Pertemuan</div>
+              <div class="atp-card-body" id="atpKalkulatorHasil">
+                <p class="text-muted" style="text-align:center;">Atur parameter di atas...</p>
+              </div>
+            </div>
+
+            <!-- Info Rujukan -->
+            <div class="atp-card">
+              <div class="atp-card-head">📜 Rujukan Regulasi</div>
+              <div class="atp-card-body" style="font-size:12px;line-height:1.7;color:var(--text-secondary);">
+                <p><strong>MTs/MA (Kemenag):</strong> SK Dirjen Pendis No.7022/2022 — minimal <strong>34 minggu efektif/tahun</strong> (17 minggu/semester). Jumlah JP IPS: 3 JP/minggu.</p>
+                <p style="margin-top:6px;"><strong>SMP/SMA (Kemendikbud):</strong> Permendikbud No.22/2016 & Kep.Kepala BSKAP No.009/2022 — minimal <strong>36 minggu efektif/tahun</strong> (18 minggu/semester).</p>
+                <p style="margin-top:6px;color:var(--text-muted);">Jumlah minggu efektif di atas adalah <em>minimum</em>. Sekolah Anda mungkin memiliki jumlah yang berbeda.</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- KOLOM KANAN: Daftar TP + Distribusi + Timeline -->
+          <div>
+
+            <!-- Status TP -->
+            <div class="atp-card">
+              <div class="atp-card-head">
+                🎯 Daftar Tujuan Pembelajaran & Distribusi Pertemuan
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <span id="atpTPCount" class="badge badge-teal" style="font-size:10px;">0 TP</span>
+                  <button class="btn btn-secondary btn-sm" style="font-size:11px;" onclick="atpDistribusiOtomatis()">⚡ Distribusi Otomatis</button>
+                </div>
+              </div>
+              <div class="atp-card-body" id="atpTPList">
+                <div class="empty-state">
+                  <div class="empty-icon">🎯</div>
+                  <h3>Belum ada TP</h3>
+                  <p>Buat TP terlebih dahulu di halaman <strong>Modul Ajar</strong> atau <strong>Impor ChatGPT</strong> (Tahap 1)</p>
+                  <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="goPage('chatgpt')">
+                    → Buat TP Sekarang
+                  </button>
+                </div>
+              </div>
+              <div id="atpDistInfo" style="display:none;padding:10px 14px;background:var(--bg-base);border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary);">
+              </div>
+            </div>
+
+            <!-- Timeline Pertemuan -->
+            <div class="atp-card" id="atpTimelineCard" style="display:none;">
+              <div class="atp-card-head">
+                📋 Timeline Pertemuan — Progres RPPM
+                <span id="atpProgresLabel" class="badge badge-amber" style="font-size:10px;">0% selesai</span>
+              </div>
+              <div style="padding:10px 14px;background:var(--bg-base);border-bottom:1px solid var(--border);">
+                <div class="atp-sem-bar">
+                  <div class="atp-sem-fill" id="atpProgresBar" style="width:0%;"></div>
+                </div>
+              </div>
+              <div class="atp-card-body" id="atpTimeline" style="max-height:480px;overflow-y:auto;"></div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3701,6 +3973,7 @@ function goPage(page) {
   if (page === 'banksoal')   renderBankSoal();
   if (page === 'aisettings') updateAIKeyStatus();
   if (page === 'chatgpt')    initChatGPTPage();
+  if (page === 'atp')        initATPPage();
 }
 
 /* ============================================================
@@ -4720,6 +4993,12 @@ ${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}`;
                 cgptTahap == 3 ? 3 :
                 String(cgptTahap);
 
+  /* Jika dari ATP — gunakan TP dan konteks pertemuan spesifik */
+  const atpAktif = window._atpAktif;
+  const tpUntukPrompt = atpAktif
+    ? `TP${atpAktif.tpIdx+1}: ${atpAktif.tpTeks}\n(Ini pertemuan ke-${atpAktif.ptmKe1} dari ${atpAktif.totalPtm} pertemuan untuk TP ini. Pertemuan global ke-${atpAktif.ptmGlobal}.)`
+    : tp;
+
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 1 — Buat Tujuan Pembelajaran dari CP
      ═══════════════════════════════════════════════ */
@@ -4771,7 +5050,7 @@ Jangan isi field selain yang diminta. Jangan tambahkan penjelasan di luar marker
 ${konteks}
 
 TUJUAN PEMBELAJARAN (dari tahap sebelumnya):
-${tp}
+${tpUntukPrompt}
 
 MATERI POKOK: ${materi}
 
@@ -4802,7 +5081,7 @@ Tuliskan mata pelajaran lain yang berkaitan dengan materi ini beserta hubunganny
 [/FIELD]
 
 [FIELD:tujuan_pembelajaran]
-${tp}
+${tpUntukPrompt}
 [/FIELD]
 
 [FIELD:topik]
@@ -4851,7 +5130,7 @@ Setiap field WAJIB minimal 200 kata. Jangan kurangi. Jangan tambahkan penjelasan
 ${konteks}
 
 TUJUAN PEMBELAJARAN:
-${tp}
+${tpUntukPrompt}
 
 MATERI POKOK: ${materi}
 MODEL PEMBELAJARAN: ${d.model || 'PBL'}
@@ -4905,7 +5184,7 @@ Tulis selengkap mungkin. Jangan tambahkan penjelasan di luar marker.
 ${konteks}
 
 TUJUAN PEMBELAJARAN:
-${tp}
+${tpUntukPrompt}
 
 MATERI POKOK: ${materi}
 
@@ -4943,7 +5222,7 @@ Model         : ${d.model || 'PBL'}
 Guru          : ${d.guru || '—'}
 
 CP: ${d.cp || '—'}
-TP: ${tp}
+TP: ${tpUntukPrompt}
 Materi Pokok  : ${materi}`;
 
   if (tabId === 'lkpd') return `Kamu pakar Kurikulum Merdeka Indonesia. Buat LKPD lengkap dan kontekstual.
@@ -5486,6 +5765,13 @@ function cgptGabung() {
   const normalActions = document.getElementById('cgptNormalActions');
   if (normalActions) { normalActions.style.display = 'flex'; }
   showToast('✅ RPPM lengkap dari 3 bagian ChatGPT berhasil digabung!');
+
+  /* Jika dari ATP, langsung terapkan dan tandai selesai */
+  if (window._atpAktif) {
+    setTimeout(() => {
+      cgptTerapkan();
+    }, 500);
+  }
 }
 
 /** Hitung jumlah kata */
@@ -5685,6 +5971,11 @@ function cgptTerapkan() {
 
   const label = CGPT_TABS.find(t => t.id === cgptActiveTab)?.label || cgptActiveTab;
   showToast(`✅ ${label} dari ChatGPT berhasil diterapkan!`);
+
+  /* Jika ini RPPM dari ATP, tandai pertemuan selesai */
+  if (cgptActiveTab === 'rppm' && window._atpAktif) {
+    setTimeout(() => atpTandaiPertemuanSelesai(), 600);
+  }
 }
 
 /**
@@ -5896,8 +6187,498 @@ function initChatGPTPage() {
 /* ============================================================
    TOAST NOTIFICATION
    ============================================================ */
+/* ============================================================
+   ATP ENGINE — Kalkulator Pertemuan & Distribusi TP
+   Rujukan: SK Dirjen Pendis No.7022/2022 (Kemenag)
+            Permendikbud No.22/2016 & Kep.BSKAP No.009/2022
+   ============================================================ */
+
+/** State ATP */
+let ATP_STATE = {
+  /* Hasil kalkulator */
+  totalMingguEfektif: 0,
+  totalPertemuan:     0,
+  ptmSem1:            0,
+  ptmSem2:            0,
+  /* Daftar pertemuan per TP: [{ tpIdx, tpTeks, jumlahPtm, status[] }] */
+  distribusi: [],
+  /* Progress: { 'TP{i}_P{j}': 'done'|'todo' } */
+  progress: {},
+};
+
+/** Nilai default per jenjang berdasarkan regulasi */
+const ATP_DEFAULT = {
+  mts: { mingguMin:34, liburSem:2, liburNas:2, ujian:3, kegiatan:2, ph:2, cadangan:1 },
+  smp: { mingguMin:36, liburSem:2, liburNas:2, ujian:3, kegiatan:2, ph:2, cadangan:1 },
+  ma:  { mingguMin:34, liburSem:2, liburNas:2, ujian:3, kegiatan:2, ph:2, cadangan:1 },
+  sma: { mingguMin:36, liburSem:2, liburNas:2, ujian:3, kegiatan:2, ph:2, cadangan:1 },
+};
+
+/** Saat jenjang berubah — isi nilai default */
+function atpJenjangChange() {
+  const jenjang = document.getElementById('atp-jenjang').value;
+  const def     = ATP_DEFAULT[jenjang] || ATP_DEFAULT.mts;
+  const badge   = document.getElementById('atpJenjangBadge');
+  if (badge) badge.textContent = jenjang.toUpperCase();
+  const fields = ['liburSem','liburNas','ujian','kegiatan','ph','cadangan'];
+  fields.forEach(f => {
+    const el = document.getElementById('atp-' + f);
+    if (el) el.value = def[f];
+  });
+}
+
+/** Hitung total pertemuan efektif */
+function atpHitung() {
+  const jenjang    = document.getElementById('atp-jenjang')?.value || 'mts';
+  const def        = ATP_DEFAULT[jenjang];
+  const ptmMinggu  = parseInt(document.getElementById('atp-ptmMinggu')?.value  || 2);
+  const semester   = document.getElementById('atp-semester')?.value || 'both';
+  const liburSem   = parseInt(document.getElementById('atp-liburSem')?.value   || 2);
+  const liburNas   = parseInt(document.getElementById('atp-liburNas')?.value   || 2);
+  const ujian      = parseInt(document.getElementById('atp-ujian')?.value      || 3);
+  const kegiatan   = parseInt(document.getElementById('atp-kegiatan')?.value   || 2);
+  const ph         = parseInt(document.getElementById('atp-ph')?.value         || 2);
+  const cadangan   = parseInt(document.getElementById('atp-cadangan')?.value   || 1);
+
+  /* Total minggu per regulasi */
+  const mingguTotal    = def.mingguMin;
+  const mingguTidakEfektif = liburSem + liburNas + ujian + kegiatan + ph + cadangan;
+  const mingguEfektif  = Math.max(0, mingguTotal - mingguTidakEfektif);
+
+  /* Hitung per semester atau penuh */
+  let totalPtm, ptmS1, ptmS2;
+  if (semester === '1') {
+    const mingguS1 = Math.floor(mingguEfektif / 2);
+    ptmS1 = mingguS1 * ptmMinggu;
+    ptmS2 = 0;
+    totalPtm = ptmS1;
+  } else if (semester === '2') {
+    const mingguS2 = Math.ceil(mingguEfektif / 2);
+    ptmS1 = 0;
+    ptmS2 = mingguS2 * ptmMinggu;
+    totalPtm = ptmS2;
+  } else {
+    ptmS1 = Math.floor(mingguEfektif / 2) * ptmMinggu;
+    ptmS2 = Math.ceil(mingguEfektif / 2) * ptmMinggu;
+    totalPtm = ptmS1 + ptmS2;
+  }
+
+  /* Simpan ke state */
+  ATP_STATE.totalMingguEfektif = mingguEfektif;
+  ATP_STATE.totalPertemuan     = totalPtm;
+  ATP_STATE.ptmSem1            = ptmS1;
+  ATP_STATE.ptmSem2            = ptmS2;
+
+  /* Render hasil kalkulator */
+  _atpRenderKalkulator({
+    mingguTotal, mingguTidakEfektif, mingguEfektif,
+    ptmMinggu, totalPtm, ptmS1, ptmS2, semester, jenjang,
+  });
+
+  /* Update distribusi jika TP sudah ada */
+  if (ATP_STATE.distribusi.length) _atpRenderTimeline();
+
+  /* Simpan ke IDB */
+  _atpSimpan();
+}
+
+/** Render hasil kalkulator */
+function _atpRenderKalkulator(k) {
+  const el = document.getElementById('atpKalkulatorHasil');
+  if (!el) return;
+  const semLabel = k.semester === '1' ? 'Semester 1' : k.semester === '2' ? 'Semester 2' : 'Sem 1 + Sem 2';
+  el.innerHTML = `
+    <div class="atp-stat-row">
+      <span class="atp-stat-label">Regulasi (${k.jenjang.toUpperCase()})</span>
+      <span class="atp-stat-val">${k.mingguTotal} minggu/tahun</span>
+    </div>
+    <div class="atp-stat-row">
+      <span class="atp-stat-label">Pengurangan tidak efektif</span>
+      <span class="atp-stat-val danger">− ${k.mingguTidakEfektif} minggu</span>
+    </div>
+    <div class="atp-stat-row">
+      <span class="atp-stat-label">Minggu efektif</span>
+      <span class="atp-stat-val">${k.mingguEfektif} minggu</span>
+    </div>
+    <div class="atp-stat-row">
+      <span class="atp-stat-label">Pertemuan/minggu</span>
+      <span class="atp-stat-val">${k.ptmMinggu}×</span>
+    </div>
+    <div style="margin:10px 0 6px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">${semLabel}</div>
+    ${k.semester !== '2' && k.ptmS1 > 0 ? `
+    <div class="atp-stat-row">
+      <span class="atp-stat-label">Semester 1 (Ganjil)</span>
+      <span class="atp-stat-val">${k.ptmS1} pertemuan</span>
+    </div>
+    <div class="dist-bar-wrap">
+      <div class="atp-sem-bar"><div class="atp-sem-fill" style="width:100%;"></div></div>
+    </div>` : ''}
+    ${k.semester !== '1' && k.ptmS2 > 0 ? `
+    <div class="atp-stat-row">
+      <span class="atp-stat-label">Semester 2 (Genap)</span>
+      <span class="atp-stat-val">${k.ptmS2} pertemuan</span>
+    </div>
+    <div class="dist-bar-wrap">
+      <div class="atp-sem-bar"><div class="atp-sem-fill" style="width:100%;background:linear-gradient(90deg,var(--amber),#D97706);"></div></div>
+    </div>` : ''}
+    <div style="margin-top:10px;padding:10px 12px;background:rgba(45,212,191,.08);border-radius:var(--r-sm);border-left:3px solid var(--accent);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;font-weight:700;color:var(--accent-dark);">Total Pertemuan Tersedia</span>
+      <span class="atp-stat-val accent">${k.totalPtm} pertemuan</span>
+    </div>`;
+}
+
+/** Distribusi TP otomatis — bagi rata pertemuan ke semua TP */
+function atpDistribusiOtomatis() {
+  const tpList = STATE_ANALISIS.tp;
+  if (!tpList || !tpList.length) {
+    showToast('Buat TP terlebih dahulu di Impor ChatGPT (Tahap 1)', 'warning');
+    return;
+  }
+  if (!ATP_STATE.totalPertemuan) {
+    showToast('Hitung pertemuan terlebih dahulu', 'warning');
+    return;
+  }
+
+  const total  = ATP_STATE.totalPertemuan;
+  const n      = tpList.length;
+  const rata   = Math.floor(total / n);
+  const sisa   = total - (rata * n);
+
+  /* Distribusi: TP pertama dapat pertemuan lebih jika ada sisa */
+  ATP_STATE.distribusi = tpList.map((tp, i) => ({
+    tpIdx:      i,
+    tpTeks:     tp,
+    jumlahPtm:  rata + (i < sisa ? 1 : 0),
+  }));
+
+  _atpRenderTPList();
+  _atpRenderTimeline();
+  _atpSimpan();
+  showToast(`⚡ ${total} pertemuan didistribusikan ke ${n} TP`);
+}
+
+/** Render daftar TP dengan input jumlah pertemuan */
+function _atpRenderTPList() {
+  const el = document.getElementById('atpTPList');
+  const tpList = STATE_ANALISIS.tp;
+  const badge  = document.getElementById('atpTPCount');
+  if (badge) badge.textContent = (tpList?.length || 0) + ' TP';
+
+  if (!tpList || !tpList.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><h3>Belum ada TP</h3>
+      <p>Buat TP di <strong>Impor ChatGPT → Tahap 1</strong></p>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="goPage('chatgpt')">→ Buat TP Sekarang</button></div>`;
+    return;
+  }
+
+  /* Total pertemuan yang sudah dialokasikan */
+  const totalAlokasi = ATP_STATE.distribusi.reduce((s, d) => s + (d.jumlahPtm || 0), 0);
+  const totalTersedia = ATP_STATE.totalPertemuan;
+  const selisih = totalTersedia - totalAlokasi;
+
+  el.innerHTML = tpList.map((tp, i) => {
+    const dist = ATP_STATE.distribusi[i] || { jumlahPtm: 0 };
+    const donePtm = _atpCountDone(i);
+    const statusClass = donePtm === dist.jumlahPtm && dist.jumlahPtm > 0 ? 'done'
+                      : donePtm > 0 ? 'active' : '';
+    const statusDot   = donePtm === dist.jumlahPtm && dist.jumlahPtm > 0 ? 'done'
+                      : donePtm > 0 ? 'active' : 'todo';
+    const statusTeks  = donePtm === dist.jumlahPtm && dist.jumlahPtm > 0 ? '✓'
+                      : donePtm > 0 ? donePtm : i+1;
+    return `
+      <div class="tp-row ${statusClass}">
+        <div class="tp-status-dot ${statusDot}">${statusTeks}</div>
+        <div class="tp-info">
+          <div class="tp-title">${tp.length > 80 ? tp.slice(0,80)+'…' : tp}</div>
+          <div class="tp-meta">TP${i+1} · ${donePtm}/${dist.jumlahPtm || 0} pertemuan selesai</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+          <label style="font-size:10px;color:var(--text-muted);">Pertemuan</label>
+          <input type="number" class="tp-pertemuan-input" min="1" max="20"
+            value="${dist.jumlahPtm || 1}"
+            onchange="atpUpdateJumlahPtm(${i}, this.value)"
+            title="Jumlah pertemuan untuk TP ini">
+        </div>
+      </div>`;
+  }).join('');
+
+  /* Info distribusi */
+  const info = document.getElementById('atpDistInfo');
+  if (info) {
+    info.style.display = 'block';
+    const warna = selisih === 0 ? 'var(--accent)' : selisih > 0 ? 'var(--amber)' : 'var(--danger)';
+    info.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Total alokasi: <strong>${totalAlokasi}</strong> pertemuan</span>
+        <span style="color:${warna};font-weight:700;">
+          ${selisih === 0 ? '✅ Pas!' : selisih > 0 ? `⚠️ Sisa ${selisih} pertemuan belum dialokasikan` : `❌ Kelebihan ${Math.abs(selisih)} pertemuan`}
+        </span>
+      </div>`;
+  }
+}
+
+/** Update jumlah pertemuan satu TP saat guru edit */
+function atpUpdateJumlahPtm(tpIdx, nilai) {
+  const n = Math.max(1, Math.min(20, parseInt(nilai) || 1));
+  if (!ATP_STATE.distribusi[tpIdx]) {
+    ATP_STATE.distribusi[tpIdx] = { tpIdx, tpTeks: STATE_ANALISIS.tp[tpIdx], jumlahPtm: n };
+  } else {
+    ATP_STATE.distribusi[tpIdx].jumlahPtm = n;
+  }
+  _atpRenderTPList();
+  _atpRenderTimeline();
+  _atpSimpan();
+}
+
+/** Hitung berapa pertemuan TP ke-i yang sudah selesai */
+function _atpCountDone(tpIdx) {
+  const dist = ATP_STATE.distribusi[tpIdx];
+  if (!dist) return 0;
+  let count = 0;
+  for (let j = 0; j < dist.jumlahPtm; j++) {
+    if (ATP_STATE.progress[`TP${tpIdx}_P${j}`] === 'done') count++;
+  }
+  return count;
+}
+
+/** Render timeline pertemuan */
+function _atpRenderTimeline() {
+  const card = document.getElementById('atpTimelineCard');
+  const el   = document.getElementById('atpTimeline');
+  if (!card || !el) return;
+  if (!ATP_STATE.distribusi.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const d = currentGenerated?.data || UTIL.getFormData();
+  let html = '';
+  let totalPtm = 0;
+  let donePtm  = 0;
+  let ptmGlobal = 0;
+
+  ATP_STATE.distribusi.forEach((dist, tpIdx) => {
+    if (!dist.jumlahPtm) return;
+    /* Header TP */
+    html += `<div style="padding:8px 12px;background:var(--bg-base);border-bottom:1px solid var(--border);
+      border-top:${tpIdx>0?'1px solid var(--border)':'none'};font-size:11.5px;font-weight:700;
+      color:var(--accent-dark);letter-spacing:.3px;">
+      TP${tpIdx+1} — ${dist.tpTeks.length > 70 ? dist.tpTeks.slice(0,70)+'…' : dist.tpTeks}
+    </div>`;
+
+    for (let j = 0; j < dist.jumlahPtm; j++) {
+      ptmGlobal++;
+      totalPtm++;
+      const key    = `TP${tpIdx}_P${j}`;
+      const status = ATP_STATE.progress[key] || 'todo';
+      if (status === 'done') donePtm++;
+
+      const isCurrent = status !== 'done' &&
+        !Object.entries(ATP_STATE.progress).some(([k,v]) => {
+          const [ti,pi] = k.replace('TP','').replace('_P',',').split(',').map(Number);
+          return v !== 'done' && (ti < tpIdx || (ti === tpIdx && pi < j));
+        });
+
+      const statusClass = status === 'done' ? 'done' : isCurrent ? 'current' : 'todo';
+      html += `
+        <div class="ptm-item ${statusClass}" id="ptm-${key}">
+          <div class="ptm-num ${statusClass}">${status==='done'?'✓':ptmGlobal}</div>
+          <div class="ptm-info">
+            <div class="ptm-title">Pertemuan ${ptmGlobal} — ${d.mapel||'Mapel'} Kelas ${d.kelas||'—'}</div>
+            <div class="ptm-sub">TP${tpIdx+1} · Pertemuan ke-${j+1} dari ${dist.jumlahPtm}</div>
+          </div>
+          ${status === 'done'
+            ? `<span class="badge badge-teal" style="font-size:10px;flex-shrink:0;">✓ Selesai</span>`
+            : `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                <button class="btn-buat-rppm" ${isCurrent?'':'style="opacity:.6;"'}
+                  onclick="atpBuatRPPM(${tpIdx},${j},'${key}')">
+                  ${isCurrent ? '📝 Buat RPPM' : '📝 Buat'}
+                </button>
+                ${isCurrent ? '' : `<button onclick="atpTandaiSelesai('${key}')"
+                  style="font-size:10px;color:var(--text-muted);border:1px solid var(--border);border-radius:4px;padding:2px 6px;">
+                  ✓ Tandai selesai
+                </button>`}
+               </div>`}
+        </div>`;
+    }
+  });
+
+  el.innerHTML = html || '<p class="text-muted" style="padding:14px;">Belum ada pertemuan.</p>';
+
+  /* Update progress bar */
+  const pct = totalPtm > 0 ? Math.round((donePtm / totalPtm) * 100) : 0;
+  const bar  = document.getElementById('atpProgresBar');
+  const lbl  = document.getElementById('atpProgresLabel');
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) {
+    lbl.textContent = `${donePtm}/${totalPtm} selesai (${pct}%)`;
+    lbl.className   = pct === 100 ? 'badge badge-teal' : pct > 0 ? 'badge badge-amber' : 'badge';
+    if (pct === 0) lbl.style.cssText = 'font-size:10px;background:var(--border-light);color:var(--text-muted);';
+  }
+}
+
+/**
+ * Buat RPPM untuk satu pertemuan spesifik.
+ * Pindah ke Impor ChatGPT dengan prompt yang sudah terisi.
+ */
+function atpBuatRPPM(tpIdx, ptmKe, key) {
+  const dist = ATP_STATE.distribusi[tpIdx];
+  const tp   = dist?.tpTeks || STATE_ANALISIS.tp[tpIdx] || '';
+  const d    = currentGenerated?.data || UTIL.getFormData();
+
+  /* Set konteks khusus pertemuan ini ke STATE_ANALISIS */
+  /* Hanya TP yang aktif ini yang dipakai di prompt */
+  const tpKhusus = `${tp}\n(Pertemuan ke-${ptmKe+1} dari ${dist.jumlahPtm} pertemuan untuk TP ini)`;
+
+  /* Simpan info pertemuan aktif ke state global agar prompt bisa membacanya */
+  window._atpAktif = {
+    tpIdx, ptmKe, key,
+    tpTeks:   tp,
+    tpKhusus: tpKhusus,
+    ptmKe1:   ptmKe + 1,
+    totalPtm: dist.jumlahPtm,
+    ptmGlobal: _atpGetGlobalNum(tpIdx, ptmKe),
+    mapel:    d.mapel || '',
+    kelas:    d.kelas || '',
+    fase:     d.fase  || '',
+    waktu:    d.waktu || '',
+    model:    d.model || 'PBL',
+    guru:     d.guru  || '',
+    sekolah:  d.sekolah || '',
+    cp:       d.cp || '',
+  };
+
+  /* Reset ke Tahap 2a dengan TP khusus pertemuan ini */
+  cgptTPTersimpan = tpKhusus;
+  cgptTahap       = '2a';
+  cgptHasil       = { '2a': '', '2b': '', '2c': '' };
+
+  /* Pindah ke halaman Impor ChatGPT */
+  goPage('chatgpt');
+
+  /* Tunda sebentar agar halaman render dulu */
+  setTimeout(() => {
+    /* Pilih tab RPPM */
+    cgptPilihTab('rppm');
+    cgptSetTahap('2a');
+
+    /* Tampilkan info konteks di atas stepper */
+    const info = document.getElementById('cgptRPPMStepper');
+    if (info) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5;';
+      banner.innerHTML = `📆 <strong>Pertemuan ${window._atpAktif.ptmGlobal}</strong> — TP${tpIdx+1}<br>
+        <span style="color:var(--text-muted);">${tp.length>80?tp.slice(0,80)+'…':tp}</span>`;
+      info.prepend(banner);
+    }
+    showToast(`📝 Buat RPPM Pertemuan ${window._atpAktif.ptmGlobal} — salin prompt Tahap 2a`);
+  }, 300);
+}
+
+/** Hitung nomor pertemuan global (lintas TP) */
+function _atpGetGlobalNum(tpIdx, ptmKe) {
+  let num = 0;
+  for (let i = 0; i < tpIdx; i++) {
+    num += ATP_STATE.distribusi[i]?.jumlahPtm || 0;
+  }
+  return num + ptmKe + 1;
+}
+
+/** Tandai pertemuan selesai manual */
+function atpTandaiSelesai(key) {
+  ATP_STATE.progress[key] = 'done';
+  _atpRenderTPList();
+  _atpRenderTimeline();
+  _atpSimpan();
+  showToast('✅ Pertemuan ditandai selesai');
+}
+
+/** Tandai pertemuan aktif selesai setelah RPPM berhasil dibuat */
+function atpTandaiPertemuanSelesai() {
+  if (!window._atpAktif) return;
+  const key = window._atpAktif.key;
+  ATP_STATE.progress[key] = 'done';
+  window._atpAktif = null;
+  _atpRenderTPList();
+  _atpRenderTimeline();
+  _atpSimpan();
+
+  /* Cari pertemuan berikutnya */
+  const ptmBerikut = _atpCariBerikutnya();
+  if (ptmBerikut) {
+    setTimeout(() => {
+      if (confirm(`✅ Pertemuan selesai!\n\nLanjut ke Pertemuan ${ptmBerikut.global} (TP${ptmBerikut.tpIdx+1})?`)) {
+        atpBuatRPPM(ptmBerikut.tpIdx, ptmBerikut.ptmKe, ptmBerikut.key);
+      } else {
+        goPage('atp');
+      }
+    }, 500);
+  } else {
+    showToast('🎉 Semua pertemuan sudah selesai!');
+    goPage('atp');
+  }
+}
+
+/** Cari pertemuan berikutnya yang belum selesai */
+function _atpCariBerikutnya() {
+  let global = 0;
+  for (let i = 0; i < ATP_STATE.distribusi.length; i++) {
+    const dist = ATP_STATE.distribusi[i];
+    for (let j = 0; j < dist.jumlahPtm; j++) {
+      global++;
+      const key = `TP${i}_P${j}`;
+      if (!ATP_STATE.progress[key] || ATP_STATE.progress[key] !== 'done') {
+        return { tpIdx: i, ptmKe: j, key, global };
+      }
+    }
+  }
+  return null;
+}
+
+/** Reset ATP */
+function atpReset() {
+  if (!confirm('Reset semua progress ATP? Data pertemuan yang sudah selesai akan dihapus.')) return;
+  ATP_STATE = { totalMingguEfektif:0, totalPertemuan:0, ptmSem1:0, ptmSem2:0, distribusi:[], progress:{} };
+  window._atpAktif = null;
+  _atpRenderTPList();
+  _atpRenderTimeline();
+  _atpSimpan();
+  atpHitung();
+  showToast('🗑️ Data ATP direset', 'warning');
+}
+
+/** Simpan ATP_STATE ke IDB */
+function _atpSimpan() {
+  IDB.set('atp_state', ATP_STATE);
+}
+
+/** Muat ATP_STATE dari IDB */
+async function _atpMuat() {
+  const saved = await IDB.get('atp_state', null);
+  if (saved) Object.assign(ATP_STATE, saved);
+}
+
+/** Init halaman ATP */
+async function initATPPage() {
+  /* Muat state tersimpan */
+  await _atpMuat();
+
+  /* Sync TP dari STATE_ANALISIS jika ada tapi distribusi belum */
+  if (STATE_ANALISIS.tp?.length && !ATP_STATE.distribusi.length) {
+    /* Distribusi otomatis jika belum pernah diatur */
+    if (ATP_STATE.totalPertemuan > 0) {
+      atpDistribusiOtomatis();
+    }
+  }
+
+  /* Hitung ulang kalkulator */
+  atpHitung();
+  _atpRenderTPList();
+  _atpRenderTimeline();
+}
+
+
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toastContainer');
+
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icons = { info: 'ℹ️', error: '❌', warning: '⚠️', success: '✅' };
@@ -5966,6 +6747,9 @@ async function init() {
 
   /* 9. Load cache AI dari IDB */
   await AI_CACHE.load();
+
+  /* 10. Load ATP state */
+  await _atpMuat();
 
   /* 10. Restore currentGenerated dari sesi terakhir (termasuk hasil edit AI) */
   const lastId = await IDB.get('last_historyId', null);
