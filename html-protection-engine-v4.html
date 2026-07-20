@@ -103,6 +103,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
       <div><label>Email kontak</label><input type="text" id="p-email" placeholder="email@domain.com"></div>
       <div><label>Domain resmi (opsional)</label><input type="text" id="p-domain" placeholder="namadomain.com"></div>
       <div><label>Webhook fingerprint (opsional)</label><input type="text" id="p-webhook" placeholder="https://yourserver.com/fp"></div>
+      <div class="ifw"><label>Secret key token gateway (opsional) — harus sama dengan di gateway.html</label><input type="text" id="p-secret" placeholder="Contoh: GANTI_DENGAN_SECRET_KEY_KAMU_2024"></div>
       <div id="exp-wrap" style="display:none"><label>Tanggal kedaluwarsa</label><input type="date" id="p-expiry"></div>
     </div>
 
@@ -156,6 +157,10 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
       <label class="oc"><input type="checkbox" id="o-selfmod">
         <div><div class="oh"><span class="on">Self-destruct domain salah</span><span class="badge b2">v2</span></div>
         <div class="od">DOM dihapus jika dibuka di luar domain resmi</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="o-token">
+        <div><div class="oh"><span class="on">Token gateway lock</span><span class="badge bp">PRO</span><span class="badge bn">Baru</span></div>
+        <div class="od">Aplikasi hanya bisa dibuka lewat gateway.html di web kamu — akses langsung/bookmark diblokir. Token expired dalam 60 detik.</div></div></label>
 
       <label class="oc"><input type="checkbox" id="o-timebomb" onchange="document.getElementById('exp-wrap').style.display=this.checked?'block':'none'">
         <div><div class="oh"><span class="on">Time-lock kedaluwarsa</span><span class="badge b2">v2</span></div>
@@ -424,6 +429,36 @@ async function runProtect(){
   if(document.getElementById('o-timebomb').checked&&expiry)
     jsArr.push("(function(){if(new Date()>new Date('"+expiry+"')){document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>Lisensi Kedaluwarsa</h2></div>';}})();");
 
+  // TOKEN GATEWAY LOCK
+  var secret=document.getElementById('p-secret')?document.getElementById('p-secret').value.trim():'';
+  if(document.getElementById('o-token')&&document.getElementById('o-token').checked&&secret){
+    var _tjs='(function(){'
+      +'var _s='+JSON.stringify(secret)+';'
+      +'function _blk(){'
+      +'document.body.innerHTML="<div style=\'font-family:sans-serif;text-align:center;padding:5rem;max-width:400px;margin:auto\'>"'
+      +'+"<div style=\'font-size:48px;margin-bottom:1rem\'>\uD83D\uDD12</div>"'
+      +'+"<h2 style=\'color:#1e293b;margin-bottom:.5rem\'>Akses Terbatas</h2>"'
+      +'+"<p style=\'color:#64748b;font-size:14px;margin-bottom:1.5rem\'>Buka aplikasi ini melalui portal resmi CBT Kabut Digital.</p>"'
+      +'+"<a href=\'https://cbtkabutdigital.com/aplikasi.html\' style=\'display:inline-block;padding:10px 24px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px\'>Buka dari Portal</a>"'
+      +'+"</div>";'
+      +'}'
+      +'async function _vfy(){'
+      +'try{'
+      +'var p=new URLSearchParams(window.location.search);'
+      +'var t=p.get("_t"),e=parseInt(p.get("_e")||"0");'
+      +'if(!t||!e){_blk();return;}'
+      +'if(Math.floor(Date.now()/1000)>e+30){_blk();return;}'
+      +'var rounded=Math.floor((e-60)/60)*60;'
+      +'var buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(_s+":"+rounded));'
+      +'var hex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");'
+      +'if(hex.slice(0,32)!==t){_blk();}'
+      +'}catch(e2){_blk();}'
+      +'}'
+      +'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",_vfy);}else{_vfy();}'
+      +'})();';
+    jsArr.push(_tjs);
+  }
+
   await _sleep(100);_sp(65,'Obfuskasi script aplikasi...');
 
   // OBFUSKASI SEMUA SCRIPT INLINE
@@ -475,6 +510,7 @@ async function runProtect(){
   var msg='Berhasil: '+outName;
   if(pwaOk)msg+='\n\n📲 Script PWA otomatis dipindah ke <head>.';
   if(document.getElementById('o-branding').checked)msg+='\n\n🛡 Branding lock: 6 watermark tersebar + runtime check aktif setiap 5 detik.';
+  if(document.getElementById('o-token')&&document.getElementById('o-token').checked&&secret)msg+='\n\n🔑 Token gateway lock aktif — aplikasi hanya bisa dibuka dari gateway.html\nPastikan CONFIG.secret di gateway.html = '+secret;
   if(document.getElementById('o-obfuscate').checked)msg+='\n\n🔐 Semua script inline diobfuskasi Base64 eval.';
   _al('ok',msg);
   document.getElementById('btn-p').disabled=false;
