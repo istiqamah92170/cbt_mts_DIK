@@ -580,13 +580,52 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 
 /* ---- PRINT ---- */
 @media print {
-  .app-sidebar, .app-header, .modul-form-panel, .tab-bar, .export-bar { display: none !important; }
-  .app-shell { display: block; }
-  .page.active { display: block; }
-  .modul-body { display: block; }
-  .modul-preview-panel { padding: 0; }
-  .preview-card { box-shadow: none; border: none; }
-  .preview-card-header { background: #eee !important; -webkit-print-color-adjust: exact; }
+  /* Sembunyikan UI aplikasi */
+  .app-sidebar, .app-header, .modul-form-panel,
+  .tab-bar, .export-bar, .export-btn-group,
+  .rppm-form-panel, .btn-generate, .btn-analyze,
+  .btn-tab-action, .page-topbar button,
+  #toastContainer { display: none !important; }
+
+  /* Layout print */
+  html, body { height: auto !important; overflow: visible !important; }
+  .app-shell  { display: block !important; height: auto !important; }
+  .app-main   { display: block !important; height: auto !important; overflow: visible !important; }
+  .page       { display: none !important; }
+  .page.active{ display: block !important; height: auto !important; overflow: visible !important; }
+
+  /* Modul Ajar print */
+  .modul-body         { display: block !important; }
+  .modul-preview-panel{ padding: 0 !important; overflow: visible !important; height: auto !important; }
+
+  /* RPPM print */
+  .rppm-body         { display: block !important; }
+  .rppm-preview-panel{ padding: 0 !important; overflow: visible !important; height: auto !important; }
+
+  /* Cards */
+  .preview-card       { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
+  .preview-card-header{ background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .preview-card-body  { overflow: visible !important; height: auto !important; max-height: none !important; }
+
+  /* RPPM tabel */
+  .rppm-table         { width: 100% !important; }
+  .rppm-tahap         { page-break-inside: avoid; }
+
+  /* Paksa semua overflow visible */
+  * { overflow: visible !important; max-height: none !important; }
+
+  /* Halaman baru setelah setiap perangkat */
+  .preview-card + .preview-card { page-break-before: always; }
+
+  /* Ukuran font print */
+  body { font-size: 11pt !important; }
+  h3   { font-size: 14pt !important; }
+  h4   { font-size: 12pt !important; }
+  table{ border-collapse: collapse !important; }
+  td, th { border: 1px solid #999 !important; padding: 4pt 6pt !important; font-size: 10pt !important; }
+
+  /* Margin halaman */
+  @page { margin: 1.5cm; size: A4; }
 }
 
 /* ---- SCROLL ---- */
@@ -4239,38 +4278,116 @@ function toggleDark() {
 /* ============================================================
    EXPORT
    ============================================================ */
+/** Buat HTML yang terbaca Word dengan benar */
+function _buatHTMLWord(judulDoc, isiHTML, meta) {
+  return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="GuruAI Builder">
+<title>${judulDoc}</title>
+<!--[if gte mso 9]>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom>
+<w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+<![endif]-->
+<style>
+  /* Reset */
+  @page { margin: 2cm 2.5cm; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt; line-height: 1.5;
+    color: #000; background: #fff;
+  }
+  h1 { font-size: 14pt; font-weight: bold; text-align: center; margin: 12pt 0 6pt; }
+  h2 { font-size: 13pt; font-weight: bold; margin: 10pt 0 4pt; }
+  h3 { font-size: 12pt; font-weight: bold; margin: 8pt 0 4pt; border-bottom: 1px solid #333; padding-bottom: 2pt; }
+  h4 { font-size: 11pt; font-weight: bold; margin: 8pt 0 3pt; }
+  p  { margin: 4pt 0; text-align: justify; }
+  ul, ol { margin: 4pt 0 4pt 18pt; }
+  li { margin-bottom: 3pt; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+  th { background: #E0E0E0; font-weight: bold; border: 1px solid #666; padding: 5pt 6pt; font-size: 10pt; text-align: left; }
+  td { border: 1px solid #999; padding: 4pt 6pt; font-size: 10pt; vertical-align: top; }
+  .section-head { background: #1a1a2e; color: #2DD4BF; font-weight: bold; text-align: center; padding: 6pt; font-size: 11pt; border: 1px solid #1a1a2e; }
+  .rppm-tahap { background: #f5f5f5; border-left: 3pt solid #2DD4BF; padding: 6pt 8pt; margin: 5pt 0; }
+  .step { background: #f9f9f9; border-left: 3pt solid #2DD4BF; padding: 6pt 8pt; margin: 5pt 0; }
+  .meta-box { background: #f0f8f0; border: 1px solid #ccc; padding: 8pt; margin-bottom: 10pt; font-size: 10pt; }
+  .halaman-baru { page-break-before: always; }
+  strong { font-weight: bold; }
+  br { mso-data-placement: same-cell; }
+</style>
+</head>
+<body>
+<div class="meta-box">
+  <strong>GuruAI Builder</strong> — Dokumen Perangkat Pembelajaran<br>
+  ${meta || ''}
+</div>
+${isiHTML}
+</body></html>`;
+}
+
+/** Download file sebagai blob */
+function _downloadBlob(content, filename, mime) {
+  const blob = new Blob(['\ufeff' + content], { type: mime });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 1000);
+}
+
+/** Bersihkan HTML dari class/style kompleks untuk Word */
+function _bersihkanUntukWord(html) {
+  return html
+    /* Hapus style inline kompleks berbasis CSS var */
+    .replace(/style="[^"]*var\(--[^"]*"/g, '')
+    /* Ubah class section-head jadi tetap */
+    .replace(/class="section-head"/g, 'class="section-head" style="background:#1a1a2e;color:#2DD4BF;font-weight:bold;text-align:center;padding:6pt;"')
+    .replace(/class="rppm-tahap[^"]*"/g, 'class="rppm-tahap" style="background:#f5f5f5;border-left:3pt solid #2DD4BF;padding:6pt 8pt;margin:5pt 0;"')
+    .replace(/class="step[^"]*"/g, 'class="step" style="background:#f9f9f9;border-left:3pt solid #2DD4BF;padding:6pt 8pt;margin:5pt 0;"')
+    /* Hapus emoji di class */
+    .replace(/class="preview-card[^"]*"/g, '')
+    .replace(/class="preview-card-header[^"]*"[^>]*>/g, '<div style="background:#e8e8e8;font-weight:bold;padding:6pt;border-bottom:1px solid #ccc;">')
+    .replace(/class="preview-card-body[^"]*"/g, 'style="padding:8pt;"')
+    /* Bersihkan span dengan warna CSS var */
+    .replace(/<span[^>]*color:var\([^>]*>(.*?)<\/span>/g, '$1');
+}
+
 function doPrint() {
+  /* Tampilkan hanya konten preview sebelum print */
   window.print();
 }
 
 function exportWord() {
   if (!currentGenerated) { showToast('Generate dulu sebelum export', 'error'); return; }
   const { data, result } = currentGenerated;
-  const html = `
-    <html><head><meta charset="UTF-8">
-    <style>body{font-family:Arial,sans-serif;font-size:12pt;line-height:1.6}
-    table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px}
-    h3{color:#0F9688}h4{margin-top:14px}
-    .step{background:#f5f5f5;padding:10px;margin:6px 0;border-left:3px solid #2DD4BF}</style>
-    </head><body>
-    <h2>${CONFIG.APP_NAME} — ${data.mapel} Kelas ${data.kelas}</h2>
-    <p>Sekolah: ${data.sekolah} | Guru: ${data.guru} | Materi: ${data.materi}</p>
-    <hr>
-    ${GENERATOR.tabs.map(t => `<h3>${t.label}</h3>${result[t.id]}<hr>`).join('')}
-    </body></html>`;
 
-  const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `ModulAjar_${data.mapel}_Kelas${data.kelas}.doc`;
-  a.click();
-  showToast('📄 File Word berhasil diunduh');
+  /* Gabung semua tab dengan separator halaman baru */
+  const isiTab = GENERATOR.tabs.map((t, i) => {
+    const konten = result[t.id] || '';
+    const bersih = _bersihkanUntukWord(konten);
+    return `<div ${i > 0 ? 'class="halaman-baru"' : ''}>
+      <h3>${t.label}</h3>
+      ${bersih}
+    </div>`;
+  }).join('\n');
+
+  const meta = `Mapel: ${data.mapel} | Kelas: ${data.kelas} | Sekolah: ${data.sekolah} | Guru: ${data.guru}`;
+  const judulDoc = `Perangkat Pembelajaran — ${data.mapel} Kelas ${data.kelas}`;
+  const htmlWord = _buatHTMLWord(judulDoc, `<h1>${judulDoc}</h1>\n${isiTab}`, meta);
+
+  _downloadBlob(htmlWord, `PerangkatPembelajaran_${data.mapel}_Kelas${data.kelas}.doc`, 'application/msword');
+  showToast('📄 File Word berhasil diunduh — buka dengan Microsoft Word');
 }
 
 function exportPDF() {
   if (!currentGenerated) { showToast('Generate dulu sebelum export', 'error'); return; }
-  showToast('🖨️ Membuka dialog print untuk PDF...');
-  setTimeout(window.print, 500);
+  showToast('🖨️ Dialog print terbuka — pilih "Save as PDF"');
+  setTimeout(() => window.print(), 600);
 }
 
 /* ============================================================
@@ -4459,167 +4576,83 @@ function rppmReset() {
 function doPrintRPPM() {
   const d = getRPPMData();
   if (!d.mapel && !d.guru) { showToast('Isi data RPPM terlebih dahulu', 'error'); return; }
-  showToast('🖨️ Membuka dialog print...');
-  setTimeout(window.print, 400);
+  showToast('Membuka dialog print — pilih "Save as PDF" untuk simpan PDF');
+  setTimeout(() => window.print(), 400);
 }
 
-/** Export RPPM ke Word (.doc) */
+/** Export RPPM ke Word — menggunakan _buatHTMLWord agar terbaca benar */
 function exportRPPMWord() {
-  const d = getRPPMData();
-  if (!d.mapel && !d.guru && !d.sekolah) {
-    showToast('Isi data RPPM terlebih dahulu', 'error');
-    return;
+  let htmlIsi = '';
+  let d = null;
+
+  /* Prioritas: dari tab RPPM hasil Generate */
+  if (currentGenerated && currentGenerated.result && currentGenerated.result.rppm) {
+    htmlIsi = _bersihkanUntukWord(currentGenerated.result.rppm);
+    d = currentGenerated.data;
+  } else {
+    /* Dari form halaman RPPM */
+    d = getRPPMData ? getRPPMData() : {};
+    if (!d.mapel && !d.guru && !d.sekolah) {
+      showToast('Generate atau isi data RPPM terlebih dahulu', 'error');
+      return;
+    }
+    const br  = function(s) { return (s || '—').replace(/\n/g, '<br>'); };
+    const kbc = Array.isArray(d.kbc) ? d.kbc.map(function(v){return '&#9745; '+v;}).join('<br>') : '—';
+    const dpl = Array.isArray(d.dpl) ? d.dpl.map(function(v){return '&#9745; '+v;}).join('<br>') : '—';
+    const asA = Array.isArray(d.asAkhir) ? d.asAkhir.map(function(v){return '&#9745; '+v;}).join('<br>') : '—';
+
+    htmlIsi  = '<h1 style="text-align:center;font-size:14pt;">RENCANA PELAKSANAAN KBC DAN PM</h1>';
+    htmlIsi += '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">';
+    htmlIsi += '<tr><th style="width:160pt;background:#e0e0e0;">Sekolah</th><td>'+br(d.sekolah)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Mata Pelajaran</th><td>'+br(d.mapel)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Fase / Kelas</th><td>'+br(d.fase)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Alokasi Waktu</th><td>'+br(d.waktu)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Tahun Pelajaran</th><td>'+br(d.tahun)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Nama Penyusun</th><td>'+br(d.guru)+'</td></tr>';
+    htmlIsi += '<tr><td colspan="2" style="background:#1a1a2e;color:#fff;font-weight:bold;text-align:center;padding:6pt;">B. IDENTIFIKASI</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Peserta Didik</th><td>'+br(d.peserta)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Materi Pelajaran</th><td>'+br(d.materi)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Tema KBC</th><td>'+kbc+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Profil Lulusan</th><td>'+dpl+'</td></tr>';
+    htmlIsi += '<tr><td colspan="2" style="background:#1a1a2e;color:#fff;font-weight:bold;text-align:center;padding:6pt;">C. DESAIN PEMBELAJARAN</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Capaian Pembelajaran</th><td>'+br(d.cp)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Lintas Disiplin</th><td>'+br(d.lintas)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Tujuan Pembelajaran</th><td>'+br(d.tp)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Topik</th><td>'+br(d.topik)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Integrasi KBC</th><td>'+br(d.integrasi)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Praktik Pedagogis</th><td>'+br(d.model)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Kemitraan</th><td>'+br(d.mitra)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Lingkungan</th><td>'+br(d.lingkungan)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Digital</th><td>'+br(d.digital)+'</td></tr>';
+    htmlIsi += '<tr><td colspan="2" style="background:#1a1a2e;color:#fff;font-weight:bold;text-align:center;padding:6pt;">D. PENGALAMAN BELAJAR</td></tr>';
+    htmlIsi += '<tr><td colspan="2">';
+    if (d.dalil) htmlIsi += '<p style="background:#fffbeb;border-left:3pt solid #f59e0b;padding:6pt;font-style:italic;"><b>Dalil:</b> '+br(d.dalil)+(d.dalilSumber?'<br><b>'+d.dalilSumber+'</b>':'')+'</p>';
+    htmlIsi += '<p style="background:#f5f5f5;border-left:3pt solid #2DD4BF;padding:6pt;margin:4pt 0;"><b>AWAL</b><br>'+br(d.awal)+'</p>';
+    htmlIsi += '<p style="font-weight:bold;margin:6pt 0 2pt;">INTI</p>';
+    htmlIsi += '<p style="background:#f5f5f5;border-left:3pt solid #2DD4BF;padding:6pt;margin:4pt 0;"><b>Memahami</b><br>'+br(d.memahami)+'</p>';
+    htmlIsi += '<p style="background:#f5f5f5;border-left:3pt solid #2DD4BF;padding:6pt;margin:4pt 0;"><b>Mengaplikasi</b><br>'+br(d.mengaplikasi)+'</p>';
+    htmlIsi += '<p style="background:#f5f5f5;border-left:3pt solid #2DD4BF;padding:6pt;margin:4pt 0;"><b>Merefleksi</b><br>'+br(d.merefleksi)+'</p>';
+    htmlIsi += '<p style="background:#f5f5f5;border-left:3pt solid #f59e0b;padding:6pt;margin:4pt 0;"><b>PENUTUP</b><br>'+br(d.penutup)+'</p>';
+    htmlIsi += '</td></tr>';
+    htmlIsi += '<tr><td colspan="2" style="background:#1a1a2e;color:#fff;font-weight:bold;text-align:center;padding:6pt;">E. ASESMEN</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Asesmen Awal</th><td>'+br(d.asAwal)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Asesmen Proses</th><td>'+br(d.asProses)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Asesmen Akhir</th><td>'+asA+'</td></tr>';
+    htmlIsi += '<tr><td colspan="2" style="padding:14pt;text-align:right;">';
+    htmlIsi += (d.sekolah||'...........')+', '+UTIL.formatDate()+'<br><br>';
+    htmlIsi += 'Guru Mata Pelajaran<br><br><br><br>';
+    htmlIsi += '<b>'+(d.guru||'__________________')+'</b></td></tr>';
+    htmlIsi += '</table>';
   }
 
-  /* Ambil HTML dari preview lalu bungkus dalam dokumen Word */
-  const previewHTML = buildRPPMHTML(d);
-
-  /* Bersihkan HTML dari class/variable CSS — ganti dengan style inline sederhana */
-  const docHTML = `
-<html xmlns:o='urn:schemas-microsoft-com:office:office'
-      xmlns:w='urn:schemas-microsoft-com:office:word'
-      xmlns='http://www.w3.org/TR/REC-html40'>
-<head>
-<meta charset="UTF-8">
-<title>RPPM — ${d.mapel} ${d.fase}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11pt; margin: 2cm; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #999; padding: 6pt 8pt; vertical-align: top; font-size: 10.5pt; }
-  th { background: #F0F0F0; font-weight: bold; width: 160pt; }
-  .section-head { background: #0F1B2D; color: #2DD4BF; font-weight: bold; text-align: center; padding: 7pt; font-size: 11pt; }
-  .rppm-tahap { background: #F7F7F7; border-left: 3pt solid #2DD4BF; padding: 6pt 8pt; margin-bottom: 5pt; }
-  .rppm-tahap strong { display: block; color: #0F9688; margin-bottom: 2pt; }
-  .rppm-dalil { background: #FFFBEB; border-left: 3pt solid #F59E0B; padding: 6pt 8pt; font-style: italic; margin-bottom: 8pt; }
-  .rppm-dalil small { font-style: normal; font-weight: bold; color: #D97706; display: block; }
-  h1 { font-size: 14pt; text-align: center; }
-</style>
-</head>
-<body>
-<h1>RENCANA PELAKSANAAN KBC DAN PM</h1>
-<table>
-  <tr><th>Sekolah</th><td>${d.sekolah||'—'}</td></tr>
-  <tr><th>Mata Pelajaran</th><td>${d.mapel||'—'}</td></tr>
-  <tr><th>Fase / Kelas</th><td>${d.fase||'—'}</td></tr>
-  <tr><th>Alokasi Waktu</th><td>${d.waktu||'—'}</td></tr>
-  <tr><th>Tahun Pelajaran</th><td>${d.tahun||'—'}</td></tr>
-  <tr><th>Nama Penyusun</th><td>${d.guru||'—'}</td></tr>
-
-  <tr><td colspan="2" class="section-head">B. IDENTIFIKASI</td></tr>
-  <tr><th>Peserta Didik</th><td>${(d.peserta||'—').replace(/\n/g,'<br>')}</td></tr>
-  <tr><th>Materi Pelajaran</th><td>${d.materi||'—'}</td></tr>
-  <tr><th>Tema KBC (Panca Cinta)</th><td>${d.kbc.length ? d.kbc.map(v=>`☑ ${v}`).join('<br>') : '—'}</td></tr>
-  <tr><th>Dimensi Profil Lulusan</th><td>${d.dpl.length ? d.dpl.map(v=>`☑ ${v}`).join('<br>') : '—'}</td></tr>
-
-  <tr><td colspan="2" class="section-head">C. DESAIN PEMBELAJARAN</td></tr>
-  <tr><th>Capaian Pembelajaran</th><td>${(d.cp||'—').replace(/\n/g,'<br>')}</td></tr>
-  <tr><th>Lintas Disiplin Ilmu</th><td>${d.lintas||'—'}</td></tr>
-  <tr><th>Tujuan Pembelajaran</th><td>${(d.tp||'—').replace(/\n/g,'<br>')}</td></tr>
-  <tr><th>Topik Pembelajaran</th><td>${d.topik||'—'}</td></tr>
-  <tr><th>Materi Integrasi KBC</th><td>${(d.integrasi||'—').replace(/\n/g,'<br>')}</td></tr>
-  <tr><th>Praktik Pedagogis</th><td>${d.model||'—'}</td></tr>
-  <tr><th>Kemitraan Pembelajaran</th><td>${d.mitra||'—'}</td></tr>
-  <tr><th>Lingkungan Pembelajaran</th><td>${d.lingkungan||'—'}</td></tr>
-  <tr><th>Pemanfaatan Digital</th><td>${d.digital||'—'}</td></tr>
-
-  <tr><td colspan="2" class="section-head">D. PENGALAMAN BELAJAR — LANGKAH PEMBELAJARAN</td></tr>
-  <tr><td colspan="2">
-    ${d.dalil ? `<div class="rppm-dalil"><small>📖 Dalil</small>${d.dalil.replace(/\n/g,'<br>')}${d.dalilSumber?`<br><strong>${d.dalilSumber}</strong>`:''}</div>` : ''}
-    <div class="rppm-tahap"><strong>🌅 AWAL</strong>${(d.awal||'—').replace(/\n/g,'<br>')}</div>
-    <p><strong>🔷 INTI</strong></p>
-    <div class="rppm-tahap"><strong>💡 Memahami</strong>${(d.memahami||'—').replace(/\n/g,'<br>')}</div>
-    <div class="rppm-tahap"><strong>🛠️ Mengaplikasi</strong>${(d.mengaplikasi||'—').replace(/\n/g,'<br>')}</div>
-    <div class="rppm-tahap"><strong>🪞 Merefleksi</strong>${(d.merefleksi||'—').replace(/\n/g,'<br>')}</div>
-    <div class="rppm-tahap"><strong>🌆 PENUTUP</strong>${(d.penutup||'—').replace(/\n/g,'<br>')}</div>
-  </td></tr>
-
-  <tr><td colspan="2" class="section-head">E. ASESMEN PEMBELAJARAN</td></tr>
-  <tr><th>Asesmen Awal</th><td>${(d.asAwal||'—').replace(/\n/g,'<br>')}</td></tr>
-  <tr><th>Asesmen Proses</th><td>${(d.asProses||'—').replace(/\n/g,'<br>')}</td></tr>
-  <tr><th>Asesmen Akhir</th><td>${d.asAkhir.length ? d.asAkhir.map(v=>`☑ ${v}`).join('<br>') : '—'}</td></tr>
-
-  <tr><td colspan="2" style="padding:14pt;text-align:right;">
-    ${d.sekolah||'............'}, ${UTIL.formatDate()}<br><br>
-    Guru Mata Pelajaran<br><br><br><br>
-    <strong>${d.guru||'__________________'}</strong>
-  </td></tr>
-</table>
-</body></html>`;
-
-  const blob = new Blob(['\ufeff' + docHTML], { type: 'application/msword' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `RPPM_${d.mapel||'dokumen'}_${d.fase||''}.doc`;
-  a.click();
-  showToast('📄 RPPM berhasil diexport ke Word!');
+  const meta     = 'Mapel: '+(d.mapel||'—')+' | Kelas: '+(d.fase||'—')+' | Sekolah: '+(d.sekolah||'—')+' | Guru: '+(d.guru||'—');
+  const judul    = 'RPPM — '+(d.mapel||'Perangkat')+' '+(d.fase||'');
+  const wordHTML = _buatHTMLWord(judul, htmlIsi, meta);
+  const nama     = 'RPPM_'+((d.mapel||'Dokumen').replace(/\s+/g,'_'))+'_'+((d.fase||'').replace(/\s+/g,'_'))+'.doc';
+  _downloadBlob(wordHTML, nama, 'application/msword');
+  showToast('RPPM berhasil diexport ke Word! Buka dengan Microsoft Word.');
 }
 
-/**
- * _syncRPPMFields — Isi semua field di halaman RPPM dari data generate.
- * Dipanggil setelah buatRPPM() agar export Word di halaman RPPM tetap bisa dipakai.
- * @param {Object} d — objek berisi semua nilai field RPPM
- */
-function _syncRPPMFields(d) {
-  /* Map: field id → nilai */
-  const textMap = {
-    'r-sekolah':      d.sekolah,
-    'r-mapel':        d.mapel,
-    'r-fase':         d.fase,
-    'r-waktu':        d.waktu,
-    'r-tahun':        d.tahun,
-    'r-guru':         d.guru,
-    'r-peserta':      d.peserta,
-    'r-materi':       d.materi,
-    'r-cp':           d.cp,
-    'r-lintas':       d.lintas,
-    'r-tp':           d.tp,
-    'r-topik':        d.topik,
-    'r-integrasi':    d.integrasi,
-    'r-model':        d.model,
-    'r-mitra':        d.mitra,
-    'r-lingkungan':   d.lingkungan,
-    'r-digital':      d.digital,
-    'r-dalil':        d.dalil,
-    'r-dalil-sumber': d.dalilSumber,
-    'r-awal':         d.awal,
-    'r-memahami':     d.memahami,
-    'r-mengaplikasi': d.mengaplikasi,
-    'r-merefleksi':   d.merefleksi,
-    'r-penutup':      d.penutup,
-    'r-as-awal':      d.asAwal,
-    'r-as-proses':    d.asProses,
-  };
-
-  /* Isi field text / textarea */
-  Object.entries(textMap).forEach(([id, val]) => {
-    const el = document.getElementById(id);
-    if (el && val != null) el.value = val;
-  });
-
-  /* Checkbox Panca Cinta */
-  document.querySelectorAll('input[name="kbc"]').forEach(el => {
-    el.checked = Array.isArray(d.kbc) && d.kbc.includes(el.value);
-  });
-
-  /* Checkbox DPL */
-  document.querySelectorAll('input[name="dpl"]').forEach(el => {
-    el.checked = Array.isArray(d.dpl) && d.dpl.includes(el.value);
-  });
-
-  /* Checkbox Asesmen Akhir */
-  document.querySelectorAll('input[name="asakhir"]').forEach(el => {
-    el.checked = Array.isArray(d.asAkhir) && d.asAkhir.includes(el.value);
-  });
-
-  /* Simpan ke IDB agar export Word bisa langsung dari halaman RPPM */
-  const rppmData = getRPPMData?.();
-  if (rppmData) {
-    IDB.set('rppm', rppmData);
-    STORAGE.save(CONFIG.LS_KEY + '_rppm', rppmData);
-  }
-}
-
-/** Export Word RPPM langsung dari tab preview */
 function exportRPPMFromTab() {
   if (typeof exportRPPMWord === 'function') exportRPPMWord();
   else showToast('Buka halaman RPPM untuk export Word', 'warning');
