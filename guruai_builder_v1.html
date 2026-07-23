@@ -1062,6 +1062,33 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 }
 .rppm-dalil small { font-style: normal; font-weight: 700; color: var(--amber); font-size: 11px; display: block; margin-bottom: 3px; }
 
+/* Project Switcher */
+.project-switcher { position: relative; display: inline-block; margin-right: 4px; }
+.project-menu {
+  position: absolute; top: 100%; right: 0; margin-top: 6px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); box-shadow: var(--shadow-lg);
+  min-width: 240px; max-width: 300px; z-index: 300; padding: 6px;
+  max-height: 340px; overflow-y: auto;
+}
+.project-menu-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm);
+  cursor: pointer; font-size: 13px; color: var(--text-primary);
+}
+.project-menu-item:hover { background: var(--border-light); }
+.project-menu-item.active { font-weight: 700; color: var(--accent-dark); }
+.project-menu-item .pm-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-menu-item .pm-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.project-menu-item .pm-actions span { opacity: .5; padding: 3px 5px; border-radius: 4px; font-size: 12px; }
+.project-menu-item .pm-actions span:hover { opacity: 1; background: var(--border); }
+.project-menu-divider { height: 1px; background: var(--border); margin: 6px 2px; }
+.project-menu-new {
+  padding: 9px 10px; text-align: center; font-weight: 700; color: var(--accent-dark);
+  cursor: pointer; border-radius: var(--r-sm); font-size: 13px;
+}
+.project-menu-new:hover { background: var(--border-light); }
+.project-menu-empty { padding: 10px; text-align: center; color: var(--text-muted); font-size: 12px; }
+
 </style>
 </head>
 <body>
@@ -1075,6 +1102,12 @@ h1,h2,h3,h4 { color: var(--text-primary); }
       Guru<span>AI</span> Builder
     </div>
     <div class="header-spacer"></div>
+    <div class="project-switcher" id="projectSwitcher">
+      <button class="btn btn-secondary btn-sm" onclick="toggleProjectMenu()" title="Pilih / Kelola Project" style="gap:5px;max-width:190px;">
+        📚 <span id="activeProjectName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;display:inline-block;vertical-align:middle;">Project</span> ▾
+      </button>
+      <div id="projectMenu" class="project-menu" style="display:none;"></div>
+    </div>
     <button class="btn btn-secondary btn-sm" onclick="PROJECT.open()" title="Buka Project" style="gap:5px;">📂 Buka</button>
     <button class="btn btn-secondary btn-sm" onclick="PROJECT.save()" title="Simpan Project" style="gap:5px;margin-left:4px;">💾 Simpan</button>
     <button class="btn-icon" onclick="toggleDark()" title="Ganti Tema" id="themeBtn">🌙</button>
@@ -2421,8 +2454,24 @@ const UTIL = {
    IDB — IndexedDB wrapper async (penyimpanan utama)
    localStorage tetap tersedia sebagai fallback offline.
    ============================================================ */
+/** Key localStorage fallback ber-namespace project aktif — supaya fallback
+ *  (dipakai kalau IndexedDB gagal) tidak ikut tercampur antar project. */
+function _lsKeyProject() {
+  return CONFIG.LS_KEY + '_' + (IDB._activeProjectId || 'default');
+}
+
 const IDB = {
   _db: null,
+  /* ID project aktif — diisi saat init/switch project. Semua key otomatis
+     diberi awalan 'proj_<id>_' KECUALI key di GLOBAL_KEYS (dipakai bersama semua project). */
+  _activeProjectId: null,
+  GLOBAL_KEYS: ['project_list', 'active_project_id', 'ai_cache'],
+
+  /** Ubah key logis menjadi key fisik ber-namespace project */
+  _k(key) {
+    if (this.GLOBAL_KEYS.includes(key)) return key;
+    return `proj_${this._activeProjectId || 'default'}_${key}`;
+  },
 
   /** Buka / inisialisasi database */
   open() {
@@ -2440,8 +2489,17 @@ const IDB = {
     });
   },
 
-  /** Simpan nilai dengan key */
-  async set(key, val) {
+  /** Simpan nilai dengan key (otomatis ber-namespace project aktif) */
+  async set(key, val) { return this.setRaw(this._k(key), val); },
+
+  /** Ambil nilai dengan key (otomatis ber-namespace project aktif) */
+  async get(key, def = null) { return this.getRaw(this._k(key), def); },
+
+  /** Hapus key (otomatis ber-namespace project aktif) */
+  async del(key) { return this.delRaw(this._k(key)); },
+
+  /** Versi mentah tanpa namespace — dipakai untuk migrasi data lama & manajemen project */
+  async setRaw(key, val) {
     try {
       const db = await this.open();
       return new Promise((res, rej) => {
@@ -2451,13 +2509,11 @@ const IDB = {
         tx.onerror    = e => rej(e.target.error);
       });
     } catch(e) {
-      /* Fallback ke localStorage */
       try { localStorage.setItem('idb_' + key, JSON.stringify(val)); } catch(_) {}
     }
   },
 
-  /** Ambil nilai dengan key */
-  async get(key, def = null) {
+  async getRaw(key, def = null) {
     try {
       const db = await this.open();
       return new Promise((res, rej) => {
@@ -2467,7 +2523,6 @@ const IDB = {
         req.onerror   = e => rej(e.target.error);
       });
     } catch(e) {
-      /* Fallback ke localStorage */
       try {
         const s = localStorage.getItem('idb_' + key);
         return s ? JSON.parse(s) : def;
@@ -2475,8 +2530,7 @@ const IDB = {
     }
   },
 
-  /** Hapus key */
-  async del(key) {
+  async delRaw(key) {
     try {
       const db = await this.open();
       return new Promise((res) => {
@@ -2487,6 +2541,19 @@ const IDB = {
     } catch(e) {
       try { localStorage.removeItem('idb_' + key); } catch(_) {}
     }
+  },
+
+  /** Semua key mentah yang tersimpan (untuk migrasi & hapus project) */
+  async allKeysRaw() {
+    try {
+      const db = await this.open();
+      return new Promise((res, rej) => {
+        const tx  = db.transaction(CONFIG.DB_STORE, 'readonly');
+        const req = tx.objectStore(CONFIG.DB_STORE).getAllKeys();
+        req.onsuccess = e => res(e.target.result || []);
+        req.onerror   = e => rej(e.target.error);
+      });
+    } catch(e) { return []; }
   },
 };
 
@@ -2512,8 +2579,18 @@ const STORAGE = {
    PROJECT — Simpan / buka file .gaib (JSON)
    ============================================================ */
 const PROJECT = {
-  /** Kumpulkan semua data jadi satu objek project */
-  collect() {
+  /** Kumpulkan semua data jadi satu objek project (async — perlu baca IDB) */
+  async collect() {
+    /* Kumpulkan hasil generate lengkap (result_<id>) untuk tiap riwayat,
+       supaya isi RPPM/LKPD/Soal dst (termasuk hasil AI/edit manual) ikut ke .gaib */
+    const results = {};
+    for (const h of DATABASE.history) {
+      const r = await IDB.get('result_' + h.id, null);
+      if (r) results[h.id] = r;
+    }
+    /* Kumpulkan progress ATP & Pertemuan */
+    const atpState = await IDB.get('atp_state', null);
+
     return {
       version:  CONFIG.VERSION,
       savedAt:  Date.now(),
@@ -2521,6 +2598,8 @@ const PROJECT = {
       settings: DATABASE.settings,
       stats:    DATABASE.stats,
       history:  DATABASE.history,
+      results,                     /* NEW: hasil generate lengkap per riwayat */
+      atpState: atpState || null,  /* NEW: progress ATP & Pertemuan */
       form:     { ...UTIL.getFormData(), analisis: STATE_ANALISIS.sudahAnalisis ? STATE_ANALISIS : null },
       rppm:     getRPPMData?.() ?? {},
       aiCache:  AI_CACHE._store,   /* ikut tersimpan di .gaib */
@@ -2528,8 +2607,9 @@ const PROJECT = {
   },
 
   /** Unduh file .gaib */
-  save() {
-    const data    = this.collect();
+  async save() {
+    showToast('💾 Menyiapkan file project...', 'info');
+    const data    = await this.collect();
     const mapel   = data.form.mapel   || 'Proyek';
     const kelas   = data.form.kelas   || '';
     const tahun   = data.form.tahun   || new Date().getFullYear();
@@ -2552,10 +2632,10 @@ const PROJECT = {
       const file   = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = ev => {
+      reader.onload = async ev => {
         try {
           const data = JSON.parse(ev.target.result);
-          this._restore(data);
+          await this._restore(data);
         } catch(_) {
           showToast('❌ File tidak valid atau rusak', 'error');
         }
@@ -2565,8 +2645,8 @@ const PROJECT = {
     input.click();
   },
 
-  /** Restore semua state dari data project */
-  _restore(data) {
+  /** Restore semua state dari data project (async — menulis banyak key IDB) */
+  async _restore(data) {
     /* Settings */
     if (data.settings) {
       Object.assign(DATABASE.settings, data.settings);
@@ -2577,7 +2657,25 @@ const PROJECT = {
     if (data.history) DATABASE.history = data.history;
 
     /* Simpan ke IDB */
-    IDB.set('main', { stats: DATABASE.stats, history: DATABASE.history });
+    await IDB.set('main', { stats: DATABASE.stats, history: DATABASE.history });
+
+    /* Restore hasil generate lengkap (result_<id>) — inilah yang sebelumnya
+       hilang saat file .gaib dibuka di perangkat/browser lain */
+    if (data.results) {
+      for (const [id, result] of Object.entries(data.results)) {
+        await IDB.set('result_' + id, result);
+      }
+    }
+    if (data.history && data.history.length) {
+      await IDB.set('last_historyId', data.history[data.history.length - 1].id);
+    }
+
+    /* Restore progress ATP & Pertemuan */
+    if (data.atpState && typeof ATP_STATE !== 'undefined') {
+      Object.assign(ATP_STATE, data.atpState);
+      await IDB.set('atp_state', ATP_STATE);
+      if (typeof atpHitung === 'function') atpHitung();
+    }
 
     /* Restore form Modul Ajar */
     if (data.form) {
@@ -2618,7 +2716,7 @@ const PROJECT = {
 
     /* Restore RPPM jika ada */
     if (data.rppm && Object.keys(data.rppm).length) {
-      STORAGE.save(CONFIG.LS_KEY + '_rppm', data.rppm);
+      STORAGE.save(_lsKeyProject() + '_rppm', data.rppm);
       restoreRPPM?.();
     }
 
@@ -2633,6 +2731,336 @@ const PROJECT = {
     showToast('📂 Project berhasil dibuka!');
   },
 };
+
+/* ============================================================
+   PROJECT_MANAGER — Manajemen banyak project sekaligus di aplikasi
+   Setiap project (biasanya 1 mapel) punya ruang data IDB sendiri
+   via prefix 'proj_<id>_'. Guru tinggal pilih/switch dari dropdown,
+   tanpa perlu export-import file .gaib tiap ganti mapel.
+   File .gaib tetap tersedia untuk backup/pindah perangkat.
+   ============================================================ */
+const PROJECT_MANAGER = {
+  /** Daftar semua project tersimpan: [{id, nama, mapel, fase, kelas, tahun, updatedAt}] */
+  async listAll() {
+    return (await IDB.get('project_list', [])) || [];
+  },
+  async saveList(list) {
+    await IDB.set('project_list', list);
+  },
+  async getActiveId() {
+    return await IDB.get('active_project_id', null);
+  },
+  async setActiveId(id) {
+    IDB._activeProjectId = id;
+    await IDB.set('active_project_id', id);
+  },
+
+  /** Buat project baru lalu jadikan aktif */
+  async create(nama, meta = {}) {
+    const id   = UTIL.uid();
+    const list = await this.listAll();
+    list.push({
+      id, nama,
+      mapel: meta.mapel || '', fase: meta.fase || '', kelas: meta.kelas || '',
+      tahun: meta.tahun || '', updatedAt: Date.now(),
+    });
+    await this.saveList(list);
+    await this.setActiveId(id);
+    return id;
+  },
+
+  async rename(id, namaBaru) {
+    const list = await this.listAll();
+    const p = list.find(x => x.id === id);
+    if (p) { p.nama = namaBaru; p.updatedAt = Date.now(); await this.saveList(list); }
+  },
+
+  /** Perbarui metadata project aktif (dipanggil saat form identitas diisi) */
+  async touchActive(meta = {}) {
+    const activeId = await this.getActiveId();
+    if (!activeId) return;
+    const list = await this.listAll();
+    const p = list.find(x => x.id === activeId);
+    if (!p) return;
+    Object.assign(p, meta, { updatedAt: Date.now() });
+    await this.saveList(list);
+  },
+
+  /** Hapus project beserta seluruh datanya di IDB */
+  async remove(id) {
+    const list  = await this.listAll();
+    const sisa  = list.filter(x => x.id !== id);
+    await this.saveList(sisa);
+
+    /* Hapus semua key milik project ini */
+    const allKeys = await IDB.allKeysRaw();
+    const prefix  = `proj_${id}_`;
+    for (const k of allKeys) {
+      if (typeof k === 'string' && k.startsWith(prefix)) await IDB.delRaw(k);
+    }
+
+    /* Kalau project yang dihapus sedang aktif, pindah ke project lain / buat baru */
+    const activeId = await this.getActiveId();
+    if (activeId === id) {
+      if (sisa.length) await this.switchTo(sisa[0].id);
+      else {
+        await this.create('Project Baru');
+        await _reloadAppState();
+      }
+    }
+  },
+
+  /** Pindah ke project lain dan reload seluruh state aplikasi */
+  async switchTo(id) {
+    await this.setActiveId(id);
+    await _reloadAppState();
+    await renderProjectSwitcher();
+    goPage('dashboard');
+    showToast('📚 Project berhasil dipindahkan');
+  },
+
+  async promptCreate() {
+    const nama = prompt('Nama project baru (contoh: IPS - Fase D 2026/2027):');
+    if (!nama || !nama.trim()) return;
+    await this.create(nama.trim());
+    await _reloadAppState();
+    await renderProjectSwitcher();
+    goPage('modul');
+    showToast('✅ Project baru dibuat: ' + nama.trim());
+  },
+
+  async promptRename(id) {
+    const list = await this.listAll();
+    const p = list.find(x => x.id === id);
+    const nama = prompt('Ganti nama project:', p?.nama || '');
+    if (!nama || !nama.trim()) return;
+    await this.rename(id, nama.trim());
+    await renderProjectSwitcher();
+  },
+
+  async promptRemove(id) {
+    const list = await this.listAll();
+    const p = list.find(x => x.id === id);
+    if (!confirm(`Hapus project "${p?.nama || ''}"? Semua riwayat & RPPM di project ini akan hilang permanen dari perangkat ini.`)) return;
+    await this.remove(id);
+    await renderProjectSwitcher();
+    showToast('🗑️ Project dihapus');
+  },
+};
+
+/** Migrasi data project lama (sebelum ada Manajemen Project) — key IDB polos
+ *  seperti 'main', 'form', 'rppm', 'atp_state', 'result_<id>' — ke project
+ *  bernama 'default'. Mengembalikan objek project baru, atau null kalau
+ *  memang tidak ada data lama sama sekali (instalasi baru). */
+async function _migrasiProjectLama() {
+  const legacyMain = await IDB.getRaw('main', null);
+  const legacyForm = await IDB.getRaw('form', null);
+  if (!legacyMain && !legacyForm) return null;
+
+  const id = 'default';
+  if (legacyMain) await IDB.setRaw('proj_' + id + '_main', legacyMain);
+  if (legacyForm) await IDB.setRaw('proj_' + id + '_form', legacyForm);
+
+  const legacyRppm = await IDB.getRaw('rppm', null);
+  if (legacyRppm) await IDB.setRaw('proj_' + id + '_rppm', legacyRppm);
+
+  const legacyAtp = await IDB.getRaw('atp_state', null);
+  if (legacyAtp) await IDB.setRaw('proj_' + id + '_atp_state', legacyAtp);
+
+  const legacyLastId = await IDB.getRaw('last_historyId', null);
+  if (legacyLastId) await IDB.setRaw('proj_' + id + '_last_historyId', legacyLastId);
+
+  const legacyAiCache = await IDB.getRaw('ai_cache', null);
+  if (legacyAiCache) await IDB.setRaw('ai_cache', legacyAiCache); /* sudah global, tidak perlu prefix */
+
+  /* Salin semua result_<id> */
+  const allKeys = await IDB.allKeysRaw();
+  for (const k of allKeys) {
+    if (typeof k === 'string' && k.startsWith('result_')) {
+      const v = await IDB.getRaw(k, null);
+      if (v) await IDB.setRaw('proj_' + id + '_' + k, v);
+    }
+  }
+
+  const mapel = legacyForm?.mapel || legacyMain?.history?.[0]?.mapel || 'Project Lama';
+  const fase  = legacyForm?.fase  || legacyMain?.history?.[0]?.fase  || '';
+  const kelas = legacyForm?.kelas || legacyMain?.history?.[0]?.kelas || '';
+  const tahun = legacyForm?.tahun || legacyMain?.history?.[0]?.tahun || new Date().getFullYear();
+  const nama  = `${mapel}${fase ? ' - Fase ' + fase : ''}${tahun ? ' (' + tahun + ')' : ''}`;
+
+  return { id, nama, mapel, fase, kelas, tahun, updatedAt: Date.now() };
+}
+
+/** Inisialisasi Manajemen Project — dipanggil sekali saat init() */
+async function _initProjectManager() {
+  let list     = await PROJECT_MANAGER.listAll();
+  let activeId = await PROJECT_MANAGER.getActiveId();
+
+  if (!list.length) {
+    const migrated = await _migrasiProjectLama();
+    if (migrated) {
+      list = [migrated];
+      await PROJECT_MANAGER.saveList(list);
+      activeId = migrated.id;
+      await PROJECT_MANAGER.setActiveId(activeId);
+    } else {
+      activeId = await PROJECT_MANAGER.create('Project Pertama');
+      return; /* create() sudah men-set IDB._activeProjectId */
+    }
+  }
+  if (!activeId || !list.some(p => p.id === activeId)) activeId = list[0]?.id;
+  await PROJECT_MANAGER.setActiveId(activeId);
+}
+
+/** Reset & muat ulang seluruh state aplikasi dari project yang sedang aktif.
+ *  Dipanggil saat init() pertama kali, dan setiap kali pindah/buat project. */
+async function _reloadAppState() {
+  /* 1. Reset state di memori supaya tidak tercampur project sebelumnya */
+  DATABASE.history = [];
+  DATABASE.stats    = { modul: 0, lkpd: 0, soal: 0, asesmen: 0, tp: 0 };
+  STATE_ANALISIS    = { topik: [], tp: [], materi: [], sudahAnalisis: false };
+  if (typeof ATP_STATE !== 'undefined') {
+    ATP_STATE.totalMingguEfektif = 0; ATP_STATE.totalPertemuan = 0;
+    ATP_STATE.ptmSem1 = 0; ATP_STATE.ptmSem2 = 0;
+    ATP_STATE.distribusi = []; ATP_STATE.progress = {};
+  }
+  currentGenerated = null;
+
+  /* 2. Reset TAMPILAN semua halaman yang datanya spesifik per-project.
+     Tanpa ini, field/preview lama masih terlihat di layar walau
+     state & IDB sudah benar (sumber laporan bug "data lama masih ada"). */
+  _resetTampilanProject();
+
+  /* 3. Muat data project aktif dari IDB (otomatis ber-namespace) */
+  let saved = await IDB.get('main', null);
+  if (saved?.stats)   Object.assign(DATABASE.stats, saved.stats);
+  if (saved?.history) DATABASE.history = saved.history;
+
+  let lastForm = await IDB.get('form', null);
+  if (lastForm) {
+    const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','model'];
+    fields.forEach(f => {
+      const el = document.getElementById('f-' + f);
+      if (el && lastForm[f]) el.value = lastForm[f];
+    });
+    if (lastForm.analisis?.sudahAnalisis) {
+      STATE_ANALISIS = lastForm.analisis;
+      syncHiddenFields();
+      renderHasilAnalisis();
+      const panelAnalisis = document.getElementById('panelAnalisis');
+      if (panelAnalisis) panelAnalisis.style.display = 'block';
+    }
+  }
+
+  RENDER.renderHistory();
+  RENDER.updateStats();
+  await restoreRPPM();
+  if (typeof _atpMuat === 'function') await _atpMuat();
+
+  /* 4. Re-render halaman ATP supaya sinkron dengan ATP_STATE project aktif
+     (baik itu kosong untuk project baru, atau data lama utk project yang ada) */
+  if (typeof _atpRenderTPList  === 'function') _atpRenderTPList();
+  if (typeof _atpRenderTimeline === 'function') _atpRenderTimeline();
+
+  const lastId = await IDB.get('last_historyId', null);
+  if (lastId) {
+    const savedResult = await IDB.get('result_' + lastId, null);
+    const lastHistory = DATABASE.history.find(h => h.id === lastId);
+    if (savedResult && lastHistory) {
+      const analisis = lastHistory.analisis || {};
+      const data = {
+        ...lastHistory,
+        tp:     (analisis.tp     || []).join('\n'),
+        materi: (analisis.materi || []).join(', '),
+        topik:  analisis.topik   || [],
+      };
+      const resultLokal = GENERATOR.generate(data);
+      const result      = { ...resultLokal, ...savedResult };
+      _tampilkanPreview(data, result, 'rppm', lastId);
+    }
+  }
+}
+
+/** Kosongkan tampilan semua halaman yang datanya spesifik per-project
+ *  (Modul Ajar, panel preview hasil generate, halaman RPPM 23-field).
+ *  Dipanggil sebelum data project (baru/lain) dimuat, supaya tidak ada
+ *  sisa tampilan dari project sebelumnya yang tertinggal di layar. */
+function _resetTampilanProject() {
+  /* Form Modul Ajar */
+  ['mapel','fase','kelas','semester','tahun','waktu','cp'].forEach(f => {
+    const el = document.getElementById('f-' + f);
+    if (el) el.value = '';
+  });
+  const panelAnalisis = document.getElementById('panelAnalisis');
+  if (panelAnalisis) panelAnalisis.style.display = 'none';
+
+  /* Panel preview hasil Generate (tab RPPM/LKPD/Soal/dst) */
+  const ph = document.getElementById('previewPlaceholder');
+  const pc = document.getElementById('previewContent');
+  const eb = document.getElementById('exportBar');
+  if (ph) ph.style.display = '';
+  if (pc) pc.style.display = 'none';
+  if (eb) eb.style.display = 'none';
+
+  /* Halaman RPPM (form 23 field KBCDAN PM) — kosongkan semua input/textarea/checkbox */
+  document.querySelectorAll('#page-rppm input[type="text"], #page-rppm textarea').forEach(el => { el.value = ''; });
+  document.querySelectorAll('#page-rppm input[type="checkbox"]').forEach(el => { el.checked = false; });
+  const rppmPreviewContent = document.getElementById('rppmPreviewContent');
+  if (rppmPreviewContent) {
+    rppmPreviewContent.innerHTML = `
+      <div class="preview-placeholder">
+        <div class="ph-icon">📅</div>
+        <h3>Preview RPPM</h3>
+        <p>Isi form di sebelah kiri —<br>preview muncul otomatis</p>
+      </div>`;
+  }
+}
+
+/** Render isi dropdown & label nama project aktif di header */
+async function renderProjectSwitcher() {
+  const list     = await PROJECT_MANAGER.listAll();
+  const activeId = await PROJECT_MANAGER.getActiveId();
+  const active   = list.find(p => p.id === activeId);
+
+  const nameEl = document.getElementById('activeProjectName');
+  if (nameEl) nameEl.textContent = active?.nama || 'Project';
+
+  const menu = document.getElementById('projectMenu');
+  if (!menu) return;
+
+  if (!list.length) {
+    menu.innerHTML = `<div class="project-menu-empty">Belum ada project</div>
+      <div class="project-menu-new" onclick="PROJECT_MANAGER.promptCreate()">+ Project Baru</div>`;
+    return;
+  }
+
+  menu.innerHTML = list.slice().sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0)).map(p => `
+    <div class="project-menu-item ${p.id === activeId ? 'active' : ''}" onclick="PROJECT_MANAGER.switchTo('${p.id}')">
+      <span class="pm-name">${p.id === activeId ? '✓ ' : ''}${p.nama}</span>
+      <span class="pm-actions">
+        <span onclick="event.stopPropagation();PROJECT_MANAGER.promptRename('${p.id}')" title="Ganti nama">✏️</span>
+        <span onclick="event.stopPropagation();PROJECT_MANAGER.promptRemove('${p.id}')" title="Hapus">🗑️</span>
+      </span>
+    </div>`).join('') + `<div class="project-menu-divider"></div>
+    <div class="project-menu-new" onclick="event.stopPropagation();PROJECT_MANAGER.promptCreate()">+ Project Baru</div>`;
+}
+
+/** Buka/tutup dropdown Project Switcher */
+function toggleProjectMenu() {
+  const menu = document.getElementById('projectMenu');
+  if (!menu) return;
+  const show = menu.style.display === 'none';
+  menu.style.display = show ? 'block' : 'none';
+  if (show) {
+    const closeOnOutside = ev => {
+      if (!document.getElementById('projectSwitcher').contains(ev.target)) {
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeOnOutside);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeOnOutside), 0);
+  }
+}
 
 /* ============================================================
    AI_CACHE — Cache hasil analisis berdasarkan hash CP
@@ -4100,7 +4528,7 @@ function generate() {
     /* Simpan ke IDB */
     const payload = { stats: DATABASE.stats, history: DATABASE.history };
     IDB.set('main', payload);
-    STORAGE.save(CONFIG.LS_KEY, payload);
+    STORAGE.save(_lsKeyProject(), payload);
 
     /* Persist result tab ke IDB — key: result_<historyId> */
     _simpanResult(historyId, result);
@@ -4206,8 +4634,12 @@ function loadHistory(id) {
    ============================================================ */
 function autoSave() {
   const data = { ...UTIL.getFormData(), analisis: STATE_ANALISIS.sudahAnalisis ? STATE_ANALISIS : null };
-  STORAGE.save(CONFIG.LS_KEY + '_form', data);
+  STORAGE.save(_lsKeyProject() + '_form', data);
   IDB.set('form', data);
+  /* Sinkronkan metadata project aktif supaya nama di daftar project tetap relevan */
+  if (data.mapel) {
+    PROJECT_MANAGER.touchActive({ mapel: data.mapel, fase: data.fase, kelas: data.kelas, tahun: data.tahun });
+  }
 }
 
 /* ============================================================
@@ -4244,22 +4676,25 @@ function applyDefaultIdentity() {
   showToast('✅ Identitas default diterapkan ke form');
 }
 
-function resetData() {
-  if (!confirm('Reset semua data riwayat dan statistik? Data tidak dapat dipulihkan.')) return;
-  /* Hapus dari IDB */
-  IDB.del('main');
-  IDB.del('form');
-  IDB.del('rppm');
+async function resetData() {
+  if (!confirm('Reset semua data riwayat & statistik pada PROJECT INI SAJA (project lain tidak terpengaruh)? Data tidak dapat dipulihkan.')) return;
+  /* Hapus semua key milik project aktif dari IDB */
+  const activeId = await PROJECT_MANAGER.getActiveId();
+  const prefix   = `proj_${activeId}_`;
+  const allKeys  = await IDB.allKeysRaw();
+  for (const k of allKeys) {
+    if (typeof k === 'string' && k.startsWith(prefix)) await IDB.delRaw(k);
+  }
   /* Hapus dari localStorage */
-  STORAGE.clear(CONFIG.LS_KEY);
-  STORAGE.clear(CONFIG.LS_KEY + '_form');
-  STORAGE.clear(CONFIG.LS_KEY + '_rppm');
+  STORAGE.clear(_lsKeyProject());
+  STORAGE.clear(_lsKeyProject() + '_form');
+  STORAGE.clear(_lsKeyProject() + '_rppm');
   /* Reset state */
   DATABASE.history = [];
   DATABASE.stats = { modul: 0, lkpd: 0, soal: 0, asesmen: 0, tp: 0 };
   RENDER.updateStats();
   RENDER.renderHistory();
-  showToast('🗑️ Data berhasil direset', 'warning');
+  showToast('🗑️ Data project ini berhasil direset', 'warning');
 }
 
 /* ============================================================
@@ -4554,7 +4989,7 @@ function previewRPPM() {
   document.getElementById('rppmPreviewContent').innerHTML = buildRPPMHTML(d);
   /* Simpan ke IDB (utama) dan localStorage (fallback) */
   IDB.set('rppm', d);
-  STORAGE.save(CONFIG.LS_KEY + '_rppm', d);
+  STORAGE.save(_lsKeyProject() + '_rppm', d);
 }
 
 /** Reset semua field RPPM */
@@ -4568,7 +5003,7 @@ function rppmReset() {
       <h3>Preview RPPM</h3>
       <p>Isi form di sebelah kiri — preview muncul otomatis</p>
     </div>`;
-  STORAGE.clear(CONFIG.LS_KEY + '_rppm');
+  STORAGE.clear(_lsKeyProject() + '_rppm');
   showToast('🗑️ Form RPPM direset', 'warning');
 }
 
@@ -4690,7 +5125,7 @@ function salinDariModul() {
 async function restoreRPPM() {
   /* IDB dulu, fallback ke localStorage */
   let saved = await IDB.get('rppm', null);
-  if (!saved) saved = STORAGE.load(CONFIG.LS_KEY + '_rppm', null);
+  if (!saved) saved = STORAGE.load(_lsKeyProject() + '_rppm', null);
   if (!saved) return;
   const textFields = ['sekolah','mapel','fase','waktu','tahun','guru','peserta','materi',
     'cp','lintas','tp','topik','integrasi','model','mitra','lingkungan','digital',
@@ -6117,7 +6552,7 @@ function cgptParseRPPM(teks) {
   const rppmData = getRPPMData?.();
   if (rppmData) {
     IDB.set('rppm', rppmData);
-    STORAGE.save(CONFIG.LS_KEY + '_rppm', rppmData);
+    STORAGE.save(_lsKeyProject() + '_rppm', rppmData);
   }
 
   /* Bangun HTML preview RPPM dari data yang sudah terisi */
@@ -6728,7 +7163,7 @@ function showToast(msg, type = 'info') {
    INIT — Inisialisasi saat halaman dimuat
    ============================================================ */
 async function init() {
-  /* 1. Muat settings dari localStorage (cepat, sinkron) */
+  /* 1. Muat settings dari localStorage (cepat, sinkron) — settings guru & tema tetap global, bukan per-project */
   const settings = STORAGE.load(CONFIG.LS_SETTINGS, {});
   Object.assign(DATABASE.settings, settings);
 
@@ -6744,68 +7179,20 @@ async function init() {
   if (DATABASE.settings.guru)    document.getElementById('set-guru').value    = DATABASE.settings.guru;
   if (DATABASE.settings.nip)     document.getElementById('set-nip').value     = DATABASE.settings.nip;
 
-  /* 4. Muat data utama dari IDB — fallback ke localStorage */
-  let saved = await IDB.get('main', null);
-  if (!saved) saved = STORAGE.load(CONFIG.LS_KEY, {});   /* fallback */
-  if (saved?.stats)   Object.assign(DATABASE.stats,   saved.stats);
-  if (saved?.history) DATABASE.history = saved.history;
+  /* 4. Siapkan Manajemen Project — migrasi data lama kalau ada, tentukan project aktif */
+  await _initProjectManager();
 
-  /* 5. Restore form terakhir dari IDB — fallback ke localStorage */
-  let lastForm = await IDB.get('form', null);
-  if (!lastForm) lastForm = STORAGE.load(CONFIG.LS_KEY + '_form', null);
-  if (lastForm) {
-    const fields = ['sekolah','guru','nip','mapel','fase','kelas','semester','tahun','waktu','cp','model'];
-    fields.forEach(f => {
-      const el = document.getElementById('f-' + f);
-      if (el && lastForm[f]) el.value = lastForm[f];
-    });
-    /* Restore STATE_ANALISIS jika ada */
-    if (lastForm.analisis?.sudahAnalisis) {
-      STATE_ANALISIS = lastForm.analisis;
-      syncHiddenFields();
-      renderHasilAnalisis();
-      document.getElementById('panelAnalisis').style.display = 'block';
-    }
-  }
+  /* 5. Muat semua data (history, form, RPPM, ATP, dsb) dari project yang aktif */
+  await _reloadAppState();
 
-  /* 6. Update chip user */
+  /* 6. Update chip user & tampilkan dropdown Project Switcher */
   updateUserChip();
+  await renderProjectSwitcher();
 
-  /* 7. Render dashboard */
-  RENDER.renderHistory();
-  RENDER.updateStats();
-
-  /* 8. Restore data RPPM dari sesi terakhir */
-  restoreRPPM();
-
-  /* 9. Load cache AI dari IDB */
+  /* 7. Load cache AI dari IDB (global, dipakai bersama semua project) */
   await AI_CACHE.load();
 
-  /* 10. Load ATP state */
-  await _atpMuat();
-
-  /* 10. Restore currentGenerated dari sesi terakhir (termasuk hasil edit AI) */
-  const lastId = await IDB.get('last_historyId', null);
-  if (lastId) {
-    const savedResult = await IDB.get('result_' + lastId, null);
-    const lastHistory = DATABASE.history.find(h => h.id === lastId);
-    if (savedResult && lastHistory) {
-      /* Susun data dari riwayat */
-      const analisis = lastHistory.analisis || {};
-      const data = {
-        ...lastHistory,
-        tp:     (analisis.tp     || []).join('\n'),
-        materi: (analisis.materi || []).join(', '),
-        topik:  analisis.topik   || [],
-      };
-      /* Generate lokal sebagai base lalu timpa dengan yang tersimpan */
-      const resultLokal = GENERATOR.generate(data);
-      const result      = { ...resultLokal, ...savedResult };
-      _tampilkanPreview(data, result, 'rppm', lastId);
-    }
-  }
-
-  /* 11. Pesan selamat datang */
+  /* 8. Pesan selamat datang */
   const guru = DATABASE.settings.guru || 'Guru';
   showToast(`Selamat datang, ${guru}! 👋`);
 }
