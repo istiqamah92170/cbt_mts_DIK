@@ -718,6 +718,21 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 .tp-num { font-size: 11px; font-weight: 800; color: var(--accent); min-width: 18px; margin-top: 2px; }
 .tp-text { flex: 1; font-size: 12.5px; line-height: 1.5; }
 .tp-text[contenteditable="true"] { outline: none; }
+/* Pengelompokan TP per kelas VII/VIII/IX */
+.tp-kelas-section { margin-bottom: 10px; }
+.tp-kelas-section:last-child { margin-bottom: 0; }
+.tp-kelas-title {
+  font-size: 11.5px; font-weight: 800; color: var(--accent-dark);
+  text-transform: uppercase; letter-spacing: .4px;
+  padding: 4px 2px; display: flex; align-items: center; gap: 6px;
+}
+.tp-kelas-count { font-weight: 600; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+.tp-kelas-section .tp-item { margin-bottom: 6px; }
+.tp-kelas-select {
+  font-size: 11px; font-weight: 700; color: var(--text-secondary);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 2px 4px; margin-top: 1px; flex-shrink: 0;
+}
 .btn-chip-add {
   font-size: 11px; font-weight: 700; color: var(--accent);
   padding: 2px 8px; border: 1px solid var(--accent);
@@ -3710,19 +3725,70 @@ function renderHasilAnalisis() {
   renderMateriChips();
 }
 
-/** Render daftar TP yang bisa diedit/hapus */
+/** Pastikan STATE_ANALISIS.tpKelas ada & sinkron dengan panjang TP.
+ *  Kelas yang belum diatur diisi otomatis: TP dibagi berurutan menjadi
+ *  3 bagian (VII → VIII → IX) sesuai urutan kemunculan dalam CP.
+ *  Guru bisa menimpa manual lewat dropdown per TP. */
+function _pastikanTpKelas() {
+  const n = STATE_ANALISIS.tp?.length || 0;
+  const existing = Array.isArray(STATE_ANALISIS.tpKelas) ? STATE_ANALISIS.tpKelas : [];
+  const per = Math.ceil(n / 3) || 1;
+  const arr = [];
+  for (let i = 0; i < n; i++) {
+    arr.push(existing[i] || (i < per ? 7 : i < per * 2 ? 8 : 9));
+  }
+  STATE_ANALISIS.tpKelas = arr;
+}
+
+/** Render daftar TP yang bisa diedit/hapus — dikelompokkan per kelas VII/VIII/IX */
 function renderTPList() {
-  document.getElementById('analisisTP').innerHTML =
-    STATE_ANALISIS.tp.map((tp, i) => `
-      <div class="tp-item" id="tp-item-${i}">
-        <span class="tp-num">TP${i+1}</span>
-        <span class="tp-text" contenteditable="true"
-          onblur="updateTP(${i}, this.textContent.trim())"
-          onfocus="this.parentElement.classList.add('editing')"
-        >${tp}</span>
-        <span class="chip-del" onclick="hapusTP(${i})" title="Hapus TP ini">✕</span>
-      </div>
-    `).join('') || '<p class="text-muted">Belum ada TP. Klik "+ Tambah".</p>';
+  _pastikanTpKelas();
+  const container = document.getElementById('analisisTP');
+
+  if (!STATE_ANALISIS.tp.length) {
+    container.innerHTML = '<p class="text-muted">Belum ada TP. Klik "+ Tambah".</p>';
+    return;
+  }
+
+  const kelasLabel = { 7: 'Kelas VII', 8: 'Kelas VIII', 9: 'Kelas IX' };
+  let html = '';
+  [7, 8, 9].forEach(kelasNum => {
+    const idxTp = STATE_ANALISIS.tp
+      .map((tp, i) => ({ tp, i }))
+      .filter(x => STATE_ANALISIS.tpKelas[x.i] === kelasNum);
+
+    html += `<div class="tp-kelas-section">
+      <div class="tp-kelas-title">${kelasLabel[kelasNum]} <span class="tp-kelas-count">${idxTp.length} TP</span></div>`;
+
+    if (!idxTp.length) {
+      html += `<p class="text-muted" style="font-size:12px;padding:4px 2px;">Belum ada TP di kelas ini</p>`;
+    } else {
+      html += idxTp.map(({ tp, i }) => `
+        <div class="tp-item" id="tp-item-${i}">
+          <span class="tp-num">TP${i + 1}</span>
+          <span class="tp-text" contenteditable="true"
+            onblur="updateTP(${i}, this.textContent.trim())"
+            onfocus="this.parentElement.classList.add('editing')"
+          >${tp}</span>
+          <select class="tp-kelas-select" title="Pindah ke kelas lain" onchange="updateTPKelas(${i}, this.value)">
+            <option value="7"  ${kelasNum === 7  ? 'selected' : ''}>VII</option>
+            <option value="8"  ${kelasNum === 8  ? 'selected' : ''}>VIII</option>
+            <option value="9"  ${kelasNum === 9  ? 'selected' : ''}>IX</option>
+          </select>
+          <span class="chip-del" onclick="hapusTP(${i})" title="Hapus TP ini">✕</span>
+        </div>`).join('');
+    }
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+/** Pindahkan TP ke kelas lain (override manual dari pembagian otomatis) */
+function updateTPKelas(i, kelasBaru) {
+  STATE_ANALISIS.tpKelas[i] = parseInt(kelasBaru, 10);
+  renderTPList();
+  autoSave();
 }
 
 /** Render chip materi yang bisa diedit/hapus */
@@ -3749,6 +3815,7 @@ function updateTP(i, val) {
 }
 function hapusTP(i) {
   STATE_ANALISIS.tp.splice(i, 1);
+  if (Array.isArray(STATE_ANALISIS.tpKelas)) STATE_ANALISIS.tpKelas.splice(i, 1);
   renderTPList();
   syncHiddenFields();
 }
