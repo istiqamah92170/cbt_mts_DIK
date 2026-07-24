@@ -843,6 +843,14 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 
 /* ---- ATP & PERTEMUAN ---- */
 .atp-body { flex:1; overflow-y:auto; padding:20px; }
+.atp-kelas-tabs { display: flex; gap: 6px; padding: 0 20px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+.atp-kelas-tab {
+  padding: 9px 16px; font-size: 13px; font-weight: 700; color: var(--text-muted);
+  background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+  margin-bottom: -1px; transition: color var(--t), border-color var(--t);
+}
+.atp-kelas-tab:hover { color: var(--text-primary); }
+.atp-kelas-tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
 .atp-grid { display:grid; grid-template-columns:340px 1fr; gap:16px; align-items:start; }
 .atp-card {
   background:var(--bg-surface); border:1px solid var(--border);
@@ -2056,9 +2064,15 @@ h1,h2,h3,h4 { color: var(--text-primary); }
           <p>Kalkulator pertemuan efektif → distribusi TP → buat RPPM satu pertemuan sekaligus</p>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="atpReset()" title="Reset semua data ATP">↺ Reset</button>
+          <button class="btn btn-secondary btn-sm" onclick="atpReset()" title="Reset progress kelas yang sedang aktif">↺ Reset</button>
           <button class="btn btn-primary btn-sm" onclick="atpHitung()">🧮 Hitung Ulang</button>
         </div>
+      </div>
+
+      <div class="atp-kelas-tabs" id="atpKelasTabs">
+        <button class="atp-kelas-tab" data-kelas="7" onclick="atpGantiKelas(7)">Kelas VII</button>
+        <button class="atp-kelas-tab" data-kelas="8" onclick="atpGantiKelas(8)">Kelas VIII</button>
+        <button class="atp-kelas-tab" data-kelas="9" onclick="atpGantiKelas(9)">Kelas IX</button>
       </div>
 
       <div class="atp-body">
@@ -2685,11 +2699,12 @@ const PROJECT = {
       await IDB.set('last_historyId', data.history[data.history.length - 1].id);
     }
 
-    /* Restore progress ATP & Pertemuan */
-    if (data.atpState && typeof ATP_STATE !== 'undefined') {
-      Object.assign(ATP_STATE, data.atpState);
-      await IDB.set('atp_state', ATP_STATE);
+    /* Restore progress ATP & Pertemuan (semua kelas VII/VIII/IX) */
+    if (data.atpState && typeof _atpTerapkanData === 'function') {
+      _atpTerapkanData(data.atpState);
+      await _atpSimpan();
       if (typeof atpHitung === 'function') atpHitung();
+      if (typeof _atpRenderTabKelas === 'function') _atpRenderTabKelas();
     }
 
     /* Restore form Modul Ajar */
@@ -2934,10 +2949,10 @@ async function _reloadAppState() {
   DATABASE.history = [];
   DATABASE.stats    = { modul: 0, lkpd: 0, soal: 0, asesmen: 0, tp: 0 };
   STATE_ANALISIS    = { topik: [], tp: [], materi: [], sudahAnalisis: false };
-  if (typeof ATP_STATE !== 'undefined') {
-    ATP_STATE.totalMingguEfektif = 0; ATP_STATE.totalPertemuan = 0;
-    ATP_STATE.ptmSem1 = 0; ATP_STATE.ptmSem2 = 0;
-    ATP_STATE.distribusi = []; ATP_STATE.progress = {};
+  if (typeof ATP_ALL_KELAS !== 'undefined') {
+    ATP_KELAS_AKTIF = 7;
+    [7, 8, 9].forEach(k => { ATP_ALL_KELAS[k] = _atpKosong(); });
+    ATP_STATE = ATP_ALL_KELAS[ATP_KELAS_AKTIF];
   }
   currentGenerated = null;
 
@@ -2974,6 +2989,7 @@ async function _reloadAppState() {
 
   /* 4. Re-render halaman ATP supaya sinkron dengan ATP_STATE project aktif
      (baik itu kosong untuk project baru, atau data lama utk project yang ada) */
+  if (typeof _atpRenderTabKelas === 'function') _atpRenderTabKelas();
   if (typeof _atpRenderTPList  === 'function') _atpRenderTPList();
   if (typeof _atpRenderTimeline === 'function') _atpRenderTimeline();
 
@@ -3463,6 +3479,18 @@ function updateModelStatus(model) {
    Tidak menggunakan AI eksternal. Berbasis pola kata kunci
    yang dapat dikembangkan bertahap.
    ============================================================ */
+/** Deteksi baris yang sebenarnya judul/label struktur dokumen CP
+ *  (mis. "A. Elemen Pemahaman Konsep", "B. Elemen Keterampilan Proses"),
+ *  BUKAN kalimat kompetensi — supaya tidak ikut ter-ekstrak jadi topik/TP/materi. */
+function _adalahJudulElemen(teks) {
+  const t = (teks || '').trim();
+  if (!t) return true;
+  return /^[a-z0-9]+[.)]\s*elemen\b/i.test(t) ||
+         /^elemen\b/i.test(t) ||
+         /^(capaian pembelajaran|rasional|karakteristik|tujuan mata pelajaran)\b/i.test(t) ||
+         /^fase\s+[a-f]\b/i.test(t);
+}
+
 const CP_ANALYZER = {
 
   /**
@@ -3500,6 +3528,10 @@ const CP_ANALYZER = {
 
   /** Ekstrak topik dari teks CP */
   _ekstrakTopik(lower, mapel) {
+    /* Kata kerja operasional — penanda klausa ini benar berisi kompetensi,
+       bukan judul/label struktur seperti "A. Elemen Pemahaman Konsep" */
+    const daftarVerba = /(memahami|menjelaskan|menganalisis|menerapkan|menyajikan|mengidentifikasi|membuat|merancang|menggunakan|menghitung|menyelesaikan|menyebutkan|mengklasifikasikan|membandingkan|mengevaluasi|mencipta|mengembangkan|membangun|berkomunikasi|berpikir|berkolaborasi|mendeskripsikan|menelaah|mengkaji|menggambarkan|mempresentasikan|mengeksplorasi|menginterpretasi|menghubungkan|mengamati|menanya|mengumpulkan|menalar|mengomunikasikan|mempraktikkan|melakukan|memaknai|meyakini)/;
+
     /* Pisahkan per klausa (titik koma, koma bersambung, "dan") */
     const klausa = lower
       .replace(/pada akhir fase [a-f],?/g, '')
@@ -3507,7 +3539,9 @@ const CP_ANALYZER = {
       .replace(/siswa (mampu|dapat)/g, '|')
       .split(/[|;]/)
       .map(s => s.replace(/^\s*(dan|serta|,)\s*/,'').trim())
-      .filter(s => s.length > 10);
+      .filter(s => s.length > 10)
+      .filter(s => !_adalahJudulElemen(s))   /* buang baris judul/label struktur CP */
+      .filter(s => daftarVerba.test(s));      /* pastikan memang kalimat kompetensi */
 
     /* Ambil frasa bermakna: kata benda utama setelah kata kerja */
     const topik = [];
@@ -6097,13 +6131,14 @@ function cgptSimpanTP() {
   const tpList = tpMatch[1].trim()
     .split('\n')
     .map(l => l.replace(/^TP\d+[:.]\s*/i, '').trim())
-    .filter(l => l.length > 10);
+    .filter(l => l.length > 10)
+    .filter(l => !_adalahJudulElemen(l));
 
   const topikList = topikMatch
-    ? topikMatch[1].trim().split('\n').map(l => l.replace(/^[-•*\d.]+\s*/,'').trim()).filter(Boolean)
+    ? topikMatch[1].trim().split('\n').map(l => l.replace(/^[-•*\d.]+\s*/,'').trim()).filter(Boolean).filter(l => !_adalahJudulElemen(l))
     : [];
   const materiList = materiMatch
-    ? materiMatch[1].trim().split('\n').map(l => l.replace(/^[-•*\d.]+\s*/,'').trim()).filter(Boolean)
+    ? materiMatch[1].trim().split('\n').map(l => l.replace(/^[-•*\d.]+\s*/,'').trim()).filter(Boolean).filter(l => !_adalahJudulElemen(l))
     : [];
 
   if (!tpList.length) { showToast('Tidak ada TP yang ditemukan dalam hasil ChatGPT', 'error'); return; }
@@ -6729,17 +6764,25 @@ function initChatGPTPage() {
    ============================================================ */
 
 /** State ATP */
-let ATP_STATE = {
-  /* Hasil kalkulator */
-  totalMingguEfektif: 0,
-  totalPertemuan:     0,
-  ptmSem1:            0,
-  ptmSem2:            0,
-  /* Daftar pertemuan per TP: [{ tpIdx, tpTeks, jumlahPtm, status[] }] */
-  distribusi: [],
-  /* Progress: { 'TP{i}_P{j}': 'done'|'todo' } */
-  progress: {},
-};
+/** Data ATP disimpan TERPISAH per kelas (VII/VIII/IX) — masing-masing
+ *  punya kalkulator hasil, distribusi TP, dan progress sendiri, karena
+ *  tiap kelas berjalan di tahun ajaran & rombel yang berbeda.
+ *  ATP_STATE adalah ALIAS (reference) ke objek kelas yang sedang aktif,
+ *  supaya seluruh fungsi ATP di bawah ini TIDAK PERLU diubah — mereka
+ *  tetap membaca/menulis "ATP_STATE.xxx" seperti biasa. */
+function _atpKosong() {
+  return { totalMingguEfektif: 0, totalPertemuan: 0, ptmSem1: 0, ptmSem2: 0, distribusi: [], progress: {} };
+}
+let ATP_ALL_KELAS = { 7: _atpKosong(), 8: _atpKosong(), 9: _atpKosong() };
+let ATP_KELAS_AKTIF = 7;
+let ATP_STATE = ATP_ALL_KELAS[ATP_KELAS_AKTIF];
+const KELAS_ROMAWI = { 7: 'VII', 8: 'VIII', 9: 'IX' };
+
+/** Daftar teks TP milik kelas yang sedang aktif di halaman ATP (index lokal 0..k-1) */
+function _atpTpAktif() {
+  _pastikanTpKelas();
+  return (STATE_ANALISIS.tp || []).filter((_, i) => STATE_ANALISIS.tpKelas[i] === ATP_KELAS_AKTIF);
+}
 
 /** Nilai default per jenjang berdasarkan regulasi */
 const ATP_DEFAULT = {
@@ -6864,9 +6907,9 @@ function _atpRenderKalkulator(k) {
 
 /** Distribusi TP otomatis — bagi rata pertemuan ke semua TP */
 function atpDistribusiOtomatis() {
-  const tpList = STATE_ANALISIS.tp;
+  const tpList = _atpTpAktif();
   if (!tpList || !tpList.length) {
-    showToast('Buat TP terlebih dahulu di Impor ChatGPT (Tahap 1)', 'warning');
+    showToast(`Belum ada TP untuk Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}. Atur pembagian kelas di Analisis CP.`, 'warning');
     return;
   }
   if (!ATP_STATE.totalPertemuan) {
@@ -6895,13 +6938,13 @@ function atpDistribusiOtomatis() {
 /** Render daftar TP dengan input jumlah pertemuan */
 function _atpRenderTPList() {
   const el = document.getElementById('atpTPList');
-  const tpList = STATE_ANALISIS.tp;
+  const tpList = _atpTpAktif();
   const badge  = document.getElementById('atpTPCount');
-  if (badge) badge.textContent = (tpList?.length || 0) + ' TP';
+  if (badge) badge.textContent = (tpList?.length || 0) + ' TP · Kelas ' + KELAS_ROMAWI[ATP_KELAS_AKTIF];
 
   if (!tpList || !tpList.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><h3>Belum ada TP</h3>
-      <p>Buat TP di <strong>Impor ChatGPT → Tahap 1</strong></p>
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><h3>Belum ada TP di Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}</h3>
+      <p>Atur pembagian TP ke kelas di <strong>Analisis CP</strong>, atau buat TP baru di <strong>Impor ChatGPT → Tahap 1</strong></p>
       <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="goPage('chatgpt')">→ Buat TP Sekarang</button></div>`;
     return;
   }
@@ -6956,7 +6999,7 @@ function _atpRenderTPList() {
 function atpUpdateJumlahPtm(tpIdx, nilai) {
   const n = Math.max(1, Math.min(20, parseInt(nilai) || 1));
   if (!ATP_STATE.distribusi[tpIdx]) {
-    ATP_STATE.distribusi[tpIdx] = { tpIdx, tpTeks: STATE_ANALISIS.tp[tpIdx], jumlahPtm: n };
+    ATP_STATE.distribusi[tpIdx] = { tpIdx, tpTeks: _atpTpAktif()[tpIdx], jumlahPtm: n };
   } else {
     ATP_STATE.distribusi[tpIdx].jumlahPtm = n;
   }
@@ -7056,14 +7099,17 @@ function _atpRenderTimeline() {
  */
 function atpBuatRPPM(tpIdx, ptmKe, key) {
   const dist = ATP_STATE.distribusi[tpIdx];
-  const tp   = dist?.tpTeks || STATE_ANALISIS.tp[tpIdx] || '';
+  const tp   = dist?.tpTeks || _atpTpAktif()[tpIdx] || '';
   const d    = currentGenerated?.data || UTIL.getFormData();
 
   /* Set konteks khusus pertemuan ini ke STATE_ANALISIS */
   /* Hanya TP yang aktif ini yang dipakai di prompt */
   const tpKhusus = `${tp}\n(Pertemuan ke-${ptmKe+1} dari ${dist.jumlahPtm} pertemuan untuk TP ini)`;
 
-  /* Simpan info pertemuan aktif ke state global agar prompt bisa membacanya */
+  /* Simpan info pertemuan aktif ke state global agar prompt bisa membacanya.
+     Kelas ikut tab ATP yang sedang aktif — bukan field Modul Ajar yang
+     mungkin sudah tidak sesuai (mis. guru pindah tab kelas VIII di ATP,
+     tapi form Modul Ajar masih menunjukkan kelas VII). */
   window._atpAktif = {
     tpIdx, ptmKe, key,
     tpTeks:   tp,
@@ -7072,7 +7118,7 @@ function atpBuatRPPM(tpIdx, ptmKe, key) {
     totalPtm: dist.jumlahPtm,
     ptmGlobal: _atpGetGlobalNum(tpIdx, ptmKe),
     mapel:    d.mapel || '',
-    kelas:    d.kelas || '',
+    kelas:    KELAS_ROMAWI[ATP_KELAS_AKTIF],
     fase:     d.fase  || '',
     waktu:    d.waktu || '',
     model:    d.model || 'PBL',
@@ -7168,37 +7214,74 @@ function _atpCariBerikutnya() {
   return null;
 }
 
-/** Reset ATP */
+/** Reset ATP — hanya untuk kelas yang sedang aktif */
 function atpReset() {
-  if (!confirm('Reset semua progress ATP? Data pertemuan yang sudah selesai akan dihapus.')) return;
-  ATP_STATE = { totalMingguEfektif:0, totalPertemuan:0, ptmSem1:0, ptmSem2:0, distribusi:[], progress:{} };
+  if (!confirm(`Reset progress ATP Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}? Data pertemuan yang sudah selesai di kelas ini akan dihapus. Kelas lain tidak terpengaruh.`)) return;
+  Object.assign(ATP_STATE, _atpKosong());
   window._atpAktif = null;
   _atpRenderTPList();
   _atpRenderTimeline();
   _atpSimpan();
   atpHitung();
-  showToast('🗑️ Data ATP direset', 'warning');
+  showToast(`🗑️ Data ATP Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]} direset`, 'warning');
 }
 
-/** Simpan ATP_STATE ke IDB */
+/** Simpan seluruh data ATP (3 kelas sekaligus) ke IDB */
 function _atpSimpan() {
-  IDB.set('atp_state', ATP_STATE);
+  IDB.set('atp_state', { kelasAktif: ATP_KELAS_AKTIF, kelas: ATP_ALL_KELAS });
 }
 
-/** Muat ATP_STATE dari IDB */
+/** Terapkan data ATP dari IDB/.gaib — mendukung format baru (per-kelas)
+ *  maupun format lama (flat, sebelum ada pembagian kelas — dianggap kelas VII) */
+function _atpTerapkanData(saved) {
+  if (!saved) return;
+  if (saved.kelas && typeof saved.kelas === 'object') {
+    [7, 8, 9].forEach(k => {
+      if (saved.kelas[k]) Object.assign(ATP_ALL_KELAS[k], _atpKosong(), saved.kelas[k]);
+    });
+    ATP_KELAS_AKTIF = (saved.kelasAktif && ATP_ALL_KELAS[saved.kelasAktif]) ? saved.kelasAktif : 7;
+  } else if (saved.distribusi || saved.progress || saved.totalPertemuan) {
+    /* Format lama (sebelum Fase 2) — anggap ini data Kelas VII */
+    Object.assign(ATP_ALL_KELAS[7], _atpKosong(), saved);
+    ATP_KELAS_AKTIF = 7;
+  }
+  ATP_STATE = ATP_ALL_KELAS[ATP_KELAS_AKTIF];
+}
+
+/** Muat data ATP dari IDB */
 async function _atpMuat() {
   const saved = await IDB.get('atp_state', null);
-  if (saved) Object.assign(ATP_STATE, saved);
+  _atpTerapkanData(saved);
+}
+
+/** Render status aktif tab kelas */
+function _atpRenderTabKelas() {
+  document.querySelectorAll('#atpKelasTabs .atp-kelas-tab').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.kelas, 10) === ATP_KELAS_AKTIF);
+  });
+}
+
+/** Pindah tab kelas di halaman ATP */
+function atpGantiKelas(kelasBaru) {
+  kelasBaru = parseInt(kelasBaru, 10);
+  if (!ATP_ALL_KELAS[kelasBaru] || kelasBaru === ATP_KELAS_AKTIF) return;
+  ATP_KELAS_AKTIF = kelasBaru;
+  ATP_STATE = ATP_ALL_KELAS[ATP_KELAS_AKTIF];
+  window._atpAktif = null;
+  _atpRenderTabKelas();
+  atpHitung();
+  _atpRenderTPList();
+  _atpRenderTimeline();
 }
 
 /** Init halaman ATP */
 async function initATPPage() {
-  /* Muat state tersimpan */
+  /* Muat state tersimpan (semua kelas) */
   await _atpMuat();
+  _atpRenderTabKelas();
 
-  /* Sync TP dari STATE_ANALISIS jika ada tapi distribusi belum */
-  if (STATE_ANALISIS.tp?.length && !ATP_STATE.distribusi.length) {
-    /* Distribusi otomatis jika belum pernah diatur */
+  /* Sync TP dari STATE_ANALISIS jika ada tapi distribusi kelas aktif belum */
+  if (_atpTpAktif().length && !ATP_STATE.distribusi.length) {
     if (ATP_STATE.totalPertemuan > 0) {
       atpDistribusiOtomatis();
     }
