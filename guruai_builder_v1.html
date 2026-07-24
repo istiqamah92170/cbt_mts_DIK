@@ -5538,7 +5538,25 @@ let cgptLastResult   = null;
  * Guru tidak perlu menulis prompt sendiri.
  */
 function cgptBuatPrompt(tabId) {
-  const d = currentGenerated?.data || UTIL.getFormData();
+  /* Kalau prompt dipicu dari ATP (klik "Buat RPPM" di satu pertemuan),
+     pakai identitas & kelas dari konteks ATP itu — bukan form Modul Ajar
+     yang mungkin sudah tidak sesuai (mis. guru sedang di tab ATP Kelas VIII,
+     tapi form Modul Ajar masih menunjukkan Kelas VII). */
+  const atpAktif = window._atpAktif;
+  let d = currentGenerated?.data || UTIL.getFormData();
+  if (atpAktif) {
+    d = {
+      ...d,
+      kelas:   atpAktif.kelas   || d.kelas,
+      mapel:   atpAktif.mapel   || d.mapel,
+      fase:    atpAktif.fase    || d.fase,
+      waktu:   atpAktif.waktu   || d.waktu,
+      model:   atpAktif.model   || d.model,
+      guru:    atpAktif.guru    || d.guru,
+      sekolah: atpAktif.sekolah || d.sekolah,
+      cp:      atpAktif.cp      || d.cp,
+    };
+  }
   const materi = d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
   /* Untuk tahap 2, TP pakai yang sudah disimpan dari tahap 1 */
   const tp = cgptTPTersimpan ||
@@ -5563,7 +5581,6 @@ ${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}`;
                 String(cgptTahap);
 
   /* Jika dari ATP — gunakan TP dan konteks pertemuan spesifik */
-  const atpAktif = window._atpAktif;
   const tpUntukPrompt = atpAktif
     ? `TP${atpAktif.tpIdx+1}: ${atpAktif.tpTeks}\n(Ini pertemuan ke-${atpAktif.ptmKe1} dari ${atpAktif.totalPtm} pertemuan untuk TP ini. Pertemuan global ke-${atpAktif.ptmGlobal}.)`
     : tp;
@@ -6514,10 +6531,26 @@ function cgptTeksKeHTML(teks, tabId) {
 function cgptTerapkan() {
   if (!cgptLastResult) { showToast('Format dulu hasilnya', 'error'); return; }
 
-  /* Jika belum ada currentGenerated, buat dummy dari form data */
+  /* Jika belum ada currentGenerated, buat dummy dari form data
+     (atau dari konteks ATP kalau RPPM ini dipicu dari tab ATP) */
   if (!currentGenerated) {
+    const atpAktif = window._atpAktif;
+    let formData = UTIL.getFormData();
+    if (atpAktif) {
+      formData = {
+        ...formData,
+        kelas:   atpAktif.kelas   || formData.kelas,
+        mapel:   atpAktif.mapel   || formData.mapel,
+        fase:    atpAktif.fase    || formData.fase,
+        waktu:   atpAktif.waktu   || formData.waktu,
+        model:   atpAktif.model   || formData.model,
+        guru:    atpAktif.guru    || formData.guru,
+        sekolah: atpAktif.sekolah || formData.sekolah,
+        cp:      atpAktif.cp      || formData.cp,
+      };
+    }
     const data = {
-      ...UTIL.getFormData(),
+      ...formData,
       tp:     STATE_ANALISIS.tp.join('\n'),
       materi: STATE_ANALISIS.materi.join(', '),
       topik:  STATE_ANALISIS.topik,
@@ -6596,7 +6629,20 @@ function cgptParseRPPM(teks) {
     const el = document.getElementById(id);
     if (el && val) el.value = val;
   };
-  const d = UTIL.getFormData();
+  let d = UTIL.getFormData();
+  if (window._atpAktif) {
+    const a = window._atpAktif;
+    d = {
+      ...d,
+      kelas:   a.kelas   || d.kelas,
+      mapel:   a.mapel   || d.mapel,
+      fase:    a.fase    || d.fase,
+      waktu:   a.waktu   || d.waktu,
+      guru:    a.guru    || d.guru,
+      sekolah: a.sekolah || d.sekolah,
+      cp:      a.cp      || d.cp,
+    };
+  }
 
   setVal('r-sekolah',      d.sekolah || '');
   setVal('r-mapel',        d.mapel   || '');
