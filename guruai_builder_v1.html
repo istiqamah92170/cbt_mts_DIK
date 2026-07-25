@@ -3798,27 +3798,51 @@ function toggleImporWord() {
  *  diabaikan karena tidak diawali "Peserta didik mampu/dapat...". */
 function _parseTabelATPWord(teks) {
   const baris = (teks || '').split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim().length);
+  if (!baris.length) return [];
+
+  /* Cari kolom secara LUWES dari baris header — berpatokan pada NAMA
+     KOLOM (mis. "Alur Tujuan Pembelajaran", "Tujuan Pembelajaran"),
+     BUKAN pada pola kalimat "peserta didik mampu/dapat...", karena ada
+     TP yang tidak diawali frasa itu sama sekali. */
+  const kolomHeader = baris[0].split('\t').map(h => h.trim().toLowerCase());
+  let idxBab     = kolomHeader.findIndex(h => h.includes('bab'));
+  let idxTp      = kolomHeader.findIndex(h => h.includes('tujuan pembelajaran'));
+  let idxMateri  = kolomHeader.findIndex(h => h.includes('materi'));
+  let idxAlokasi = kolomHeader.findIndex(h => h.includes('alokasi') || h.includes('jam pelajaran') || /\bjp\b/.test(h) || h.includes('waktu'));
+
+  let mulaiBaris = 1;
+  if (idxTp === -1) {
+    /* Header tidak dikenali — asumsikan urutan standar tabel ATP:
+       Bab, Alur Tujuan Pembelajaran, Materi, Alokasi Waktu — dan baris
+       pertama dianggap DATA (bukan header) */
+    idxBab = 0; idxTp = 1; idxMateri = 2; idxAlokasi = 3;
+    mulaiBaris = 0;
+  }
+
   let babAktif = '';
   const hasil = [];
-  baris.forEach(line => {
-    const kolom  = line.split('\t');
-    const bab     = (kolom[0] || '').trim();
-    const tp      = (kolom[1] || '').trim();
-    const materi  = (kolom[2] || '').trim();
-    const alokasi = (kolom[3] || '').trim();
+  for (let i = mulaiBaris; i < baris.length; i++) {
+    const kolom      = baris[i].split('\t');
+    const bab        = idxBab     >= 0 ? (kolom[idxBab]     || '').trim() : '';
+    const tp         = (kolom[idxTp] || '').trim();
+    const materi     = idxMateri  >= 0 ? (kolom[idxMateri]  || '').trim() : '';
+    const alokasiRaw = idxAlokasi >= 0 ? (kolom[idxAlokasi] || '').trim() : '';
 
+    /* Lewati baris tanpa isi TP sama sekali (baris "Total", baris kosong,
+       dll) — dicek SEBELUM update babAktif supaya baris seperti "Total"
+       (yang kolom Bab-nya terisi tapi TP-nya kosong) tidak ikut jadi
+       Bab aktif untuk baris berikutnya */
+    if (!tp) continue;
+    if (_adalahJudulElemen(tp)) continue;
     if (bab) babAktif = bab;
-
-    /* Hanya baris yang benar berisi TP (diawali "peserta didik/siswa mampu/dapat") yang diambil */
-    if (!/^(peserta didik|siswa)\s+(mampu|dapat)/i.test(tp)) return;
 
     hasil.push({
       bab: babAktif,
       tp,
       materi,
-      alokasi: /^\d+$/.test(alokasi) ? parseInt(alokasi, 10) : null,
+      alokasi: /^\d+$/.test(alokasiRaw) ? parseInt(alokasiRaw, 10) : null,
     });
-  });
+  }
   return hasil;
 }
 
