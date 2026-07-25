@@ -6953,8 +6953,8 @@ function _atpRenderKalkulator(k) {
 
 /** Distribusi TP otomatis — bagi rata pertemuan ke semua TP */
 function atpDistribusiOtomatis() {
-  const tpList = _atpTpAktif();
-  if (!tpList || !tpList.length) {
+  const tpSemuaKelas = _atpTpAktif();
+  if (!tpSemuaKelas || !tpSemuaKelas.length) {
     showToast(`Belum ada TP untuk Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}. Atur pembagian kelas di Analisis CP.`, 'warning');
     return;
   }
@@ -6963,22 +6963,48 @@ function atpDistribusiOtomatis() {
     return;
   }
 
-  const total  = ATP_STATE.totalPertemuan;
-  const n      = tpList.length;
-  const rata   = Math.floor(total / n);
-  const sisa   = total - (rata * n);
+  const semester = document.getElementById('atp-semester')?.value || 'both';
 
-  /* Distribusi: TP pertama dapat pertemuan lebih jika ada sisa */
-  ATP_STATE.distribusi = tpList.map((tp, i) => ({
-    tpIdx:      i,
-    tpTeks:     tp,
-    jumlahPtm:  rata + (i < sisa ? 1 : 0),
-  }));
+  /* PENTING: kalau guru cuma pilih Semester Ganjil ATAU Genap saja,
+     JANGAN paksa SEMUA TP satu tahun masuk ke pertemuan semester itu
+     saja (itu bug lamanya). TP dibagi dulu jadi 2 paruh berurutan —
+     paruh awal untuk Ganjil, paruh akhir untuk Genap — baru paruh yang
+     sesuai semester yang dipilih itu didistribusikan ke pertemuan
+     semester tsb. Paruh yang tidak sedang dipilih tetap dipertahankan
+     nilainya (tidak ditimpa jadi 0) supaya distribusi semester lain
+     yang sudah diatur guru tidak hilang. */
+  const jumlahS1 = Math.ceil(tpSemuaKelas.length / 2);
+  let idxMulai, idxAkhir;
+  if (semester === '1')      { idxMulai = 0;         idxAkhir = jumlahS1; }
+  else if (semester === '2') { idxMulai = jumlahS1;  idxAkhir = tpSemuaKelas.length; }
+  else                       { idxMulai = 0;         idxAkhir = tpSemuaKelas.length; }
+
+  const tpUntukSemester = tpSemuaKelas.slice(idxMulai, idxAkhir);
+  if (!tpUntukSemester.length) {
+    showToast(`Tidak ada TP untuk Semester ${semester === '1' ? 'Ganjil' : 'Genap'} di Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}`, 'warning');
+    return;
+  }
+
+  const total = ATP_STATE.totalPertemuan;
+  const n     = tpUntukSemester.length;
+  const rata  = Math.floor(total / n);
+  const sisa  = total - (rata * n);
+
+  /* Susun ulang distribusi selebar seluruh TP kelas — TP di luar rentang
+     semester yang sedang dipilih dipertahankan dari nilai sebelumnya */
+  ATP_STATE.distribusi = tpSemuaKelas.map((tp, i) => {
+    if (i >= idxMulai && i < idxAkhir) {
+      const posLokal = i - idxMulai;
+      return { tpIdx: i, tpTeks: tp, jumlahPtm: rata + (posLokal < sisa ? 1 : 0) };
+    }
+    return ATP_STATE.distribusi[i] || { tpIdx: i, tpTeks: tp, jumlahPtm: 0 };
+  });
 
   _atpRenderTPList();
   _atpRenderTimeline();
   _atpSimpan();
-  showToast(`⚡ ${total} pertemuan didistribusikan ke ${n} TP`);
+  const semLabel = semester === '1' ? 'Semester Ganjil' : semester === '2' ? 'Semester Genap' : 'Semester 1 + 2';
+  showToast(`⚡ ${total} pertemuan (${semLabel}) didistribusikan ke ${n} TP`);
 }
 
 /** Render daftar TP dengan input jumlah pertemuan */
