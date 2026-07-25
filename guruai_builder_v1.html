@@ -7106,7 +7106,7 @@ function _atpRenderTimeline() {
         <div class="ptm-item ${statusClass}" id="ptm-${key}">
           <div class="ptm-num ${statusClass}">${status==='done'?'✓':ptmGlobal}</div>
           <div class="ptm-info">
-            <div class="ptm-title">Pertemuan ${ptmGlobal} — ${d.mapel||'Mapel'} Kelas ${d.kelas||'—'}</div>
+            <div class="ptm-title">Pertemuan ${ptmGlobal} — ${d.mapel||'Mapel'} Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}</div>
             <div class="ptm-sub">TP${tpIdx+1} · Pertemuan ke-${j+1} dari ${dist.jumlahPtm}</div>
           </div>
           ${status === 'done'
