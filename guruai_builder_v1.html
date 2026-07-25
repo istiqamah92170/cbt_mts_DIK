@@ -1333,6 +1333,27 @@ h1,h2,h3,h4 { color: var(--text-primary); }
             </button>
           </div>
 
+          <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;" onclick="toggleImporWord()" id="btnToggleImporWord">
+            📄 Atau Impor Tabel ATP dari Word
+          </button>
+
+          <div id="panelImporWord" style="display:none;margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-surface);">
+            <div class="form-group">
+              <label>Kelas tujuan untuk data ini</label>
+              <select id="importAtpKelas">
+                <option value="7">Kelas VII</option>
+                <option value="8">Kelas VIII</option>
+                <option value="9">Kelas IX</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tempel tabel ATP dari Word (Bab, Alur Tujuan Pembelajaran, Materi, Alokasi Waktu — hasil copy langsung dari tabel Word)</label>
+              <textarea id="importAtpTeks" rows="6" placeholder="Bab&#9;Alur Tujuan Pembelajaran&#9;Materi&#9;Alokasi Waktu&#10;BAB 1: ...&#9;Peserta didik mampu...&#9;Materi ...&#9;4"></textarea>
+            </div>
+            <button class="btn btn-primary btn-sm" style="width:100%;" onclick="importTabelATPWord()">📥 Proses & Tambahkan ke Kelas Ini</button>
+            <p class="text-muted" style="font-size:11px;margin-top:6px;">Baris yang tidak diawali "Peserta didik mampu/dapat..." otomatis diabaikan (judul kolom, baris Total, dll). Kolom Bab yang kosong (sel gabungan) otomatis mengikuti Bab di atasnya.</p>
+          </div>
+
           <!-- PANEL HASIL ANALISIS — tersembunyi sampai Analisis dijalankan -->
           <div id="panelAnalisis" style="display:none;">
             <div class="analisis-header">
@@ -3763,6 +3784,106 @@ function renderHasilAnalisis() {
  *  Kelas yang belum diatur diisi otomatis: TP dibagi berurutan menjadi
  *  3 bagian (VII → VIII → IX) sesuai urutan kemunculan dalam CP.
  *  Guru bisa menimpa manual lewat dropdown per TP. */
+/** Buka/tutup panel Impor Tabel ATP dari Word */
+function toggleImporWord() {
+  const panel = document.getElementById('panelImporWord');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+/** Parser tabel ATP hasil copy-paste dari Word — Bab/TP/Materi/Alokasi Waktu
+ *  dipisah TAB (persis format saat men-copy tabel Word ke clipboard).
+ *  Kolom Bab yang kosong (sel gabungan/merge di Word) otomatis mengikuti
+ *  Bab terakhir yang terisi. Baris judul kolom dan baris "Total" otomatis
+ *  diabaikan karena tidak diawali "Peserta didik mampu/dapat...". */
+function _parseTabelATPWord(teks) {
+  const baris = (teks || '').split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim().length);
+  let babAktif = '';
+  const hasil = [];
+  baris.forEach(line => {
+    const kolom  = line.split('\t');
+    const bab     = (kolom[0] || '').trim();
+    const tp      = (kolom[1] || '').trim();
+    const materi  = (kolom[2] || '').trim();
+    const alokasi = (kolom[3] || '').trim();
+
+    if (bab) babAktif = bab;
+
+    /* Hanya baris yang benar berisi TP (diawali "peserta didik/siswa mampu/dapat") yang diambil */
+    if (!/^(peserta didik|siswa)\s+(mampu|dapat)/i.test(tp)) return;
+
+    hasil.push({
+      bab: babAktif,
+      tp,
+      materi,
+      alokasi: /^\d+$/.test(alokasi) ? parseInt(alokasi, 10) : null,
+    });
+  });
+  return hasil;
+}
+
+/** Terapkan hasil import tabel ATP Word ke STATE_ANALISIS (+ opsional ke ATP) */
+function importTabelATPWord() {
+  const teks        = document.getElementById('importAtpTeks')?.value || '';
+  const kelasTarget = parseInt(document.getElementById('importAtpKelas')?.value || '7', 10);
+  const parsed = _parseTabelATPWord(teks);
+
+  if (!parsed.length) {
+    showToast('Tidak ada baris TP yang terdeteksi. Pastikan hasil copy tabel Word ditempel apa adanya (kolom dipisah TAB).', 'error');
+    return;
+  }
+
+  if (!Array.isArray(STATE_ANALISIS.tpKelas)) STATE_ANALISIS.tpKelas = [];
+  if (!Array.isArray(STATE_ANALISIS.tpBab))   STATE_ANALISIS.tpBab   = [];
+
+  const startIdx = STATE_ANALISIS.tp.length;
+  parsed.forEach((row, i) => {
+    STATE_ANALISIS.tp.push(row.tp);
+    STATE_ANALISIS.materi.push(row.materi);
+    STATE_ANALISIS.tpKelas[startIdx + i] = kelasTarget;
+    STATE_ANALISIS.tpBab[startIdx + i]   = row.bab;
+  });
+
+  /* Bab unik jadi ringkasan topik */
+  const babUnik = [...new Set(parsed.map(r => r.bab).filter(Boolean))];
+  babUnik.forEach(b => { if (!STATE_ANALISIS.topik.includes(b)) STATE_ANALISIS.topik.push(b); });
+
+  STATE_ANALISIS.sudahAnalisis = true;
+  syncHiddenFields();
+  renderHasilAnalisis();
+  const panelHasil = document.getElementById('panelAnalisis');
+  if (panelHasil) panelHasil.style.display = 'block';
+  autoSave();
+
+  /* Kalau ada Alokasi Waktu, tawarkan langsung isi ke distribusi ATP kelas
+     terkait — hanya kalau kelas itu belum punya distribusi sama sekali,
+     supaya tidak menimpa pengaturan pertemuan yang sudah dibuat guru */
+  const adaAlokasi = parsed.some(r => r.alokasi !== null);
+  const kelasObj = typeof ATP_ALL_KELAS !== 'undefined' ? ATP_ALL_KELAS[kelasTarget] : null;
+  if (adaAlokasi && kelasObj) {
+    if (!kelasObj.distribusi.length) {
+      if (confirm(`Ditemukan Alokasi Waktu untuk ${parsed.filter(r => r.alokasi !== null).length} TP. Langsung terapkan ke ATP Kelas ${KELAS_ROMAWI[kelasTarget]}?`)) {
+        kelasObj.distribusi = parsed.map((row, i) => ({
+          tpIdx: i,
+          tpTeks: row.tp,
+          jumlahPtm: row.alokasi || 1,
+        }));
+        if (kelasTarget === ATP_KELAS_AKTIF) {
+          ATP_STATE = kelasObj;
+          if (typeof _atpRenderTPList === 'function') _atpRenderTPList();
+          if (typeof _atpRenderTimeline === 'function') _atpRenderTimeline();
+        }
+        if (typeof _atpSimpan === 'function') _atpSimpan();
+      }
+    } else {
+      showToast(`Alokasi Waktu ditemukan, tapi Kelas ${KELAS_ROMAWI[kelasTarget]} sudah punya distribusi pertemuan — gunakan tombol "Distribusi Otomatis" di halaman ATP kalau ingin menimpanya.`, 'info');
+    }
+  }
+
+  document.getElementById('importAtpTeks').value = '';
+  showToast(`✅ ${parsed.length} TP dari ${babUnik.length} Bab berhasil diimpor ke Kelas ${KELAS_ROMAWI[kelasTarget]}`);
+}
+
 function _pastikanTpKelas() {
   const n = STATE_ANALISIS.tp?.length || 0;
   const existing = Array.isArray(STATE_ANALISIS.tpKelas) ? STATE_ANALISIS.tpKelas : [];
