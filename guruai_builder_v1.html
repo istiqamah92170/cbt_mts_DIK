@@ -2136,6 +2136,14 @@ h1,h2,h3,h4 { color: var(--text-primary); }
                     <option value="2">Semester 2 saja (Genap)</option>
                   </select>
                 </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                  <label>JP per Pertemuan</label>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="number" id="atp-jpPertemuan" min="1" max="6" value="2"
+                      onchange="atpDistribusiOtomatis()" style="width:70px;">
+                    <span style="font-size:11px;color:var(--text-muted);">JP setiap kali pertemuan (dipakai untuk membagi TP ke pertemuan berdasarkan Alokasi Waktu/JP)</span>
+                  </div>
+                </div>
 
                 <div class="divider-label"><span>Pengurangan Minggu Tidak Efektif</span></div>
 
@@ -3879,19 +3887,28 @@ function importTabelATPWord() {
   if (panelHasil) panelHasil.style.display = 'block';
   autoSave();
 
-  /* Kalau ada Alokasi Waktu, tawarkan langsung isi ke distribusi ATP kelas
-     terkait — hanya kalau kelas itu belum punya distribusi sama sekali,
-     supaya tidak menimpa pengaturan pertemuan yang sudah dibuat guru */
+  /* Kalau ada Alokasi Waktu (JP), tawarkan langsung susun jadi sesi
+     pertemuan untuk kelas terkait — hanya kalau kelas itu belum punya
+     sesi sama sekali, supaya tidak menimpa pengaturan yang sudah dibuat
+     guru. PENTING: Alokasi Waktu di sini adalah JAM PELAJARAN (JP),
+     bukan langsung "jumlah pertemuan" — dikonversi via JP-per-pertemuan
+     supaya benar (mis. TP 4 JP dgn 2 JP/pertemuan = 2 pertemuan, bukan 4). */
   const adaAlokasi = parsed.some(r => r.alokasi !== null);
   const kelasObj = typeof ATP_ALL_KELAS !== 'undefined' ? ATP_ALL_KELAS[kelasTarget] : null;
   if (adaAlokasi && kelasObj) {
-    if (!kelasObj.distribusi.length) {
-      if (confirm(`Ditemukan Alokasi Waktu untuk ${parsed.filter(r => r.alokasi !== null).length} TP. Langsung terapkan ke ATP Kelas ${KELAS_ROMAWI[kelasTarget]}?`)) {
-        kelasObj.distribusi = parsed.map((row, i) => ({
-          tpIdx: i,
-          tpTeks: row.tp,
-          jumlahPtm: row.alokasi || 1,
-        }));
+    if (!kelasObj.sesi.length) {
+      if (confirm(`Ditemukan Alokasi Waktu (JP) untuk ${parsed.filter(r => r.alokasi !== null).length} TP. Langsung susun jadi sesi pertemuan untuk Kelas ${KELAS_ROMAWI[kelasTarget]}?`)) {
+        const jpPerPertemuan = Math.max(1, parseInt(document.getElementById('atp-jpPertemuan')?.value, 10) || 2);
+        if (!Array.isArray(kelasObj.jpPerTP))       kelasObj.jpPerTP = [];
+        if (!Array.isArray(kelasObj.jpPerTPManual)) kelasObj.jpPerTPManual = [];
+        parsed.forEach((row, i) => {
+          kelasObj.jpPerTP[i]       = row.alokasi || 0;
+          kelasObj.jpPerTPManual[i] = row.alokasi !== null;
+        });
+        const entries = parsed.map((row, i) => ({ tpIdx: i, tpTeks: row.tp }));
+        kelasObj.sesi = typeof _atpSusunSesi === 'function'
+          ? _atpSusunSesi(entries, kelasObj.jpPerTP, jpPerPertemuan)
+          : [];
         if (kelasTarget === ATP_KELAS_AKTIF) {
           ATP_STATE = kelasObj;
           if (typeof _atpRenderTPList === 'function') _atpRenderTPList();
@@ -3900,7 +3917,7 @@ function importTabelATPWord() {
         if (typeof _atpSimpan === 'function') _atpSimpan();
       }
     } else {
-      showToast(`Alokasi Waktu ditemukan, tapi Kelas ${KELAS_ROMAWI[kelasTarget]} sudah punya distribusi pertemuan — gunakan tombol "Distribusi Otomatis" di halaman ATP kalau ingin menimpanya.`, 'info');
+      showToast(`Alokasi Waktu ditemukan, tapi Kelas ${KELAS_ROMAWI[kelasTarget]} sudah punya sesi pertemuan — gunakan tombol "Distribusi Otomatis" di halaman ATP kalau ingin menyusun ulang.`, 'info');
     }
   }
 
@@ -6962,7 +6979,14 @@ function initChatGPTPage() {
  *  supaya seluruh fungsi ATP di bawah ini TIDAK PERLU diubah — mereka
  *  tetap membaca/menulis "ATP_STATE.xxx" seperti biasa. */
 function _atpKosong() {
-  return { totalMingguEfektif: 0, totalPertemuan: 0, ptmSem1: 0, ptmSem2: 0, distribusi: [], progress: {} };
+  return {
+    totalMingguEfektif: 0, totalPertemuan: 0, ptmSem1: 0, ptmSem2: 0,
+    jpPerTP: [],        /* JP yang dialokasikan tiap TP (index lokal kelas) */
+    jpPerTPManual: [],  /* true = JP-nya diisi manual/impor, jangan ditimpa otomatis */
+    sesi: [],           /* [{ke, bagian:[{tpIdx,tpTeks,jp}]}] — 1 sesi = 1 pertemuan nyata,
+                            bisa berisi >1 TP (digabung) atau sebagian dari 1 TP (terbagi) */
+    progress: {},       /* key: 'SESI{ke}' -> 'done' */
+  };
 }
 let ATP_ALL_KELAS = { 7: _atpKosong(), 8: _atpKosong(), 9: _atpKosong() };
 let ATP_KELAS_AKTIF = 7;
@@ -6973,6 +6997,38 @@ const KELAS_ROMAWI = { 7: 'VII', 8: 'VIII', 9: 'IX' };
 function _atpTpAktif() {
   _pastikanTpKelas();
   return (STATE_ANALISIS.tp || []).filter((_, i) => STATE_ANALISIS.tpKelas[i] === ATP_KELAS_AKTIF);
+}
+
+/**
+ * Susun TP (dengan alokasi JP masing-masing) menjadi daftar SESI (pertemuan
+ * nyata) berukuran `jpPerPertemuan` JP. Satu sesi bisa berisi:
+ *  - hanya SEBAGIAN dari satu TP besar (kalau JP TP > JP per pertemuan)
+ *  - GABUNGAN beberapa TP kecil (kalau total JP mereka pas/kurang dari
+ *    JP per pertemuan) — inilah yang menjawab kasus "1 pertemuan bisa
+ *    lebih dari 1 TP" ketika jumlah TP melebihi jumlah pertemuan tersedia.
+ * `tpEntries` = [{tpIdx, tpTeks}], `jpList` = JP sejajar index dengan tpEntries.
+ */
+function _atpSusunSesi(tpEntries, jpList, jpPerPertemuan) {
+  const sesi = [];
+  let sesiAktif = null;
+  let sisaJpSesi = 0;
+
+  tpEntries.forEach((entry, k) => {
+    let sisaJpTP = Math.max(0, jpList[k] || 0);
+    if (sisaJpTP === 0) return; /* TP tanpa alokasi JP — tidak masuk sesi manapun */
+    while (sisaJpTP > 0) {
+      if (!sesiAktif || sisaJpSesi <= 0) {
+        sesiAktif = { ke: sesi.length + 1, bagian: [] };
+        sesi.push(sesiAktif);
+        sisaJpSesi = jpPerPertemuan;
+      }
+      const ambil = Math.min(sisaJpTP, sisaJpSesi);
+      sesiAktif.bagian.push({ tpIdx: entry.tpIdx, tpTeks: entry.tpTeks, jp: ambil });
+      sisaJpTP    -= ambil;
+      sisaJpSesi  -= ambil;
+    }
+  });
+  return sesi;
 }
 
 /** Nilai default per jenjang berdasarkan regulasi */
@@ -7044,8 +7100,8 @@ function atpHitung() {
     ptmMinggu, totalPtm, ptmS1, ptmS2, semester, jenjang,
   });
 
-  /* Update distribusi jika TP sudah ada */
-  if (ATP_STATE.distribusi.length) _atpRenderTimeline();
+  /* Update sesi (timeline) jika TP sudah ada */
+  if (ATP_STATE.sesi.length) _atpRenderTimeline();
 
   /* Simpan ke IDB */
   _atpSimpan();
@@ -7097,6 +7153,11 @@ function _atpRenderKalkulator(k) {
 }
 
 /** Distribusi TP otomatis — bagi rata pertemuan ke semua TP */
+/** Distribusi TP otomatis — berbasis JP (Jam Pelajaran), bukan langsung
+ *  "jumlah pertemuan". TP yang JP-nya sudah diisi manual/impor (Alokasi
+ *  Waktu dari Word) dipertahankan; sisa JP dibagi rata ke TP yang belum
+ *  punya JP. Hasilnya dikemas jadi sesi (pertemuan nyata) — TP besar bisa
+ *  terbagi ke beberapa sesi, TP-TP kecil bisa tergabung dalam satu sesi. */
 function atpDistribusiOtomatis() {
   const tpSemuaKelas = _atpTpAktif();
   if (!tpSemuaKelas || !tpSemuaKelas.length) {
@@ -7108,16 +7169,11 @@ function atpDistribusiOtomatis() {
     return;
   }
 
-  const semester = document.getElementById('atp-semester')?.value || 'both';
+  const semester       = document.getElementById('atp-semester')?.value || 'both';
+  const jpPerPertemuan = Math.max(1, parseInt(document.getElementById('atp-jpPertemuan')?.value, 10) || 2);
 
-  /* PENTING: kalau guru cuma pilih Semester Ganjil ATAU Genap saja,
-     JANGAN paksa SEMUA TP satu tahun masuk ke pertemuan semester itu
-     saja (itu bug lamanya). TP dibagi dulu jadi 2 paruh berurutan —
-     paruh awal untuk Ganjil, paruh akhir untuk Genap — baru paruh yang
-     sesuai semester yang dipilih itu didistribusikan ke pertemuan
-     semester tsb. Paruh yang tidak sedang dipilih tetap dipertahankan
-     nilainya (tidak ditimpa jadi 0) supaya distribusi semester lain
-     yang sudah diatur guru tidak hilang. */
+  /* TP dibagi 2 paruh berurutan — awal=Ganjil, akhir=Genap — biar TP
+     tidak dipaksa masuk ke satu semester saja saat guru pilih salah satu */
   const jumlahS1 = Math.ceil(tpSemuaKelas.length / 2);
   let idxMulai, idxAkhir;
   if (semester === '1')      { idxMulai = 0;         idxAkhir = jumlahS1; }
@@ -7130,29 +7186,53 @@ function atpDistribusiOtomatis() {
     return;
   }
 
-  const total = ATP_STATE.totalPertemuan;
-  const n     = tpUntukSemester.length;
-  const rata  = Math.floor(total / n);
-  const sisa  = total - (rata * n);
+  const totalJP = ATP_STATE.totalPertemuan * jpPerPertemuan;
 
-  /* Susun ulang distribusi selebar seluruh TP kelas — TP di luar rentang
-     semester yang sedang dipilih dipertahankan dari nilai sebelumnya */
-  ATP_STATE.distribusi = tpSemuaKelas.map((tp, i) => {
-    if (i >= idxMulai && i < idxAkhir) {
-      const posLokal = i - idxMulai;
-      return { tpIdx: i, tpTeks: tp, jumlahPtm: rata + (posLokal < sisa ? 1 : 0) };
-    }
-    return ATP_STATE.distribusi[i] || { tpIdx: i, tpTeks: tp, jumlahPtm: 0 };
-  });
+  if (!Array.isArray(ATP_STATE.jpPerTP))       ATP_STATE.jpPerTP = [];
+  if (!Array.isArray(ATP_STATE.jpPerTPManual)) ATP_STATE.jpPerTPManual = [];
+
+  /* TP yang JP-nya sudah diisi manual/impor dipertahankan; sisanya
+     dibagi rata dari sisa JP yang tersedia */
+  const idxBelumAdaJP = [];
+  let jpTerpakai = 0;
+  for (let i = idxMulai; i < idxAkhir; i++) {
+    if (ATP_STATE.jpPerTPManual[i]) jpTerpakai += (ATP_STATE.jpPerTP[i] || 0);
+    else idxBelumAdaJP.push(i);
+  }
+  const sisaJP = Math.max(0, totalJP - jpTerpakai);
+  if (idxBelumAdaJP.length) {
+    const rata     = Math.floor(sisaJP / idxBelumAdaJP.length);
+    const sisaBagi = sisaJP - rata * idxBelumAdaJP.length;
+    idxBelumAdaJP.forEach((idx, k) => {
+      ATP_STATE.jpPerTP[idx] = rata + (k < sisaBagi ? 1 : 0);
+    });
+  }
+
+  /* Kemas TP+JP semester ini jadi sesi (pertemuan nyata) */
+  const entries = tpUntukSemester.map((tp, k) => ({ tpIdx: idxMulai + k, tpTeks: tp }));
+  const jpSubset = tpUntukSemester.map((_, k) => ATP_STATE.jpPerTP[idxMulai + k] || 0);
+  const sesiBaru = _atpSusunSesi(entries, jpSubset, jpPerPertemuan);
+
+  /* Gabungkan dengan sesi semester LAIN yang sudah ada (supaya tidak hilang
+     saat guru cuma redistribusi salah satu semester saja) */
+  if (semester === 'both') {
+    ATP_STATE.sesi = sesiBaru;
+  } else {
+    const sesiGanjilLama = (ATP_STATE.sesi || []).filter(s => s.bagian.every(b => b.tpIdx < jumlahS1));
+    const sesiGenapLama  = (ATP_STATE.sesi || []).filter(s => s.bagian.every(b => b.tpIdx >= jumlahS1));
+    const gabungan = semester === '1' ? [...sesiBaru, ...sesiGenapLama] : [...sesiGanjilLama, ...sesiBaru];
+    gabungan.forEach((s, i) => { s.ke = i + 1; });
+    ATP_STATE.sesi = gabungan;
+  }
 
   _atpRenderTPList();
   _atpRenderTimeline();
   _atpSimpan();
   const semLabel = semester === '1' ? 'Semester Ganjil' : semester === '2' ? 'Semester Genap' : 'Semester 1 + 2';
-  showToast(`⚡ ${total} pertemuan (${semLabel}) didistribusikan ke ${n} TP`);
+  showToast(`⚡ ${ATP_STATE.totalPertemuan} pertemuan (${semLabel}, ${jpPerPertemuan} JP/pertemuan) → ${sesiBaru.length} sesi disusun`);
 }
 
-/** Render daftar TP dengan input jumlah pertemuan */
+/** Render daftar TP dengan input JP (Jam Pelajaran) per TP */
 function _atpRenderTPList() {
   const el = document.getElementById('atpTPList');
   const tpList = _atpTpAktif();
@@ -7166,33 +7246,31 @@ function _atpRenderTPList() {
     return;
   }
 
-  /* Total pertemuan yang sudah dialokasikan */
-  const totalAlokasi = ATP_STATE.distribusi.reduce((s, d) => s + (d.jumlahPtm || 0), 0);
-  const totalTersedia = ATP_STATE.totalPertemuan;
-  const selisih = totalTersedia - totalAlokasi;
+  const jpPerPertemuan = Math.max(1, parseInt(document.getElementById('atp-jpPertemuan')?.value, 10) || 2);
+  const jpPerTP  = ATP_STATE.jpPerTP || [];
+  const totalJP  = jpPerTP.reduce((s, v) => s + (v || 0), 0);
+  const totalJPTersedia = ATP_STATE.totalPertemuan * jpPerPertemuan;
+  const selisihJP = totalJPTersedia - totalJP;
 
   el.innerHTML = tpList.map((tp, i) => {
-    const dist = ATP_STATE.distribusi[i] || { jumlahPtm: 0 };
-    const donePtm = _atpCountDone(i);
-    const statusClass = donePtm === dist.jumlahPtm && dist.jumlahPtm > 0 ? 'done'
-                      : donePtm > 0 ? 'active' : '';
-    const statusDot   = donePtm === dist.jumlahPtm && dist.jumlahPtm > 0 ? 'done'
-                      : donePtm > 0 ? 'active' : 'todo';
-    const statusTeks  = donePtm === dist.jumlahPtm && dist.jumlahPtm > 0 ? '✓'
-                      : donePtm > 0 ? donePtm : i+1;
+    const jp = jpPerTP[i] || 0;
+    const { selesai, total } = _atpCountDone(i);
+    const statusClass = total > 0 && selesai === total ? 'done' : selesai > 0 ? 'active' : '';
+    const statusDot   = total > 0 && selesai === total ? 'done' : selesai > 0 ? 'active' : 'todo';
+    const statusTeks  = total > 0 && selesai === total ? '✓' : selesai > 0 ? selesai : i+1;
     return `
       <div class="tp-row ${statusClass}">
         <div class="tp-status-dot ${statusDot}">${statusTeks}</div>
         <div class="tp-info">
           <div class="tp-title">${tp.length > 80 ? tp.slice(0,80)+'…' : tp}</div>
-          <div class="tp-meta">TP${i+1} · ${donePtm}/${dist.jumlahPtm || 0} pertemuan selesai</div>
+          <div class="tp-meta">TP${i+1} · ${jp} JP (≈${Math.ceil(jp / jpPerPertemuan) || 0} sesi) · ${selesai}/${total} sesi selesai</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
-          <label style="font-size:10px;color:var(--text-muted);">Pertemuan</label>
-          <input type="number" class="tp-pertemuan-input" min="1" max="20"
-            value="${dist.jumlahPtm || 1}"
-            onchange="atpUpdateJumlahPtm(${i}, this.value)"
-            title="Jumlah pertemuan untuk TP ini">
+          <label style="font-size:10px;color:var(--text-muted);">JP</label>
+          <input type="number" class="tp-pertemuan-input" min="0" max="40"
+            value="${jp}"
+            onchange="atpUpdateJpTP(${i}, this.value)"
+            title="Jam Pelajaran untuk TP ini">
         </div>
       </div>`;
   }).join('');
@@ -7201,104 +7279,102 @@ function _atpRenderTPList() {
   const info = document.getElementById('atpDistInfo');
   if (info) {
     info.style.display = 'block';
-    const warna = selisih === 0 ? 'var(--accent)' : selisih > 0 ? 'var(--amber)' : 'var(--danger)';
+    const warna = selisihJP === 0 ? 'var(--accent)' : selisihJP > 0 ? 'var(--amber)' : 'var(--danger)';
     info.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Total alokasi: <strong>${totalAlokasi}</strong> pertemuan</span>
+        <span>Total alokasi: <strong>${totalJP}</strong> JP (${jpPerPertemuan} JP/pertemuan)</span>
         <span style="color:${warna};font-weight:700;">
-          ${selisih === 0 ? '✅ Pas!' : selisih > 0 ? `⚠️ Sisa ${selisih} pertemuan belum dialokasikan` : `❌ Kelebihan ${Math.abs(selisih)} pertemuan`}
+          ${selisihJP === 0 ? '✅ Pas!' : selisihJP > 0 ? `⚠️ Sisa ${selisihJP} JP belum dialokasikan` : `❌ Kelebihan ${Math.abs(selisihJP)} JP`}
         </span>
       </div>`;
   }
 }
 
-/** Update jumlah pertemuan satu TP saat guru edit */
-function atpUpdateJumlahPtm(tpIdx, nilai) {
-  const n = Math.max(1, Math.min(20, parseInt(nilai) || 1));
-  if (!ATP_STATE.distribusi[tpIdx]) {
-    ATP_STATE.distribusi[tpIdx] = { tpIdx, tpTeks: _atpTpAktif()[tpIdx], jumlahPtm: n };
-  } else {
-    ATP_STATE.distribusi[tpIdx].jumlahPtm = n;
-  }
-  _atpRenderTPList();
-  _atpRenderTimeline();
-  _atpSimpan();
+/** Update JP satu TP saat guru edit manual — nilai ini dipertahankan
+ *  (tidak ditimpa) saat Distribusi Otomatis dijalankan ulang */
+function atpUpdateJpTP(tpIdx, nilai) {
+  const jp = Math.max(0, Math.min(40, parseInt(nilai) || 0));
+  if (!Array.isArray(ATP_STATE.jpPerTP))       ATP_STATE.jpPerTP = [];
+  if (!Array.isArray(ATP_STATE.jpPerTPManual)) ATP_STATE.jpPerTPManual = [];
+  ATP_STATE.jpPerTP[tpIdx]       = jp;
+  ATP_STATE.jpPerTPManual[tpIdx] = true;
+  /* Susun ulang sesi supaya sisa JP TP lain ikut menyesuaikan */
+  atpDistribusiOtomatis();
 }
 
-/** Hitung berapa pertemuan TP ke-i yang sudah selesai */
+/** Hitung berapa sesi TP ke-i yang sudah selesai, dari berapa total sesi
+ *  yang memuat TP tsb (bisa >1 kalau TP terbagi, atau sesi bisa dipakai
+ *  bersama TP lain kalau digabung) */
 function _atpCountDone(tpIdx) {
-  const dist = ATP_STATE.distribusi[tpIdx];
-  if (!dist) return 0;
-  let count = 0;
-  for (let j = 0; j < dist.jumlahPtm; j++) {
-    if (ATP_STATE.progress[`TP${tpIdx}_P${j}`] === 'done') count++;
-  }
-  return count;
+  let total = 0, selesai = 0;
+  (ATP_STATE.sesi || []).forEach(s => {
+    if (s.bagian.some(b => b.tpIdx === tpIdx)) {
+      total++;
+      if (ATP_STATE.progress[`SESI${s.ke}`] === 'done') selesai++;
+    }
+  });
+  return { selesai, total };
 }
 
 /** Render timeline pertemuan */
+/** Render timeline pertemuan (berbasis sesi — 1 sesi = 1 pertemuan nyata,
+ *  bisa berisi 1 TP penuh, sebagian TP besar, atau gabungan beberapa TP kecil) */
 function _atpRenderTimeline() {
   const card = document.getElementById('atpTimelineCard');
   const el   = document.getElementById('atpTimeline');
   if (!card || !el) return;
-  if (!ATP_STATE.distribusi.length) { card.style.display = 'none'; return; }
+  if (!ATP_STATE.sesi.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
 
   const d = currentGenerated?.data || UTIL.getFormData();
   let html = '';
-  let totalPtm = 0;
-  let donePtm  = 0;
-  let ptmGlobal = 0;
+  let donePtm = 0;
 
-  ATP_STATE.distribusi.forEach((dist, tpIdx) => {
-    if (!dist.jumlahPtm) return;
-    /* Header TP */
-    html += `<div style="padding:8px 12px;background:var(--bg-base);border-bottom:1px solid var(--border);
-      border-top:${tpIdx>0?'1px solid var(--border)':'none'};font-size:11.5px;font-weight:700;
-      color:var(--accent-dark);letter-spacing:.3px;">
-      TP${tpIdx+1} — ${dist.tpTeks.length > 70 ? dist.tpTeks.slice(0,70)+'…' : dist.tpTeks}
-    </div>`;
+  /* Sesi "current" = sesi belum selesai PERTAMA secara berurutan */
+  const idxCurrent = ATP_STATE.sesi.findIndex(s => ATP_STATE.progress[`SESI${s.ke}`] !== 'done');
 
-    for (let j = 0; j < dist.jumlahPtm; j++) {
-      ptmGlobal++;
-      totalPtm++;
-      const key    = `TP${tpIdx}_P${j}`;
-      const status = ATP_STATE.progress[key] || 'todo';
-      if (status === 'done') donePtm++;
+  ATP_STATE.sesi.forEach((s, i) => {
+    const key      = `SESI${s.ke}`;
+    const status   = ATP_STATE.progress[key] || 'todo';
+    if (status === 'done') donePtm++;
+    const isCurrent = i === idxCurrent;
+    const statusClass = status === 'done' ? 'done' : isCurrent ? 'current' : 'todo';
 
-      const isCurrent = status !== 'done' &&
-        !Object.entries(ATP_STATE.progress).some(([k,v]) => {
-          const [ti,pi] = k.replace('TP','').replace('_P',',').split(',').map(Number);
-          return v !== 'done' && (ti < tpIdx || (ti === tpIdx && pi < j));
-        });
+    /* Judul TP — kalau sesi ini gabungan >1 TP, tampilkan semua ringkas */
+    const labelTP = s.bagian.length > 1
+      ? s.bagian.map(b => `TP${b.tpIdx+1}`).join(' + ')
+      : `TP${s.bagian[0].tpIdx+1}`;
+    const isiTP = s.bagian.map(b => {
+      const teks = b.tpTeks.length > 70 ? b.tpTeks.slice(0,70)+'…' : b.tpTeks;
+      return `${teks} (${b.jp} JP)`;
+    }).join('<br>+ ');
 
-      const statusClass = status === 'done' ? 'done' : isCurrent ? 'current' : 'todo';
-      html += `
-        <div class="ptm-item ${statusClass}" id="ptm-${key}">
-          <div class="ptm-num ${statusClass}">${status==='done'?'✓':ptmGlobal}</div>
-          <div class="ptm-info">
-            <div class="ptm-title">Pertemuan ${ptmGlobal} — ${d.mapel||'Mapel'} Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}</div>
-            <div class="ptm-sub">TP${tpIdx+1} · Pertemuan ke-${j+1} dari ${dist.jumlahPtm}</div>
-          </div>
-          ${status === 'done'
-            ? `<span class="badge badge-teal" style="font-size:10px;flex-shrink:0;">✓ Selesai</span>`
-            : `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-                <button class="btn-buat-rppm" ${isCurrent?'':'style="opacity:.6;"'}
-                  onclick="atpBuatRPPM(${tpIdx},${j},'${key}')">
-                  ${isCurrent ? '📝 Buat RPPM' : '📝 Buat'}
-                </button>
-                ${isCurrent ? '' : `<button onclick="atpTandaiSelesai('${key}')"
-                  style="font-size:10px;color:var(--text-muted);border:1px solid var(--border);border-radius:4px;padding:2px 6px;">
-                  ✓ Tandai selesai
-                </button>`}
-               </div>`}
-        </div>`;
-    }
+    html += `
+      <div class="ptm-item ${statusClass}" id="ptm-${key}">
+        <div class="ptm-num ${statusClass}">${status==='done'?'✓':s.ke}</div>
+        <div class="ptm-info">
+          <div class="ptm-title">Pertemuan ${s.ke} — ${d.mapel||'Mapel'} Kelas ${KELAS_ROMAWI[ATP_KELAS_AKTIF]}</div>
+          <div class="ptm-sub">${labelTP} · ${isiTP}</div>
+        </div>
+        ${status === 'done'
+          ? `<span class="badge badge-teal" style="font-size:10px;flex-shrink:0;">✓ Selesai</span>`
+          : `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+              <button class="btn-buat-rppm" ${isCurrent?'':'style="opacity:.6;"'}
+                onclick="atpBuatRPPM(${s.ke})">
+                ${isCurrent ? '📝 Buat RPPM' : '📝 Buat'}
+              </button>
+              ${isCurrent ? '' : `<button onclick="atpTandaiSelesai('${key}')"
+                style="font-size:10px;color:var(--text-muted);border:1px solid var(--border);border-radius:4px;padding:2px 6px;">
+                ✓ Tandai selesai
+              </button>`}
+             </div>`}
+      </div>`;
   });
 
   el.innerHTML = html || '<p class="text-muted" style="padding:14px;">Belum ada pertemuan.</p>';
 
   /* Update progress bar */
+  const totalPtm = ATP_STATE.sesi.length;
   const pct = totalPtm > 0 ? Math.round((donePtm / totalPtm) * 100) : 0;
   const bar  = document.getElementById('atpProgresBar');
   const lbl  = document.getElementById('atpProgresLabel');
@@ -7311,29 +7387,35 @@ function _atpRenderTimeline() {
 }
 
 /**
- * Buat RPPM untuk satu pertemuan spesifik.
- * Pindah ke Impor ChatGPT dengan prompt yang sudah terisi.
+ * Buat RPPM untuk satu sesi (pertemuan) — bisa berisi 1 TP penuh, sebagian
+ * TP besar, atau gabungan beberapa TP kecil. Pindah ke Impor ChatGPT
+ * dengan prompt yang sudah terisi konteks gabungan TP-nya.
  */
-function atpBuatRPPM(tpIdx, ptmKe, key) {
-  const dist = ATP_STATE.distribusi[tpIdx];
-  const tp   = dist?.tpTeks || _atpTpAktif()[tpIdx] || '';
-  const d    = currentGenerated?.data || UTIL.getFormData();
+function atpBuatRPPM(sesiKe) {
+  const s = ATP_STATE.sesi.find(x => x.ke === sesiKe);
+  if (!s) return;
+  const d = currentGenerated?.data || UTIL.getFormData();
 
-  /* Set konteks khusus pertemuan ini ke STATE_ANALISIS */
-  /* Hanya TP yang aktif ini yang dipakai di prompt */
-  const tpKhusus = `${tp}\n(Pertemuan ke-${ptmKe+1} dari ${dist.jumlahPtm} pertemuan untuk TP ini)`;
+  /* Gabungkan teks semua TP dalam sesi ini jadi satu konteks TP untuk prompt */
+  const tpGabungan = s.bagian.length > 1
+    ? s.bagian.map((b, i) => `${i+1}. ${b.tpTeks} (${b.jp} JP dari total alokasi TP ini)`).join('\n')
+    : s.bagian[0].tpTeks;
+  const labelTP = s.bagian.length > 1
+    ? s.bagian.map(b => `TP${b.tpIdx+1}`).join(' + ')
+    : `TP${s.bagian[0].tpIdx+1}`;
 
-  /* Simpan info pertemuan aktif ke state global agar prompt bisa membacanya.
+  const tpKhusus = s.bagian.length > 1
+    ? `Pertemuan ini menggabungkan ${s.bagian.length} Tujuan Pembelajaran sekaligus (karena alokasi JP masing-masing kecil):\n${tpGabungan}`
+    : `${tpGabungan}\n(Pertemuan ke-${sesiKe})`;
+
+  /* Simpan info sesi aktif ke state global agar prompt bisa membacanya.
      Kelas ikut tab ATP yang sedang aktif — bukan field Modul Ajar yang
-     mungkin sudah tidak sesuai (mis. guru pindah tab kelas VIII di ATP,
-     tapi form Modul Ajar masih menunjukkan kelas VII). */
+     mungkin sudah tidak sesuai. */
   window._atpAktif = {
-    tpIdx, ptmKe, key,
-    tpTeks:   tp,
+    sesiKe, key: `SESI${sesiKe}`,
+    tpTeks:   tpGabungan,
     tpKhusus: tpKhusus,
-    ptmKe1:   ptmKe + 1,
-    totalPtm: dist.jumlahPtm,
-    ptmGlobal: _atpGetGlobalNum(tpIdx, ptmKe),
+    ptmGlobal: sesiKe,
     mapel:    d.mapel || '',
     kelas:    KELAS_ROMAWI[ATP_KELAS_AKTIF],
     fase:     d.fase  || '',
@@ -7363,21 +7445,12 @@ function atpBuatRPPM(tpIdx, ptmKe, key) {
     if (info) {
       const banner = document.createElement('div');
       banner.style.cssText = 'padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:12px;margin-bottom:10px;line-height:1.5;';
-      banner.innerHTML = `📆 <strong>Pertemuan ${window._atpAktif.ptmGlobal}</strong> — TP${tpIdx+1}<br>
-        <span style="color:var(--text-muted);">${tp.length>80?tp.slice(0,80)+'…':tp}</span>`;
+      banner.innerHTML = `📆 <strong>Pertemuan ${sesiKe}</strong> — ${labelTP}<br>
+        <span style="color:var(--text-muted);">${tpGabungan.length>100?tpGabungan.slice(0,100)+'…':tpGabungan}</span>`;
       info.prepend(banner);
     }
-    showToast(`📝 Buat RPPM Pertemuan ${window._atpAktif.ptmGlobal} — salin prompt Tahap 2a`);
+    showToast(`📝 Buat RPPM Pertemuan ${sesiKe} — salin prompt Tahap 2a`);
   }, 300);
-}
-
-/** Hitung nomor pertemuan global (lintas TP) */
-function _atpGetGlobalNum(tpIdx, ptmKe) {
-  let num = 0;
-  for (let i = 0; i < tpIdx; i++) {
-    num += ATP_STATE.distribusi[i]?.jumlahPtm || 0;
-  }
-  return num + ptmKe + 1;
 }
 
 /** Tandai pertemuan selesai manual */
@@ -7403,8 +7476,8 @@ function atpTandaiPertemuanSelesai() {
   const ptmBerikut = _atpCariBerikutnya();
   if (ptmBerikut) {
     setTimeout(() => {
-      if (confirm(`✅ Pertemuan selesai!\n\nLanjut ke Pertemuan ${ptmBerikut.global} (TP${ptmBerikut.tpIdx+1})?`)) {
-        atpBuatRPPM(ptmBerikut.tpIdx, ptmBerikut.ptmKe, ptmBerikut.key);
+      if (confirm(`✅ Pertemuan selesai!\n\nLanjut ke Pertemuan ${ptmBerikut.ke}?`)) {
+        atpBuatRPPM(ptmBerikut.ke);
       } else {
         goPage('atp');
       }
@@ -7415,20 +7488,10 @@ function atpTandaiPertemuanSelesai() {
   }
 }
 
-/** Cari pertemuan berikutnya yang belum selesai */
+/** Cari sesi (pertemuan) berikutnya yang belum selesai */
 function _atpCariBerikutnya() {
-  let global = 0;
-  for (let i = 0; i < ATP_STATE.distribusi.length; i++) {
-    const dist = ATP_STATE.distribusi[i];
-    for (let j = 0; j < dist.jumlahPtm; j++) {
-      global++;
-      const key = `TP${i}_P${j}`;
-      if (!ATP_STATE.progress[key] || ATP_STATE.progress[key] !== 'done') {
-        return { tpIdx: i, ptmKe: j, key, global };
-      }
-    }
-  }
-  return null;
+  const found = (ATP_STATE.sesi || []).find(s => ATP_STATE.progress[`SESI${s.ke}`] !== 'done');
+  return found ? { ke: found.ke } : null;
 }
 
 /** Reset ATP — hanya untuk kelas yang sedang aktif */
@@ -7448,18 +7511,48 @@ function _atpSimpan() {
   IDB.set('atp_state', { kelasAktif: ATP_KELAS_AKTIF, kelas: ATP_ALL_KELAS });
 }
 
-/** Terapkan data ATP dari IDB/.gaib — mendukung format baru (per-kelas)
- *  maupun format lama (flat, sebelum ada pembagian kelas — dianggap kelas VII) */
+/** Migrasi 1 objek kelas dari format lama (distribusi: [{tpIdx,tpTeks,jumlahPtm}])
+ *  ke format baru (sesi: [{ke,bagian:[...]}]) — 1:1 per pertemuan, supaya
+ *  progress yang sudah ada (key lama TP{i}_P{j}) tidak hilang. */
+function _migrasiDistribusiKeSesi(objKelas) {
+  if (!objKelas || !Array.isArray(objKelas.distribusi) || objKelas.sesi?.length) return objKelas;
+  const sesi = [];
+  const progressBaru = { ...(objKelas.progress || {}) };
+  let ke = 0;
+  objKelas.distribusi.forEach(d => {
+    for (let j = 0; j < (d.jumlahPtm || 0); j++) {
+      ke++;
+      sesi.push({ ke, bagian: [{ tpIdx: d.tpIdx, tpTeks: d.tpTeks, jp: null }] });
+      const keyLama = `TP${d.tpIdx}_P${j}`;
+      if (objKelas.progress?.[keyLama]) {
+        progressBaru[`SESI${ke}`] = objKelas.progress[keyLama];
+        delete progressBaru[keyLama];
+      }
+    }
+  });
+  objKelas.sesi = sesi;
+  objKelas.progress = progressBaru;
+  delete objKelas.distribusi;
+  return objKelas;
+}
+
+/** Terapkan data ATP dari IDB/.gaib — mendukung format baru (per-kelas,
+ *  sesi-based), format Fase 2 lama (per-kelas, distribusi-based), maupun
+ *  format paling lama (flat, sebelum ada pembagian kelas — dianggap kelas VII) */
 function _atpTerapkanData(saved) {
   if (!saved) return;
   if (saved.kelas && typeof saved.kelas === 'object') {
     [7, 8, 9].forEach(k => {
-      if (saved.kelas[k]) Object.assign(ATP_ALL_KELAS[k], _atpKosong(), saved.kelas[k]);
+      if (saved.kelas[k]) {
+        Object.assign(ATP_ALL_KELAS[k], _atpKosong(), saved.kelas[k]);
+        _migrasiDistribusiKeSesi(ATP_ALL_KELAS[k]);
+      }
     });
     ATP_KELAS_AKTIF = (saved.kelasAktif && ATP_ALL_KELAS[saved.kelasAktif]) ? saved.kelasAktif : 7;
-  } else if (saved.distribusi || saved.progress || saved.totalPertemuan) {
-    /* Format lama (sebelum Fase 2) — anggap ini data Kelas VII */
+  } else if (saved.distribusi || saved.sesi || saved.progress || saved.totalPertemuan) {
+    /* Format paling lama (sebelum Fase 2) — anggap ini data Kelas VII */
     Object.assign(ATP_ALL_KELAS[7], _atpKosong(), saved);
+    _migrasiDistribusiKeSesi(ATP_ALL_KELAS[7]);
     ATP_KELAS_AKTIF = 7;
   }
   ATP_STATE = ATP_ALL_KELAS[ATP_KELAS_AKTIF];
@@ -7497,8 +7590,8 @@ async function initATPPage() {
   await _atpMuat();
   _atpRenderTabKelas();
 
-  /* Sync TP dari STATE_ANALISIS jika ada tapi distribusi kelas aktif belum */
-  if (_atpTpAktif().length && !ATP_STATE.distribusi.length) {
+  /* Sync TP dari STATE_ANALISIS jika ada tapi sesi kelas aktif belum */
+  if (_atpTpAktif().length && !ATP_STATE.sesi.length) {
     if (ATP_STATE.totalPertemuan > 0) {
       atpDistribusiOtomatis();
     }
