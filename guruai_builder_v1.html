@@ -5732,7 +5732,7 @@ function cgptBuatPrompt(tabId) {
       cp:      atpAktif.cp      || d.cp,
     };
   }
-  const materi = d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
+  const materi = atpAktif?.materi || d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
   /* Untuk tahap 2, TP pakai yang sudah disimpan dari tahap 1 */
   const tp = cgptTPTersimpan ||
     d.tp || STATE_ANALISIS.tp.join('\n') || '(belum ada TP — selesaikan Tahap 1 dulu)';
@@ -5755,10 +5755,10 @@ ${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}`;
                 cgptTahap == 3 ? 3 :
                 String(cgptTahap);
 
-  /* Jika dari ATP — gunakan TP dan konteks pertemuan spesifik */
-  const tpUntukPrompt = atpAktif
-    ? `TP${atpAktif.tpIdx+1}: ${atpAktif.tpTeks}\n(Ini pertemuan ke-${atpAktif.ptmKe1} dari ${atpAktif.totalPtm} pertemuan untuk TP ini. Pertemuan global ke-${atpAktif.ptmGlobal}.)`
-    : tp;
+  /* Jika dari ATP — gunakan konteks pertemuan spesifik yang sudah disusun
+     saat atpBuatRPPM() dipanggil (tpKhusus mencakup TP tunggal ATAU
+     gabungan beberapa TP kalau pertemuan ini menggabungkan TP kecil) */
+  const tpUntukPrompt = atpAktif ? atpAktif.tpKhusus : tp;
 
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 1 — Buat Tujuan Pembelajaran dari CP
@@ -6726,8 +6726,8 @@ function cgptTerapkan() {
     }
     const data = {
       ...formData,
-      tp:     STATE_ANALISIS.tp.join('\n'),
-      materi: STATE_ANALISIS.materi.join(', '),
+      tp:     atpAktif?.tpKhusus || STATE_ANALISIS.tp.join('\n'),
+      materi: atpAktif?.materi   || STATE_ANALISIS.materi.join(', '),
       topik:  STATE_ANALISIS.topik,
     };
     /* Generate semua tab lokal sebagai base */
@@ -7533,6 +7533,12 @@ function atpBuatRPPM(sesiKe) {
     ? `Pertemuan ini menggabungkan ${s.bagian.length} Tujuan Pembelajaran sekaligus (karena alokasi JP masing-masing kecil):\n${tpGabungan}`
     : `${tpGabungan}\n(Pertemuan ke-${sesiKe})`;
 
+  /* Materi SPESIFIK untuk TP dalam sesi ini saja — bukan seluruh materi CP,
+     supaya LKPD/Rubrik/Soal fokus pada materi pertemuan ini saja */
+  const materiGabungan = [...new Set(
+    s.bagian.map(b => STATE_ANALISIS.materi?.[b.tpIdx]).filter(Boolean)
+  )].join(', ');
+
   /* Simpan info sesi aktif ke state global agar prompt bisa membacanya.
      Kelas ikut tab ATP yang sedang aktif — bukan field Modul Ajar yang
      mungkin sudah tidak sesuai. */
@@ -7540,6 +7546,7 @@ function atpBuatRPPM(sesiKe) {
     sesiKe, key: `SESI${sesiKe}`,
     tpTeks:   tpGabungan,
     tpKhusus: tpKhusus,
+    materi:   materiGabungan,
     ptmGlobal: sesiKe,
     mapel:    d.mapel || '',
     kelas:    KELAS_ROMAWI[ATP_KELAS_AKTIF],
