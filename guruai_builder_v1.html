@@ -7032,15 +7032,34 @@ function _atpSusunSesi(tpEntries, jpList, jpPerPertemuan) {
   const sesi = [];
   let sesiAktif = null;
   let sisaJpSesi = 0;
+  /* TP dengan JP 0 — bukannya dilewati (bikin nomor TP loncat di RPPM),
+     digabung ke sesi TERDEKAT: didahulukan ke sesi SEBELUMNYA yang masih
+     terbuka; kalau belum ada sesi sama sekali, ditunda dulu dan disatukan
+     ke sesi BERIKUTNYA yang baru dibuat. */
+  let tpMenunggu = [];
 
   tpEntries.forEach((entry, k) => {
     let sisaJpTP = Math.max(0, jpList[k] || 0);
-    if (sisaJpTP === 0) return; /* TP tanpa alokasi JP — tidak masuk sesi manapun */
+
+    if (sisaJpTP === 0) {
+      if (sesiAktif) {
+        sesiAktif.bagian.push({ tpIdx: entry.tpIdx, tpTeks: entry.tpTeks, jp: 0 });
+      } else {
+        tpMenunggu.push(entry);
+      }
+      return;
+    }
+
     while (sisaJpTP > 0) {
       if (!sesiAktif || sisaJpSesi <= 0) {
         sesiAktif = { ke: sesi.length + 1, bagian: [] };
         sesi.push(sesiAktif);
         sisaJpSesi = jpPerPertemuan;
+        /* Sertakan TP yang sempat tertunda (JP 0 di awal) ke sesi baru ini */
+        if (tpMenunggu.length) {
+          tpMenunggu.forEach(e => sesiAktif.bagian.push({ tpIdx: e.tpIdx, tpTeks: e.tpTeks, jp: 0 }));
+          tpMenunggu = [];
+        }
       }
       const ambil = Math.min(sisaJpTP, sisaJpSesi);
       sesiAktif.bagian.push({ tpIdx: entry.tpIdx, tpTeks: entry.tpTeks, jp: ambil });
@@ -7048,6 +7067,17 @@ function _atpSusunSesi(tpEntries, jpList, jpPerPertemuan) {
       sisaJpSesi  -= ambil;
     }
   });
+
+  /* Kalau masih ada TP tertunda di akhir (semua TP setelahnya juga 0 JP) —
+     satukan ke sesi TERAKHIR yang ada, atau buat 1 sesi khusus kalau
+     ternyata tidak ada sesi sama sekali */
+  if (tpMenunggu.length) {
+    if (sesi.length) {
+      sesi[sesi.length - 1].bagian.push(...tpMenunggu.map(e => ({ tpIdx: e.tpIdx, tpTeks: e.tpTeks, jp: 0 })));
+    } else {
+      sesi.push({ ke: 1, bagian: tpMenunggu.map(e => ({ tpIdx: e.tpIdx, tpTeks: e.tpTeks, jp: 0 })) });
+    }
+  }
   return sesi;
 }
 
@@ -7202,20 +7232,40 @@ function _atpBobotTP(teks) {
 /** Bagi `sisaJP` ke `idxList` (index ke tpSemuaKelas) secara PROPORSIONAL
  *  berdasarkan bobot Bloom tiap TP, dengan sisa pembulatan dibagi via
  *  metode largest-remainder (adil untuk semua posisi — tidak selalu
- *  menguntungkan yang di depan atau merugikan yang di belakang). */
+ *  menguntungkan yang di depan atau merugikan yang di belakang).
+ *  Setiap TP DIJAMIN minimal 1 JP — kalau `sisaJP` yang tersedia dari
+ *  kalkulator ternyata tidak cukup untuk itu, anggaran diperluas otomatis
+ *  (kebutuhan riil TP lebih diutamakan daripada estimasi kalkulator).
+ *  Mengembalikan { peta, totalDipakai, kekurangan } — `kekurangan` > 0
+ *  berarti anggaran diperluas sebesar itu dari estimasi awal. */
 function _atpBagiJPProporsional(idxList, tpTeksList, sisaJP) {
-  if (!idxList.length) return {};
+  if (!idxList.length) return { peta: {}, totalDipakai: 0, kekurangan: 0 };
   const bobot = idxList.map(idx => _atpBobotTP(tpTeksList[idx]));
   const totalBobot = bobot.reduce((s, b) => s + b, 0) || 1;
 
-  const alokasiFloat = bobot.map(b => (sisaJP * b) / totalBobot);
-  const alokasiFloor = alokasiFloat.map(v => Math.floor(v));
-  const totalFloor   = alokasiFloor.reduce((s, v) => s + v, 0);
-  let sisaBagi        = sisaJP - totalFloor;
+  /* Jaminan minimum: tiap TP dapat MINIMAL 1 JP supaya tidak ada yang
+     kebagian 0 dan hilang/loncat dari penomoran RPPM. */
+  const jpEfektif  = Math.max(sisaJP, idxList.length);
+  const kekurangan = jpEfektif - sisaJP;
 
-  /* Urutkan berdasarkan sisa desimal terbesar — itu yang berhak dibulatkan ke atas dulu */
+  const alokasiFloat = bobot.map(b => (jpEfektif * b) / totalBobot);
+  const alokasiFloor = alokasiFloat.map(v => Math.max(1, Math.floor(v)));
+  let totalFloor = alokasiFloor.reduce((s, v) => s + v, 0);
+
+  /* Karena tiap TP dijamin minimal 1, totalFloor bisa lebih besar dari
+     jpEfektif kalau bobot antar-TP sangat timpang — pangkas dari yang
+     alokasinya PALING BESAR dulu (bukan yang sudah di batas minimum) */
+  while (totalFloor > jpEfektif) {
+    let iMax = 0;
+    for (let k = 1; k < alokasiFloor.length; k++) if (alokasiFloor[k] > alokasiFloor[iMax]) iMax = k;
+    if (alokasiFloor[iMax] <= 1) break; /* semua sudah di batas minimum, tidak bisa dipangkas lagi */
+    alokasiFloor[iMax]--;
+    totalFloor--;
+  }
+
+  const sisaBagi = jpEfektif - totalFloor;
   const urutanSisa = alokasiFloat
-    .map((v, k) => ({ k, sisa: v - alokasiFloor[k] }))
+    .map((v, k) => ({ k, sisa: v - Math.floor(v) }))
     .sort((a, b) => b.sisa - a.sisa);
 
   const hasil = [...alokasiFloor];
@@ -7225,7 +7275,7 @@ function _atpBagiJPProporsional(idxList, tpTeksList, sisaJP) {
 
   const peta = {};
   idxList.forEach((idx, k) => { peta[idx] = hasil[k]; });
-  return peta;
+  return { peta, totalDipakai: jpEfektif, kekurangan };
 }
 
 function atpDistribusiOtomatis() {
@@ -7270,10 +7320,12 @@ function atpDistribusiOtomatis() {
     else idxBelumAdaJP.push(i);
   }
   const sisaJP = Math.max(0, totalJP - jpTerpakai);
+  let kekuranganJP = 0;
   if (idxBelumAdaJP.length) {
-    const petaAlokasi = _atpBagiJPProporsional(idxBelumAdaJP, tpSemuaKelas, sisaJP);
+    const { peta, kekurangan } = _atpBagiJPProporsional(idxBelumAdaJP, tpSemuaKelas, sisaJP);
+    kekuranganJP = kekurangan;
     idxBelumAdaJP.forEach(idx => {
-      ATP_STATE.jpPerTP[idx] = petaAlokasi[idx] || 0;
+      ATP_STATE.jpPerTP[idx] = peta[idx] || 0;
     });
   }
 
@@ -7298,7 +7350,11 @@ function atpDistribusiOtomatis() {
   _atpRenderTimeline();
   _atpSimpan();
   const semLabel = semester === '1' ? 'Semester Ganjil' : semester === '2' ? 'Semester Genap' : 'Semester 1 + 2';
-  showToast(`⚡ ${ATP_STATE.totalPertemuan} pertemuan (${semLabel}, ${jpPerPertemuan} JP/pertemuan) → ${sesiBaru.length} sesi disusun`);
+  if (kekuranganJP > 0) {
+    showToast(`⚠️ Kebutuhan JP TP-mu ${kekuranganJP} JP lebih besar dari estimasi kalkulator — anggaran diperluas otomatis supaya tidak ada TP yang kebagian 0 JP. ${sesiBaru.length} sesi disusun.`, 'warning');
+  } else {
+    showToast(`⚡ ${ATP_STATE.totalPertemuan} pertemuan (${semLabel}, ${jpPerPertemuan} JP/pertemuan) → ${sesiBaru.length} sesi disusun`);
+  }
 }
 
 /** Render daftar TP dengan input JP (Jam Pelajaran) per TP */
