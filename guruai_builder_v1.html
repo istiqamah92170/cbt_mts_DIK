@@ -3887,28 +3887,40 @@ function importTabelATPWord() {
   if (panelHasil) panelHasil.style.display = 'block';
   autoSave();
 
-  /* Kalau ada Alokasi Waktu (JP), tawarkan langsung susun jadi sesi
-     pertemuan untuk kelas terkait — hanya kalau kelas itu belum punya
-     sesi sama sekali, supaya tidak menimpa pengaturan yang sudah dibuat
-     guru. PENTING: Alokasi Waktu di sini adalah JAM PELAJARAN (JP),
-     bukan langsung "jumlah pertemuan" — dikonversi via JP-per-pertemuan
-     supaya benar (mis. TP 4 JP dgn 2 JP/pertemuan = 2 pertemuan, bukan 4). */
+  /* Kalau ada Alokasi Waktu (JP), SELALU simpan nilainya ke jpPerTP kelas
+     terkait — ini yang sebelumnya bisa hilang sama sekali kalau kelas
+     sudah punya sesi (guru sempat buka halaman ATP duluan). Menyusun
+     ULANG sesi timeline tetap perlu konfirmasi kalau sudah ada, tapi
+     JP-nya sendiri harus selalu tersimpan supaya "Distribusi Otomatis"
+     berikutnya pakai angka asli dari data ATP kamu, bukan bagi rata.
+     PENTING: Alokasi Waktu = JAM PELAJARAN (JP), bukan langsung "jumlah
+     pertemuan" — dikonversi via JP-per-pertemuan (mis. TP 4 JP dgn 2
+     JP/pertemuan = 2 pertemuan, bukan 4). */
   const adaAlokasi = parsed.some(r => r.alokasi !== null);
   const kelasObj = typeof ATP_ALL_KELAS !== 'undefined' ? ATP_ALL_KELAS[kelasTarget] : null;
   if (adaAlokasi && kelasObj) {
+    if (!Array.isArray(kelasObj.jpPerTP))       kelasObj.jpPerTP = [];
+    if (!Array.isArray(kelasObj.jpPerTPManual)) kelasObj.jpPerTPManual = [];
+
+    /* Posisi LOKAL TP baru ini di dalam daftar TP kelas tujuan — perlu
+       dihitung, bukan diasumsikan mulai dari 0, kalau kelas ini sudah
+       punya TP sebelumnya (mis. dari impor lain) */
+    const startLokal = STATE_ANALISIS.tpKelas.slice(0, startIdx).filter(k => k === kelasTarget).length;
+
+    parsed.forEach((row, i) => {
+      if (row.alokasi !== null) {
+        kelasObj.jpPerTP[startLokal + i]       = row.alokasi;
+        kelasObj.jpPerTPManual[startLokal + i] = true;
+      }
+    });
+
+    const jumlahDenganJP = parsed.filter(r => r.alokasi !== null).length;
     if (!kelasObj.sesi.length) {
-      if (confirm(`Ditemukan Alokasi Waktu (JP) untuk ${parsed.filter(r => r.alokasi !== null).length} TP. Langsung susun jadi sesi pertemuan untuk Kelas ${KELAS_ROMAWI[kelasTarget]}?`)) {
+      if (confirm(`Ditemukan Alokasi Waktu (JP) untuk ${jumlahDenganJP} TP. Langsung susun jadi sesi pertemuan untuk Kelas ${KELAS_ROMAWI[kelasTarget]}?`)) {
         const jpPerPertemuan = Math.max(1, parseInt(document.getElementById('atp-jpPertemuan')?.value, 10) || 2);
-        if (!Array.isArray(kelasObj.jpPerTP))       kelasObj.jpPerTP = [];
-        if (!Array.isArray(kelasObj.jpPerTPManual)) kelasObj.jpPerTPManual = [];
-        parsed.forEach((row, i) => {
-          kelasObj.jpPerTP[i]       = row.alokasi || 0;
-          kelasObj.jpPerTPManual[i] = row.alokasi !== null;
-        });
-        const entries = parsed.map((row, i) => ({ tpIdx: i, tpTeks: row.tp }));
-        kelasObj.sesi = typeof _atpSusunSesi === 'function'
-          ? _atpSusunSesi(entries, kelasObj.jpPerTP, jpPerPertemuan)
-          : [];
+        const entries = _tpIndexUntukKelas(kelasTarget).map(g => ({ tpIdx: g, tpTeks: STATE_ANALISIS.tp[g] }));
+        const jpList  = entries.map((_, k) => kelasObj.jpPerTP[k] || 0);
+        kelasObj.sesi = typeof _atpSusunSesi === 'function' ? _atpSusunSesi(entries, jpList, jpPerPertemuan) : [];
         if (kelasTarget === ATP_KELAS_AKTIF) {
           ATP_STATE = kelasObj;
           if (typeof _atpRenderTPList === 'function') _atpRenderTPList();
@@ -3917,7 +3929,8 @@ function importTabelATPWord() {
         if (typeof _atpSimpan === 'function') _atpSimpan();
       }
     } else {
-      showToast(`Alokasi Waktu ditemukan, tapi Kelas ${KELAS_ROMAWI[kelasTarget]} sudah punya sesi pertemuan — gunakan tombol "Distribusi Otomatis" di halaman ATP kalau ingin menyusun ulang.`, 'info');
+      showToast(`JP dari ${jumlahDenganJP} TP sudah disimpan. Klik "Distribusi Otomatis" di halaman ATP (Kelas ${KELAS_ROMAWI[kelasTarget]}) untuk menyusun ulang sesi dengan JP ini.`, 'info');
+      if (typeof _atpSimpan === 'function') _atpSimpan();
     }
   }
 
@@ -6999,6 +7012,13 @@ function _atpTpAktif() {
   return (STATE_ANALISIS.tp || []).filter((_, i) => STATE_ANALISIS.tpKelas[i] === ATP_KELAS_AKTIF);
 }
 
+/** Daftar index GLOBAL (ke STATE_ANALISIS.tp) milik kelas tertentu, berurutan —
+ *  dipakai saat perlu tahu posisi lokal TP di kelas manapun, bukan cuma yang aktif */
+function _tpIndexUntukKelas(kelasNum) {
+  _pastikanTpKelas();
+  return (STATE_ANALISIS.tp || []).map((_, i) => i).filter(i => STATE_ANALISIS.tpKelas[i] === kelasNum);
+}
+
 /**
  * Susun TP (dengan alokasi JP masing-masing) menjadi daftar SESI (pertemuan
  * nyata) berukuran `jpPerPertemuan` JP. Satu sesi bisa berisi:
@@ -7158,6 +7178,56 @@ function _atpRenderKalkulator(k) {
  *  Waktu dari Word) dipertahankan; sisa JP dibagi rata ke TP yang belum
  *  punya JP. Hasilnya dikemas jadi sesi (pertemuan nyata) — TP besar bisa
  *  terbagi ke beberapa sesi, TP-TP kecil bisa tergabung dalam satu sesi. */
+/** Bobot tingkat kognitif (Taksonomi Bloom) per kata kerja TP — dipakai
+ *  untuk membagi JP secara proporsional & adil: TP level tinggi (analisis,
+ *  evaluasi, mencipta) wajar mendapat alokasi JP lebih besar daripada TP
+ *  level dasar (mengingat, memahami), bukan dibagi rata begitu saja. */
+const ATP_BOBOT_BLOOM = [
+  { bobot: 3.5, kata: /\b(merancang|menciptakan|mengembangkan|mendesain|memproduksi|menyusun|mengkreasikan|memproyeksikan|berinovasi)\b/ },
+  { bobot: 3.0, kata: /\b(mengevaluasi|menilai|mempertimbangkan|memprediksi|menyimpulkan|memutuskan|merefleksikan)\b/ },
+  { bobot: 2.5, kata: /\b(menganalisis|membandingkan|mengklasifikasikan|menghubungkan|membedakan|mengkaji|menelaah|mendiagnosis)\b/ },
+  { bobot: 2.0, kata: /\b(menerapkan|menggunakan|mempraktikkan|melakukan|mendemonstrasikan|menghitung|menyelesaikan|mengoperasikan)\b/ },
+  { bobot: 1.5, kata: /\b(menjelaskan|memahami|mendeskripsikan|menceritakan|menguraikan|mengungkapkan|memaknai|menggambarkan|menafsirkan)\b/ },
+  { bobot: 1.0, kata: /\b(mengidentifikasi|menyebutkan|mendaftar|mengingat|menuliskan|menunjukkan|mendata)\b/ },
+];
+
+/** Ambil bobot 1 TP berdasar kata kerja pertama yang ditemukan (default:
+ *  1.5 / setara "memahami", kalau kata kerjanya tidak dikenali) */
+function _atpBobotTP(teks) {
+  const t = (teks || '').toLowerCase();
+  for (const b of ATP_BOBOT_BLOOM) if (b.kata.test(t)) return b.bobot;
+  return 1.5;
+}
+
+/** Bagi `sisaJP` ke `idxList` (index ke tpSemuaKelas) secara PROPORSIONAL
+ *  berdasarkan bobot Bloom tiap TP, dengan sisa pembulatan dibagi via
+ *  metode largest-remainder (adil untuk semua posisi — tidak selalu
+ *  menguntungkan yang di depan atau merugikan yang di belakang). */
+function _atpBagiJPProporsional(idxList, tpTeksList, sisaJP) {
+  if (!idxList.length) return {};
+  const bobot = idxList.map(idx => _atpBobotTP(tpTeksList[idx]));
+  const totalBobot = bobot.reduce((s, b) => s + b, 0) || 1;
+
+  const alokasiFloat = bobot.map(b => (sisaJP * b) / totalBobot);
+  const alokasiFloor = alokasiFloat.map(v => Math.floor(v));
+  const totalFloor   = alokasiFloor.reduce((s, v) => s + v, 0);
+  let sisaBagi        = sisaJP - totalFloor;
+
+  /* Urutkan berdasarkan sisa desimal terbesar — itu yang berhak dibulatkan ke atas dulu */
+  const urutanSisa = alokasiFloat
+    .map((v, k) => ({ k, sisa: v - alokasiFloor[k] }))
+    .sort((a, b) => b.sisa - a.sisa);
+
+  const hasil = [...alokasiFloor];
+  for (let n = 0; n < sisaBagi && n < urutanSisa.length; n++) {
+    hasil[urutanSisa[n].k]++;
+  }
+
+  const peta = {};
+  idxList.forEach((idx, k) => { peta[idx] = hasil[k]; });
+  return peta;
+}
+
 function atpDistribusiOtomatis() {
   const tpSemuaKelas = _atpTpAktif();
   if (!tpSemuaKelas || !tpSemuaKelas.length) {
@@ -7201,10 +7271,9 @@ function atpDistribusiOtomatis() {
   }
   const sisaJP = Math.max(0, totalJP - jpTerpakai);
   if (idxBelumAdaJP.length) {
-    const rata     = Math.floor(sisaJP / idxBelumAdaJP.length);
-    const sisaBagi = sisaJP - rata * idxBelumAdaJP.length;
-    idxBelumAdaJP.forEach((idx, k) => {
-      ATP_STATE.jpPerTP[idx] = rata + (k < sisaBagi ? 1 : 0);
+    const petaAlokasi = _atpBagiJPProporsional(idxBelumAdaJP, tpSemuaKelas, sisaJP);
+    idxBelumAdaJP.forEach(idx => {
+      ATP_STATE.jpPerTP[idx] = petaAlokasi[idx] || 0;
     });
   }
 
