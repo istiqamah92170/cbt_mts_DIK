@@ -3075,6 +3075,11 @@ function _resetTampilanProject() {
         <p>Isi form di sebelah kiri —<br>preview muncul otomatis</p>
       </div>`;
   }
+
+  /* Kalkulator ATP — reset ke default dulu, supaya tidak menampilkan
+     pengaturan project sebelumnya kalau project baru belum punya sendiri
+     (nilai project yang benar akan menimpa ini lewat _atpTerapkanData) */
+  if (typeof _atpResetKalkulatorDOM === 'function') _atpResetKalkulatorDOM();
 }
 
 /** Render isi dropdown & label nama project aktif di header */
@@ -4800,6 +4805,38 @@ function _simpanResult(historyId, result) {
   IDB.set('last_historyId', historyId);
 }
 
+/** Catat/perbarui satu hasil ke riwayat dashboard + statistik + IDB.
+ *  Dipakai oleh generate() (klasik) MAUPUN cgptTerapkan() (ATP/ChatGPT) —
+ *  sebelumnya cgptTerapkan() TIDAK PERNAH memanggil ini, jadi RPPM yang
+ *  dibuat lewat ATP tidak pernah masuk riwayat/statistik, dan hilang saat
+ *  pindah project karena tidak pernah benar-benar tersimpan permanen. */
+function _catatKeRiwayat(historyId, data) {
+  if (!historyId) return;
+  const existing = DATABASE.history.find(h => h.id === historyId);
+  if (existing) {
+    /* Sudah ada (mis. lanjut generate tab lain utk RPPM yang sama) —
+       perbarui datanya, jangan hitung dobel ke statistik */
+    Object.assign(existing, data, { id: existing.id, ts: existing.ts });
+  } else {
+    DATABASE.history.push({
+      id: historyId,
+      ts: Date.now(),
+      ...data,
+      analisis: { topik: STATE_ANALISIS.topik, tp: STATE_ANALISIS.tp, materi: STATE_ANALISIS.materi },
+    });
+    DATABASE.stats.modul++;
+    DATABASE.stats.lkpd++;
+    DATABASE.stats.soal += 5;
+    DATABASE.stats.asesmen++;
+    DATABASE.stats.tp += STATE_ANALISIS.tp.length || 1;
+  }
+  const payload = { stats: DATABASE.stats, history: DATABASE.history };
+  IDB.set('main', payload);
+  STORAGE.save(_lsKeyProject(), payload);
+  RENDER.renderHistory();
+  RENDER.updateStats();
+}
+
 function generate() {
   const data = UTIL.getFormData();
   const missing = UTIL.validateForm(data);
@@ -4829,25 +4866,8 @@ function generate() {
     /* Tampilkan preview — sertakan historyId agar bisa di-persist */
     _tampilkanPreview(data, result, 'rppm', historyId);
 
-    /* Update statistik */
-    DATABASE.stats.modul++;
-    DATABASE.stats.lkpd++;
-    DATABASE.stats.soal += 5;
-    DATABASE.stats.asesmen++;
-    DATABASE.stats.tp += STATE_ANALISIS.tp.length || 1;
-
-    /* Simpan ke riwayat */
-    DATABASE.history.push({
-      id: historyId,
-      ts: Date.now(),
-      ...data,
-      analisis: { topik: STATE_ANALISIS.topik, tp: STATE_ANALISIS.tp, materi: STATE_ANALISIS.materi },
-    });
-
-    /* Simpan ke IDB */
-    const payload = { stats: DATABASE.stats, history: DATABASE.history };
-    IDB.set('main', payload);
-    STORAGE.save(_lsKeyProject(), payload);
+    /* Catat ke riwayat + statistik + IDB */
+    _catatKeRiwayat(historyId, data);
 
     /* Persist result tab ke IDB — key: result_<historyId> */
     _simpanResult(historyId, result);
@@ -5083,9 +5103,12 @@ ${isiHTML}
 </body></html>`;
 }
 
-/** Download file sebagai blob */
+/** Download file sebagai blob. BOM ('\ufeff') SENGAJA TIDAK dipakai di sini
+ *  — untuk file HTML-sebagai-.doc, BOM di depan <!DOCTYPE html> bisa bikin
+ *  Word gagal mengenali format filenya sama sekali (gagal dibuka). Encoding
+ *  UTF-8 sudah dideklarasikan lewat <meta charset="UTF-8"> di _buatHTMLWord. */
 function _downloadBlob(content, filename, mime) {
-  const blob = new Blob(['\ufeff' + content], { type: mime });
+  const blob = new Blob([content], { type: mime });
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
   a.download = filename;
@@ -6855,6 +6878,12 @@ function cgptTerapkan() {
   /* Simpan hasil ChatGPT ke tab yang dipilih */
   currentGenerated.result[cgptActiveTab]             = cgptLastResult;
   currentGenerated.result[cgptActiveTab + '_sumber'] = 'chatgpt';
+
+  /* Catat ke riwayat dashboard + statistik + IDB — SEBELUMNYA TIDAK PERNAH
+     dipanggil di sini, jadi RPPM hasil ATP/ChatGPT tidak pernah muncul di
+     riwayat, statistik tidak update, dan hilang permanen saat pindah
+     project (karena tidak pernah benar-benar tercatat) */
+  _catatKeRiwayat(currentGenerated.historyId, currentGenerated.data);
   _simpanResult(currentGenerated.historyId, currentGenerated.result);
 
   /* Pindah ke Modul Ajar dan tampilkan tab */
@@ -7772,8 +7801,54 @@ function atpReset() {
 }
 
 /** Simpan seluruh data ATP (3 kelas sekaligus) ke IDB */
+/** Ambil nilai kalkulator saat ini langsung dari DOM (untuk disimpan per-project) */
+function _atpAmbilKalkulatorDariDOM() {
+  const g = id => document.getElementById(id)?.value;
+  return {
+    jenjang:    g('atp-jenjang')    || 'mts',
+    ptmMinggu:  g('atp-ptmMinggu')  || '2',
+    semester:   g('atp-semester')   || 'both',
+    jpPertemuan:g('atp-jpPertemuan')|| '2',
+    liburSem:   g('atp-liburSem')   || '2',
+    liburNas:   g('atp-liburNas')   || '2',
+    ujian:      g('atp-ujian')      || '3',
+    kegiatan:   g('atp-kegiatan')   || '2',
+    ph:         g('atp-ph')         || '2',
+    cadangan:   g('atp-cadangan')   || '1',
+  };
+}
+
+/** Terapkan nilai kalkulator tersimpan ke DOM (dipanggil saat project dimuat/diganti) */
+function _atpTerapkanKalkulatorKeDOM(k) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+  set('atp-jenjang', k?.jenjang);
+  set('atp-ptmMinggu', k?.ptmMinggu);
+  const val = document.getElementById('atp-ptmMingguVal');
+  if (val) val.textContent = document.getElementById('atp-ptmMinggu')?.value || '2';
+  set('atp-semester', k?.semester);
+  set('atp-jpPertemuan', k?.jpPertemuan);
+  set('atp-liburSem', k?.liburSem);
+  set('atp-liburNas', k?.liburNas);
+  set('atp-ujian', k?.ujian);
+  set('atp-kegiatan', k?.kegiatan);
+  set('atp-ph', k?.ph);
+  set('atp-cadangan', k?.cadangan);
+}
+
+/** Reset kalkulator ATP ke nilai default (dipanggil saat pindah/buat project baru) */
+function _atpResetKalkulatorDOM() {
+  _atpTerapkanKalkulatorKeDOM({
+    jenjang: 'mts', ptmMinggu: '2', semester: 'both', jpPertemuan: '2',
+    liburSem: '2', liburNas: '2', ujian: '3', kegiatan: '2', ph: '2', cadangan: '1',
+  });
+}
+
 function _atpSimpan() {
-  IDB.set('atp_state', { kelasAktif: ATP_KELAS_AKTIF, kelas: ATP_ALL_KELAS });
+  IDB.set('atp_state', {
+    kelasAktif: ATP_KELAS_AKTIF,
+    kelas: ATP_ALL_KELAS,
+    kalkulator: _atpAmbilKalkulatorDariDOM(),
+  });
 }
 
 /** Migrasi 1 objek kelas dari format lama (distribusi: [{tpIdx,tpTeks,jumlahPtm}])
@@ -7814,6 +7889,7 @@ function _atpTerapkanData(saved) {
       }
     });
     ATP_KELAS_AKTIF = (saved.kelasAktif && ATP_ALL_KELAS[saved.kelasAktif]) ? saved.kelasAktif : 7;
+    _atpTerapkanKalkulatorKeDOM(saved.kalkulator);
   } else if (saved.distribusi || saved.sesi || saved.progress || saved.totalPertemuan) {
     /* Format paling lama (sebelum Fase 2) — anggap ini data Kelas VII */
     Object.assign(ATP_ALL_KELAS[7], _atpKosong(), saved);
