@@ -2792,7 +2792,12 @@ async function startAnalysis(){
     const batch=[];let j=i;
     while(j<total&&batch.length<batchSize){
       const row=resultData[j];
-      if(skipFilled&&row['topik']&&row['bloom']&&row['kunci_ai']){skip++;addLog('info','\u27B6 Soal #'+(row['no']||j+1)+': dilewati');updateProg(j+1,total);j++;continue;}
+      // Skip hanya jika semua kolom hasil sudah terisi dengan nilai nyata
+      // (bukan string kosong) — mencegah false-skip jika Excel asli kebetulan
+      // punya kolom bernama bloom/topik yang sudah ada isinya
+      const alreadyDone = row['bloom'] && String(row['bloom']).match(/^C[1-6]$/) &&
+                          row['topik'] && String(row['topik']).trim().length > 0;
+      if(skipFilled && alreadyDone){skip++;addLog('info','\u27B6 Soal #'+(row['no']||j+1)+': dilewati');updateProg(j+1,total);j++;continue;}
       batch.push({idx:j,row});j++;
     }
     i=j;if(!batch.length)continue;
@@ -2801,7 +2806,10 @@ async function startAnalysis(){
     try{
       let results;
       if(aMode==='local'){results=batch.map(function(b){return localAnalyze(b.row,mapel,kelas,materiList);});}
-      else{results=await callGemini(apiKey,model,batch.map(function(b){return b.row;}),mapel,kelas,materiList);}
+      else{
+        results=await callGemini(apiKey,model,batch.map(function(b){return b.row;}),mapel,kelas,materiList);
+        if(results&&results.length) addLog('info','\u2139 Gemini OK: '+results.length+' hasil diterima untuk batch ini');
+      }
       results.forEach(function(res,ri){
         const b=batch[ri],noL=b.row['no']||(b.idx+1);
         if(res.error){err++;addLog('err','\u2717 Soal #'+noL+': '+res.error);}
@@ -2920,11 +2928,17 @@ function normalizeItem(p,materiList,_soalPayload){
   const topikName=topikRaw.split('|')[0].trim();
   const keywords=topikRaw.includes('|')?topikRaw.split('|')[1].trim():'';
   var resolvedTopik=topikName;
+  var confidencePenalty=0;
   if(materiList&&materiList.length){
     var taeResult=taeResolve(topikName,materiList);
-    if(!taeResult.found)return{error:'Topik "'+topikName+'" tidak ada di daftar materi (TAE: tidak ada alias)'};
-    resolvedTopik=taeResult.found;
-    // Rebuild topik string with resolved name + original keywords
+    if(!taeResult.found){
+      // Fallback: gunakan materi pertama dari list daripada gagal total.
+      // Pengguna bisa koreksi topik manual di tabel. Turunkan confidence.
+      resolvedTopik=materiList[0];
+      confidencePenalty=20;
+    } else {
+      resolvedTopik=taeResult.found;
+    }
   }
   const finalTopik=resolvedTopik+(keywords?' | '+keywords:'');
   // Untuk soal PG: kunci_ai di-uppercase (A/B/C/D).
@@ -2933,7 +2947,9 @@ function normalizeItem(p,materiList,_soalPayload){
   const isEsaiItem = ESAI.includes(tipeItem);
   const rawKunci = String(p.kunci_ai||'').trim();
   const kunciNormalized = isEsaiItem ? (rawKunci || '—') : (rawKunci.toUpperCase() || '?');
-  var _result={topik:finalTopik,bloom:bloom,kesulitan:kd,confidence:Math.min(100,Math.max(0,parseInt(p.confidence)||50)),kunci_ai:kunciNormalized};
+  var rawConf = Math.min(100,Math.max(0,parseInt(p.confidence)||50));
+  if(confidencePenalty) rawConf = Math.max(0, rawConf - confidencePenalty);
+  var _result={topik:finalTopik,bloom:bloom,kesulitan:kd,confidence:rawConf,kunci_ai:kunciNormalized};
   // TKB validation — C1/C2 only in v1.0
   if(_soalPayload && typeof tkbValidate==='function'){
     _result=tkbValidate(_soalPayload,_result);
@@ -5041,7 +5057,9 @@ function buildJejak(row, res) {
 // PATCH doDownload — bangun Excel langsung dari resultData (andal, tidak perlu re-match)
 // ─────────────────────────────────────────────────────────────────────────────
 var doDownload = function() {
-  if (!workbook || !resultData.length) { alert('Tidak ada data.'); return; }
+  if (!resultData || !resultData.length) { alert('Tidak ada data hasil analisis. Jalankan analisis terlebih dahulu.'); return; }
+  if (typeof XLSX === 'undefined') { alert('Library Excel (XLSX) belum siap. Tunggu beberapa detik lalu coba lagi.'); return; }
+
   try {
     // Header output: pakai nama asli dari file (origHeadersRaw) + kolom hasil analisis
     // OUT_COLS berisi key lowercase — tampilkan dengan nama rapi untuk header Excel
@@ -5070,19 +5088,23 @@ var doDownload = function() {
     const newWb = XLSX.utils.book_new();
     const newWs = XLSX.utils.aoa_to_sheet(outRows);
 
-    // Auto-width kolom: lebar berdasarkan konten terpanjang
-    var colWidths = baseHdrs.map(function(h) { return { wch: Math.max(h.length, 10) }; });
+    // Auto-width kolom
+    var colWidths = displayHdrs.map(function(h) { return { wch: Math.max(String(h).length, 10) }; });
     outRows.slice(1).forEach(function(r) {
       r.forEach(function(cell, ci) {
         var len = String(cell||'').length;
-        if (len > (colWidths[ci] ? colWidths[ci].wch : 0)) {
-          colWidths[ci] = { wch: Math.min(len, 60) };
-        }
+        if (len > (colWidths[ci] ? colWidths[ci].wch : 0)) colWidths[ci] = { wch: Math.min(len, 60) };
       });
     });
     newWs['!cols'] = colWidths;
 
-    XLSX.utils.book_append_sheet(newWb, newWs, workbook.SheetNames[0]);
+    // Nama sheet: pakai "Soal" sebagai default yang aman (maks 31 karakter, tanpa karakter khusus)
+    var sheetName = 'Soal';
+    if (workbook && workbook.SheetNames && workbook.SheetNames[0]) {
+      var sn = String(workbook.SheetNames[0]).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31);
+      if (sn) sheetName = sn;
+    }
+    XLSX.utils.book_append_sheet(newWb, newWs, sheetName);
 
     // ── Sheet _Metadata_Analisis ─────────────────────────────────────────────
     var metaRows = _buildMetadataSheet();
@@ -5702,7 +5724,15 @@ var _origValidateFile = validateFile;
 validateFile = function(json, file) {
   if (!json || json.length < 2) { showV('error', 'File kosong.'); return; }
   // Simpan header asli untuk output Excel, normalisasi ke lowercase untuk akses internal
-  var rawHeaders = json[0].map(function(h) { return String(h).trim(); });
+  var rawHeadersFull = json[0].map(function(h) { return String(h).trim(); });
+  // Buang kolom tanpa nama (header kosong) — sering muncul akibat format/style Excel
+  // yang meluas melebihi data asli (contoh: kolom kosong sampai AN). Kalau tidak dibuang,
+  // kolom hasil analisis (Topik/Bloom/dll) akan terdorong jauh ke kanan melewati celah
+  // kolom kosong tsb, sehingga terlihat "hilang" padahal cuma tidak kelihatan di layar sempit.
+  // keepIdx menyimpan index kolom asli supaya data tetap terambil dari posisi yang benar.
+  var keepIdx = [];
+  rawHeadersFull.forEach(function(h, i) { if (h !== '') keepIdx.push(i); });
+  var rawHeaders = keepIdx.map(function(i) { return rawHeadersFull[i]; });
   origHeadersRaw = rawHeaders;
   origHeaders = rawHeaders.map(function(h) { return h.toLowerCase(); });
 
@@ -5720,7 +5750,7 @@ validateFile = function(json, file) {
 
   sheetData = json.slice(1).map(function(row, ri) {
     var obj = { _ri: ri + 1 };
-    origHeaders.forEach(function(h, i) { obj[h] = row[i] !== undefined ? row[i] : ''; });
+    origHeaders.forEach(function(h, hi) { obj[h] = row[keepIdx[hi]] !== undefined ? row[keepIdx[hi]] : ''; });
     return obj;
   }).filter(function(row) {
     var tipe   = String(row['tipe'] || '').toLowerCase().trim();
