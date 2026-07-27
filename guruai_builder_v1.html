@@ -1219,10 +1219,11 @@ h1,h2,h3,h4 { color: var(--text-primary); }
         <!-- Progress Tahun Ajaran -->
         <div class="section-title" style="margin-bottom:8px;">📈 Progress Tahun Ajaran</div>
         <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;margin-bottom:24px;box-shadow:var(--shadow-sm);">
-          <p id="progLabel" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">0 dari ±32 pertemuan (estimasi tahun ajaran)</p>
+          <p id="progLabel" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Belum ada pertemuan disusun</p>
           <div style="background:var(--border);border-radius:20px;height:18px;overflow:hidden;">
             <div id="progBar" style="background:linear-gradient(90deg,var(--accent),var(--accent-dark));height:100%;border-radius:20px;width:0%;transition:width .5s ease;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;min-width:0px;">0%</div>
           </div>
+          <p id="progBreakdown" style="font-size:11px;color:var(--text-muted);margin-top:8px;"></p>
         </div>
         <div class="section-title">📂 Riwayat Terakhir</div>
         <div class="history-list" id="historyList">
@@ -4624,16 +4625,34 @@ const RENDER = {
     /* Stat TP — elemen mungkin belum ada di versi lama, guard dengan ?. */
     const elTp = document.getElementById('stat-tp');
     if (elTp) elTp.textContent = DATABASE.stats.tp || 0;
-    /* Progress bar */
+    /* Progress bar — dari data ATP NYATA (gabungan Kelas VII+VIII+IX untuk
+       project yang sedang aktif), bukan estimasi angka tetap seperti dulu */
     const prog = document.getElementById('progBar');
-    if (prog) {
-      const pct = DATABASE.stats.modul > 0
-        ? Math.min(100, Math.round((DATABASE.stats.modul / 32) * 100))
-        : 0;
-      prog.style.width    = pct + '%';
-      prog.textContent    = pct + '%';
-      const lbl = document.getElementById('progLabel');
-      if (lbl) lbl.textContent = `${DATABASE.stats.modul} dari ±32 pertemuan (estimasi tahun ajaran)`;
+    const lbl  = document.getElementById('progLabel');
+    const brk  = document.getElementById('progBreakdown');
+    if (prog && typeof ATP_ALL_KELAS !== 'undefined') {
+      let totalSesi = 0, doneSesi = 0;
+      const perKelas = [];
+      [7, 8, 9].forEach(k => {
+        const kelasObj = ATP_ALL_KELAS[k];
+        const sesiKelas = kelasObj?.sesi || [];
+        let doneKelas = 0;
+        sesiKelas.forEach(s => {
+          totalSesi++;
+          if (kelasObj.progress?.[`SESI${s.ke}`] === 'done') { doneSesi++; doneKelas++; }
+        });
+        if (sesiKelas.length) perKelas.push(`Kelas ${KELAS_ROMAWI[k]}: ${doneKelas}/${sesiKelas.length}`);
+      });
+
+      const pct = totalSesi > 0 ? Math.round((doneSesi / totalSesi) * 100) : 0;
+      prog.style.width = pct + '%';
+      prog.textContent = pct + '%';
+      if (lbl) {
+        lbl.textContent = totalSesi > 0
+          ? `${doneSesi} dari ${totalSesi} pertemuan selesai`
+          : 'Belum ada pertemuan disusun — buka ATP & Pertemuan untuk mulai';
+      }
+      if (brk) brk.textContent = perKelas.join('  ·  ');
     }
   },
 };
@@ -5398,6 +5417,33 @@ function salinDariModul() {
 }
 
 /** Restore data RPPM dari localStorage saat halaman dibuka */
+/** Isi field-field di halaman RPPM (form 23-field KBCDAN PM) dari hasil
+ *  generate (lokal/AI/ATP) — supaya guru bisa langsung Export Word dari
+ *  halaman RPPM tanpa perlu isi ulang manual. Dipanggil oleh
+ *  GENERATOR.buatRPPM() setiap kali RPPM digenerate. */
+function _syncRPPMFields(f) {
+  const textFields = ['sekolah','mapel','fase','waktu','tahun','guru','peserta','materi',
+    'cp','lintas','tp','topik','integrasi','model','mitra','lingkungan','digital',
+    'dalil','dalilSumber','awal','memahami','mengaplikasi','merefleksi','penutup',
+    'asAwal','asProses'];
+  const fieldMap = {
+    dalilSumber: 'r-dalil-sumber', asAwal: 'r-as-awal', asProses: 'r-as-proses',
+  };
+  textFields.forEach(k => {
+    const id = fieldMap[k] || ('r-' + k.replace(/([A-Z])/g, m => m.toLowerCase()));
+    const el = document.getElementById(id);
+    if (el && f[k] != null) el.value = f[k];
+  });
+  /* Reset checkbox dulu supaya tidak tercampur dari pertemuan sebelumnya */
+  document.querySelectorAll('input[name="kbc"]').forEach(el => { el.checked = false; });
+  document.querySelectorAll('input[name="dpl"]').forEach(el => { el.checked = false; });
+  document.querySelectorAll('input[name="asakhir"]').forEach(el => { el.checked = false; });
+  if (Array.isArray(f.kbc))     f.kbc.forEach(v     => { const el = document.querySelector(`input[name="kbc"][value="${v}"]`);     if (el) el.checked = true; });
+  if (Array.isArray(f.dpl))     f.dpl.forEach(v     => { const el = document.querySelector(`input[name="dpl"][value="${v}"]`);     if (el) el.checked = true; });
+  if (Array.isArray(f.asAkhir)) f.asAkhir.forEach(v => { const el = document.querySelector(`input[name="asakhir"][value="${v}"]`); if (el) el.checked = true; });
+  if (typeof previewRPPM === 'function') previewRPPM();
+}
+
 async function restoreRPPM() {
   /* IDB dulu, fallback ke localStorage */
   let saved = await IDB.get('rppm', null);
@@ -6706,10 +6752,11 @@ function cgptTeksKeHTML(teks, tabId) {
 function cgptTerapkan() {
   if (!cgptLastResult) { showToast('Format dulu hasilnya', 'error'); return; }
 
+  const atpAktif = window._atpAktif;
+
   /* Jika belum ada currentGenerated, buat dummy dari form data
      (atau dari konteks ATP kalau RPPM ini dipicu dari tab ATP) */
   if (!currentGenerated) {
-    const atpAktif = window._atpAktif;
     let formData = UTIL.getFormData();
     if (atpAktif) {
       formData = {
@@ -6734,6 +6781,25 @@ function cgptTerapkan() {
     const result = GENERATOR.generate(data);
     const historyId = UTIL.uid();
     _tampilkanPreview(data, result, cgptActiveTab, historyId);
+  } else if (atpAktif) {
+    /* PENTING: currentGenerated SUDAH ADA dari sebelumnya (mis. guru pernah
+       Generate perangkat penuh dari Modul Ajar sebelum memakai ATP) — data
+       TP/materi-nya harus tetap diperbarui ke konteks pertemuan ATP ini,
+       supaya LKPD/Rubrik/Soal yang dibuat SETELAH atpTandaiPertemuanSelesai()
+       menghapus window._atpAktif (otomatis, ~600ms lagi) tetap memakai TP
+       dan materi pertemuan ini — bukan balik ke data lama (semua TP/materi). */
+    currentGenerated.data = {
+      ...currentGenerated.data,
+      tp:      atpAktif.tpKhusus || currentGenerated.data.tp,
+      materi:  atpAktif.materi   || currentGenerated.data.materi,
+      kelas:   atpAktif.kelas    || currentGenerated.data.kelas,
+      mapel:   atpAktif.mapel    || currentGenerated.data.mapel,
+      fase:    atpAktif.fase     || currentGenerated.data.fase,
+      waktu:   atpAktif.waktu    || currentGenerated.data.waktu,
+      guru:    atpAktif.guru     || currentGenerated.data.guru,
+      sekolah: atpAktif.sekolah  || currentGenerated.data.sekolah,
+      cp:      atpAktif.cp       || currentGenerated.data.cp,
+    };
   }
 
   /* Simpan hasil ChatGPT ke tab yang dipilih */
