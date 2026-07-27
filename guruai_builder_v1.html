@@ -3777,9 +3777,14 @@ function renderHasilAnalisis() {
     badge.className   = isAI ? 'badge badge-teal' : 'badge badge-blue';
   }
 
-  /* Topik chips */
+  /* Topik chips — SELALU dihitung ulang dari tpBab (topik per-TP),
+     BUKAN dari array global yang cuma ditambah terus. Sebelumnya kalau
+     guru impor Word untuk >1 kelas, topik kelas lama ikut menumpuk di
+     sini walau TP kelas itu sudah tidak relevan lagi ditampilkan. */
+  _pastikanTpTopik();
+  const topikUnik = [...new Set((STATE_ANALISIS.tpBab || []).filter(Boolean))];
   document.getElementById('analisisTopik').innerHTML =
-    STATE_ANALISIS.topik.map(t => `<span class="chip-topik">✓ ${t}</span>`).join('') ||
+    topikUnik.map(t => `<span class="chip-topik">✓ ${t}</span>`).join('') ||
     '<span class="text-muted">—</span>';
 
   /* TP list — editable */
@@ -3787,6 +3792,23 @@ function renderHasilAnalisis() {
 
   /* Materi chips — editable */
   renderMateriChips();
+}
+
+/** Pastikan tiap TP (index i) punya "topik/bab" sendiri di
+ *  STATE_ANALISIS.tpBab — ini jadi SUMBER TUNGGAL topik per-TP, supaya
+ *  tidak ada lagi topik dari kelas/sesi analisis lain yang nyangkut
+ *  (dulu chip topik cuma DITAMBAH terus dan tidak pernah diganti, jadi
+ *  topik Kelas VII & Kelas VIII bisa tercampur di panel yang sama).
+ *  TP yang belum punya Bab (bukan dari Impor Word) memakai topik[i]
+ *  atau materi[i] yang sudah ada di index yang sama sebagai gantinya. */
+function _pastikanTpTopik() {
+  const n = STATE_ANALISIS.tp?.length || 0;
+  if (!Array.isArray(STATE_ANALISIS.tpBab)) STATE_ANALISIS.tpBab = [];
+  for (let i = 0; i < n; i++) {
+    if (!STATE_ANALISIS.tpBab[i]) {
+      STATE_ANALISIS.tpBab[i] = STATE_ANALISIS.topik?.[i] || STATE_ANALISIS.materi?.[i] || '';
+    }
+  }
 }
 
 /** Pastikan STATE_ANALISIS.tpKelas ada & sinkron dengan panjang TP.
@@ -3877,9 +3899,11 @@ function importTabelATPWord() {
     STATE_ANALISIS.tpBab[startIdx + i]   = row.bab;
   });
 
-  /* Bab unik jadi ringkasan topik */
+  /* Catatan: chip "Topik" di panel Hasil Analisis otomatis dihitung ulang
+     dari tpBab setiap render (lihat _pastikanTpTopik + renderHasilAnalisis),
+     jadi TIDAK perlu ditambahkan manual di sini lagi — ini yang dulu
+     bikin topik dari kelas/impor sebelumnya ikut menumpuk & tercampur. */
   const babUnik = [...new Set(parsed.map(r => r.bab).filter(Boolean))];
-  babUnik.forEach(b => { if (!STATE_ANALISIS.topik.includes(b)) STATE_ANALISIS.topik.push(b); });
 
   STATE_ANALISIS.sudahAnalisis = true;
   syncHiddenFields();
@@ -4204,7 +4228,7 @@ const GENERATOR = {
       ${tr('Capaian Pembelajaran', val(d.cp))}
       ${tr('Lintas Disiplin Ilmu', '—')}
       <tr><th>Tujuan Pembelajaran</th><td>${tpList.map((t,i)=>`<div style="margin-bottom:5px;"><strong style="color:var(--accent);font-size:11px;">TP${i+1}</strong> ${t}</div>`).join('')}</td></tr>
-      ${tr('Topik Pembelajaran',   materiList[0] || '—')}
+      ${tr('Topik Pembelajaran',   (Array.isArray(d.topik) ? d.topik.join(', ') : d.topik) || materiList[0] || '—')}
       ${tr('Materi Integrasi KBC', `Nilai ${kbc.join(' dan ')} diintegrasikan dalam setiap aktivitas pembelajaran.`)}
       ${tr('Praktik Pedagogis',    modelLabel)}
       ${tr('Kemitraan Pembelajaran','Guru mapel, wali kelas')}
@@ -5758,6 +5782,19 @@ let cgptLastResult   = null;
  * Prompt per tab — dibuat dari data form yang sudah diisi guru.
  * Guru tidak perlu menulis prompt sendiri.
  */
+/** Ekstrak isi satu baris tabel RPPM (<th>Label</th><td>...</td>) dari HTML
+ *  RPPM yang SUDAH DIBUAT — dipakai supaya LKPD/Rubrik/Soal SELALU bisa
+ *  mengambil konteks langsung dari RPPM itu sendiri (sumber paling bisa
+ *  dipercaya), terlepas dari window._atpAktif atau currentGenerated.data
+ *  yang mungkin sudah usang/berpindah konteks. */
+function _ekstrakDariRPPMHtml(html, label) {
+  if (!html) return '';
+  const re = new RegExp(`<th>${label}[\\s\\S]{0,40}?</th>\\s*<td>([\\s\\S]*?)</td>`, 'i');
+  const m = html.match(re);
+  if (!m) return '';
+  return m[1].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function cgptBuatPrompt(tabId) {
   /* Kalau prompt dipicu dari ATP (klik "Buat RPPM" di satu pertemuan),
      pakai identitas & kelas dari konteks ATP itu — bukan form Modul Ajar
@@ -5778,7 +5815,16 @@ function cgptBuatPrompt(tabId) {
       cp:      atpAktif.cp      || d.cp,
     };
   }
-  const materi = atpAktif?.materi || d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
+
+  /* Untuk tab SELAIN RPPM (LKPD/Rubrik/Soal/dst) — utamakan ambil materi/TP
+     LANGSUNG dari RPPM yang sudah jadi (currentGenerated.result.rppm),
+     karena itu SUMBER PALING BISA DIPERCAYA: tidak tergantung apakah
+     window._atpAktif masih ada atau sudah kehapus otomatis. */
+  const rppmHtml       = currentGenerated?.result?.rppm || '';
+  const materiDariRPPM = tabId !== 'rppm' ? _ekstrakDariRPPMHtml(rppmHtml, 'Materi Pelajaran') : '';
+  const tpDariRPPM     = tabId !== 'rppm' ? _ekstrakDariRPPMHtml(rppmHtml, 'Tujuan Pembelajaran') : '';
+
+  const materi = materiDariRPPM || atpAktif?.materi || d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
   /* Untuk tahap 2, TP pakai yang sudah disimpan dari tahap 1 */
   const tp = cgptTPTersimpan ||
     d.tp || STATE_ANALISIS.tp.join('\n') || '(belum ada TP — selesaikan Tahap 1 dulu)';
@@ -5803,8 +5849,10 @@ ${d.cp || '(isi CP di form Modul Ajar terlebih dahulu)'}`;
 
   /* Jika dari ATP — gunakan konteks pertemuan spesifik yang sudah disusun
      saat atpBuatRPPM() dipanggil (tpKhusus mencakup TP tunggal ATAU
-     gabungan beberapa TP kalau pertemuan ini menggabungkan TP kecil) */
-  const tpUntukPrompt = atpAktif ? atpAktif.tpKhusus : tp;
+     gabungan beberapa TP kalau pertemuan ini menggabungkan TP kecil).
+     Kalau ini tab non-RPPM dan RPPM-nya sudah jadi, utamakan TP yang
+     TERTULIS di RPPM tsb — itu sumber paling akurat untuk pertemuan ini. */
+  const tpUntukPrompt = tpDariRPPM || (atpAktif ? atpAktif.tpKhusus : tp);
 
   /* ═══════════════════════════════════════════════
      RPPM TAHAP 1 — Buat Tujuan Pembelajaran dari CP
@@ -6775,7 +6823,7 @@ function cgptTerapkan() {
       ...formData,
       tp:     atpAktif?.tpKhusus || STATE_ANALISIS.tp.join('\n'),
       materi: atpAktif?.materi   || STATE_ANALISIS.materi.join(', '),
-      topik:  STATE_ANALISIS.topik,
+      topik:  atpAktif?.topik    || STATE_ANALISIS.topik,
     };
     /* Generate semua tab lokal sebagai base */
     const result = GENERATOR.generate(data);
@@ -6784,14 +6832,16 @@ function cgptTerapkan() {
   } else if (atpAktif) {
     /* PENTING: currentGenerated SUDAH ADA dari sebelumnya (mis. guru pernah
        Generate perangkat penuh dari Modul Ajar sebelum memakai ATP) — data
-       TP/materi-nya harus tetap diperbarui ke konteks pertemuan ATP ini,
-       supaya LKPD/Rubrik/Soal yang dibuat SETELAH atpTandaiPertemuanSelesai()
-       menghapus window._atpAktif (otomatis, ~600ms lagi) tetap memakai TP
-       dan materi pertemuan ini — bukan balik ke data lama (semua TP/materi). */
+       TP/materi/topik-nya harus tetap diperbarui ke konteks pertemuan ATP
+       ini, supaya LKPD/Rubrik/Soal yang dibuat SETELAH
+       atpTandaiPertemuanSelesai() menghapus window._atpAktif (otomatis,
+       ~600ms lagi) tetap memakai TP/materi/topik pertemuan ini — bukan
+       balik ke data lama (semua TP/materi/topik dari kelas/sesi lain). */
     currentGenerated.data = {
       ...currentGenerated.data,
       tp:      atpAktif.tpKhusus || currentGenerated.data.tp,
       materi:  atpAktif.materi   || currentGenerated.data.materi,
+      topik:   atpAktif.topik    || currentGenerated.data.topik,
       kelas:   atpAktif.kelas    || currentGenerated.data.kelas,
       mapel:   atpAktif.mapel    || currentGenerated.data.mapel,
       fase:    atpAktif.fase     || currentGenerated.data.fase,
@@ -7587,6 +7637,15 @@ function atpBuatRPPM(sesiKe) {
   if (!s) return;
   const d = currentGenerated?.data || UTIL.getFormData();
 
+  /* PENTING: b.tpIdx di dalam sesi adalah index LOKAL (posisi dalam daftar
+     TP kelas aktif saja), BUKAN index GLOBAL ke STATE_ANALISIS.tp/materi/
+     tpBab. Kalau kelas ini bukan kelas pertama yang diisi TP-nya (mis. TP
+     kelas VII diimpor duluan, baru kelas VIII), index lokal & global akan
+     berbeda — harus dipetakan dulu supaya materi/topik yang diambil benar
+     milik TP ini, bukan TP kelas lain yang kebetulan index-nya sama. */
+  const petaLokalKeGlobal = _tpIndexUntukKelas(ATP_KELAS_AKTIF);
+  const globalIdx = (tpIdxLokal) => petaLokalKeGlobal[tpIdxLokal] ?? tpIdxLokal;
+
   /* Gabungkan teks semua TP dalam sesi ini jadi satu konteks TP untuk prompt */
   const tpGabungan = s.bagian.length > 1
     ? s.bagian.map((b, i) => `${i+1}. ${b.tpTeks} (${b.jp} JP dari total alokasi TP ini)`).join('\n')
@@ -7602,7 +7661,14 @@ function atpBuatRPPM(sesiKe) {
   /* Materi SPESIFIK untuk TP dalam sesi ini saja — bukan seluruh materi CP,
      supaya LKPD/Rubrik/Soal fokus pada materi pertemuan ini saja */
   const materiGabungan = [...new Set(
-    s.bagian.map(b => STATE_ANALISIS.materi?.[b.tpIdx]).filter(Boolean)
+    s.bagian.map(b => STATE_ANALISIS.materi?.[globalIdx(b.tpIdx)]).filter(Boolean)
+  )].join(', ');
+
+  /* Topik SPESIFIK untuk TP dalam sesi ini — dari tpBab (per-TP), bukan
+     dari daftar topik/bab kelas lain yang mungkin tercampur */
+  _pastikanTpTopik();
+  const topikGabungan = [...new Set(
+    s.bagian.map(b => STATE_ANALISIS.tpBab?.[globalIdx(b.tpIdx)]).filter(Boolean)
   )].join(', ');
 
   /* Simpan info sesi aktif ke state global agar prompt bisa membacanya.
@@ -7613,6 +7679,7 @@ function atpBuatRPPM(sesiKe) {
     tpTeks:   tpGabungan,
     tpKhusus: tpKhusus,
     materi:   materiGabungan,
+    topik:    topikGabungan,
     ptmGlobal: sesiKe,
     mapel:    d.mapel || '',
     kelas:    KELAS_ROMAWI[ATP_KELAS_AKTIF],
