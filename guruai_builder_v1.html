@@ -626,6 +626,20 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 
   /* Margin halaman */
   @page { margin: 1.5cm; size: A4; }
+
+  /* Paksa teks jadi HITAM PEKAT saat print/PDF — sebelumnya warna "muted"
+     (abu-abu) dari style aplikasi, atau isi yang ditempel dari ChatGPT,
+     ikut tercetak dan terlihat pudar/kabur. Band dengan latar gelap
+     (section-head) tetap dibuat terang supaya kontras & terbaca. */
+  body, p, td, th, li, h1, h2, h3, h4, span, div, strong, b {
+    color: #000 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .section-head, .rppm-section-head,
+  [style*="background:#1a1a2e"], [style*="background: #1a1a2e"],
+  [style*="background:#1a1a2e"] *, [style*="background: #1a1a2e"] * {
+    color: #fff !important;
+  }
 }
 
 /* ---- SCROLL ---- */
@@ -4623,23 +4637,26 @@ const RENDER = {
     `;
   },
 
-  /** Render daftar riwayat di dashboard */
+  /** Render daftar riwayat di dashboard — SEMUA entri (RPPM, LKPD, dst
+   *  dari awal sampai akhir), tidak dibatasi, sampai guru hapus sendiri */
   renderHistory() {
     const el = document.getElementById('historyList');
     if (!DATABASE.history.length) {
       el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>Belum ada riwayat</h3><p>Buat modul ajar pertama Anda di menu <strong>Modul Ajar</strong></p></div>`;
       return;
     }
-    el.innerHTML = DATABASE.history.slice().reverse().slice(0, 10).map(h => `
+    el.innerHTML = DATABASE.history.slice().reverse().map(h => `
       <div class="history-item" onclick="loadHistory('${h.id}')">
         <div class="history-badge">📚</div>
         <div class="history-info">
-          <h4>${h.mapel} — Kelas ${h.kelas}</h4>
+          <h4>${h.mapel || '—'} — Kelas ${h.kelas || '—'}</h4>
           <p>${h.materi || '—'} | ${h.model || '—'} | ${h.sekolah || '—'}</p>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-          <span class="badge badge-teal" style="font-size:10px;cursor:pointer;">📂 Buka</span>
+          <span class="badge badge-teal" style="font-size:10px;">📂 Buka</span>
           <span class="history-time">${UTIL.timeAgo(h.ts)}</span>
+          <span onclick="event.stopPropagation();hapusRiwayat('${h.id}')"
+            style="font-size:10px;color:var(--danger);cursor:pointer;padding:2px 6px;" title="Hapus riwayat ini">🗑️ Hapus</span>
         </div>
       </div>
     `).join('');
@@ -4891,6 +4908,33 @@ function switchTab(id) {
 /* ============================================================
    HISTORY — Load data dari riwayat
    ============================================================ */
+/** Hapus satu entri riwayat (RPPM+LKPD+dst untuk pertemuan/modul itu) —
+ *  satu-satunya cara riwayat berkurang adalah guru memilih hapus sendiri */
+async function hapusRiwayat(id) {
+  const item = DATABASE.history.find(h => h.id === id);
+  if (!confirm(`Hapus riwayat "${item?.mapel || ''} — Kelas ${item?.kelas || ''}"? Semua tab (RPPM/LKPD/Rubrik/dst) untuk riwayat ini akan terhapus permanen.`)) return;
+
+  DATABASE.history = DATABASE.history.filter(h => h.id !== id);
+  await IDB.del('result_' + id);
+  const payload = { stats: DATABASE.stats, history: DATABASE.history };
+  await IDB.set('main', payload);
+  STORAGE.save(_lsKeyProject(), payload);
+
+  /* Kalau yang dihapus sedang ditampilkan di preview, kosongkan */
+  if (currentGenerated?.historyId === id) {
+    currentGenerated = null;
+    const ph = document.getElementById('previewPlaceholder');
+    const pc = document.getElementById('previewContent');
+    const eb = document.getElementById('exportBar');
+    if (ph) ph.style.display = '';
+    if (pc) pc.style.display = 'none';
+    if (eb) eb.style.display = 'none';
+  }
+
+  RENDER.renderHistory();
+  showToast('🗑️ Riwayat dihapus');
+}
+
 function loadHistory(id) {
   const h = DATABASE.history.find(x => x.id === id);
   if (!h) return;
@@ -5053,6 +5097,236 @@ function toggleDark() {
    EXPORT
    ============================================================ */
 /** Buat HTML yang terbaca Word dengan benar */
+/* ============================================================
+   DOCX GENERATOR — file .docx ASLI (ZIP + OOXML), murni JavaScript,
+   tanpa library eksternal. Dibuat karena trik "HTML sebagai .doc" tidak
+   selalu bisa dibuka oleh aplikasi Word (terutama versi Android/mobile).
+   ZIP dibuat dengan metode STORE (tanpa kompresi) — tidak perlu
+   implementasi algoritma deflate, cukup CRC32 + struktur ZIP standar.
+   ============================================================ */
+
+/** CRC32 standar — dipakai header ZIP */
+function _crc32(bytes) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) {
+    crc ^= bytes[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 1) ? (0xEDB88320 ^ (crc >>> 1)) : (crc >>> 1);
+    }
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+/** Tanggal/waktu format DOS — dipakai header ZIP */
+function _zipDosDateTime() {
+  const d = new Date();
+  const time = ((d.getHours() & 0x1F) << 11) | ((d.getMinutes() & 0x3F) << 5) | ((Math.floor(d.getSeconds() / 2)) & 0x1F);
+  const date = (((d.getFullYear() - 1980) & 0x7F) << 9) | (((d.getMonth() + 1) & 0xF) << 5) | (d.getDate() & 0x1F);
+  return { time, date };
+}
+
+/** Buat file .zip (metode STORE / tanpa kompresi) dari daftar {name, data(string)}.
+ *  Mengembalikan Blob siap-download. */
+function _buatZip(files) {
+  const enc = new TextEncoder();
+  const { time, date } = _zipDosDateTime();
+  const localChunks = [];
+  const centralChunks = [];
+  let offset = 0;
+
+  files.forEach(f => {
+    const nameBytes = enc.encode(f.name);
+    const dataBytes = enc.encode(f.data);
+    const crc  = _crc32(dataBytes);
+    const size = dataBytes.length;
+
+    const lh = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(lh.buffer);
+    lv.setUint32(0,  0x04034b50, true);
+    lv.setUint16(4,  20,   true);
+    lv.setUint16(6,  0,    true);
+    lv.setUint16(8,  0,    true);   // method 0 = store
+    lv.setUint16(10, time, true);
+    lv.setUint16(12, date, true);
+    lv.setUint32(14, crc,  true);
+    lv.setUint32(18, size, true);
+    lv.setUint32(22, size, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    lh.set(nameBytes, 30);
+    localChunks.push(lh, dataBytes);
+
+    const ch = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(ch.buffer);
+    cv.setUint32(0,  0x02014b50, true);
+    cv.setUint16(4,  20, true);
+    cv.setUint16(6,  20, true);
+    cv.setUint16(8,  0,  true);
+    cv.setUint16(10, 0,  true);
+    cv.setUint16(12, time, true);
+    cv.setUint16(14, date, true);
+    cv.setUint32(16, crc,  true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    ch.set(nameBytes, 46);
+    centralChunks.push(ch);
+
+    offset += lh.length + dataBytes.length;
+  });
+
+  const centralOffset = offset;
+  const centralSize   = centralChunks.reduce((s, c) => s + c.length, 0);
+
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0,  0x06054b50, true);
+  ev.setUint16(4,  0, true);
+  ev.setUint16(6,  0, true);
+  ev.setUint16(8,  files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralOffset, true);
+  ev.setUint16(20, 0, true);
+
+  return new Blob([...localChunks, ...centralChunks, eocd],
+    { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+const _DOCX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+const _DOCX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+const _DOCX_DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`;
+
+function _escXml(s) {
+  return (s == null ? '' : String(s))
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Ubah node HTML (dengan <br>, <b>/<strong>) jadi runs WordprocessingML */
+function _nodeKeRunsDocx(node, bold) {
+  let runs = '';
+  node.childNodes.forEach(child => {
+    if (child.nodeType === 3) {
+      const t = child.textContent;
+      if (t && t.trim()) {
+        runs += `<w:r>${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${_escXml(t)}</w:t></w:r>`;
+      }
+    } else if (child.nodeName === 'BR') {
+      runs += `<w:r><w:br/></w:r>`;
+    } else if (child.nodeName === 'B' || child.nodeName === 'STRONG') {
+      runs += _nodeKeRunsDocx(child, true);
+    } else if (child.nodeType === 1) {
+      runs += _nodeKeRunsDocx(child, bold);
+    }
+  });
+  return runs;
+}
+
+function _paragrafDocx(runsXml, opts) {
+  opts = opts || {};
+  const align = opts.center ? '<w:jc w:val="center"/>' : '';
+  const rPr   = opts.heading ? `<w:rPr><w:b/><w:sz w:val="${opts.heading===1?28:24}"/></w:rPr>` : '';
+  const isi   = runsXml || '<w:r><w:t xml:space="preserve"> </w:t></w:r>';
+  return `<w:p>${align?`<w:pPr>${align}</w:pPr>`:''}${opts.heading ? isi.replace(/<w:r>/g, `<w:r>${rPr}`).replace(/<w:rPr><\/w:rPr>/g,'') : isi}</w:p>`;
+}
+
+function _tabelKeDocx(table) {
+  let rows = '';
+  Array.from(table.querySelectorAll('tr')).forEach(tr => {
+    let cells = '';
+    Array.from(tr.children).forEach(td => {
+      const isHeader = td.tagName === 'TH';
+      const runs = _nodeKeRunsDocx(td, isHeader);
+      const shading = isHeader ? '<w:shd w:val="clear" w:fill="E0E0E0"/>' : '';
+      cells += `<w:tc><w:tcPr>${shading}<w:tcW w:w="0" w:type="auto"/></w:tcPr>${_paragrafDocx(runs)}</w:tc>`;
+    });
+    rows += `<w:tr>${cells}</w:tr>`;
+  });
+  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>` +
+    `<w:top w:val="single" w:sz="4" w:color="999999"/><w:left w:val="single" w:sz="4" w:color="999999"/>` +
+    `<w:bottom w:val="single" w:sz="4" w:color="999999"/><w:right w:val="single" w:sz="4" w:color="999999"/>` +
+    `<w:insideH w:val="single" w:sz="4" w:color="999999"/><w:insideV w:val="single" w:sz="4" w:color="999999"/>` +
+    `</w:tblBorders></w:tblPr>${rows || '<w:tr><w:tc><w:p/></w:tc></w:tr>'}</w:tbl>`;
+}
+
+/** Ubah elemen HTML hasil generate jadi isi dokumen Word (paragraf + tabel) */
+function _htmlKeDocxBody(rootEl) {
+  let xml = '';
+  function walk(el) {
+    Array.from(el.children).forEach(node => {
+      const tag = node.tagName;
+      if (node.className && /halaman-baru/.test(node.className)) {
+        xml += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+      }
+      if (tag === 'TABLE') {
+        xml += _tabelKeDocx(node);
+      } else if (/^H[1-4]$/.test(tag)) {
+        xml += _paragrafDocx(_nodeKeRunsDocx(node, true), { heading: parseInt(tag[1], 10) });
+      } else if (tag === 'P' || tag === 'LI') {
+        const runs = _nodeKeRunsDocx(node, false);
+        if (runs) xml += _paragrafDocx(runs);
+      } else if (tag === 'BR') {
+        xml += _paragrafDocx('');
+      } else {
+        walk(node); /* DIV/UL/OL/SPAN dsb — masuk lebih dalam */
+      }
+    });
+  }
+  walk(rootEl);
+  return xml || _paragrafDocx('');
+}
+
+function _buatDocumentXmlDocx(bodyXml, judul) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+${_paragrafDocx(`<w:r><w:t xml:space="preserve">${_escXml(judul)}</w:t></w:r>`, { heading: 1, center: true })}
+${bodyXml}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417"/></w:sectPr>
+</w:body>
+</w:document>`;
+}
+
+/** Buat & unduh file .docx dari HTML hasil generate (rppmHtml) */
+function _unduhDocx(judul, rppmHtml, namaFile) {
+  const parser = new DOMParser();
+  const doc  = parser.parseFromString('<div>' + rppmHtml + '</div>', 'text/html');
+  const body = _htmlKeDocxBody(doc.body.firstChild || doc.body);
+  const documentXml = _buatDocumentXmlDocx(body, judul);
+
+  const blob = _buatZip([
+    { name: '[Content_Types].xml',          data: _DOCX_CONTENT_TYPES },
+    { name: '_rels/.rels',                  data: _DOCX_RELS },
+    { name: 'word/document.xml',            data: documentXml },
+    { name: 'word/_rels/document.xml.rels', data: _DOCX_DOC_RELS },
+  ]);
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = namaFile;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 1000);
+}
+
 function _buatHTMLWord(judulDoc, isiHTML, meta) {
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -5143,22 +5417,19 @@ function exportWord() {
   if (!currentGenerated) { showToast('Generate dulu sebelum export', 'error'); return; }
   const { data, result } = currentGenerated;
 
-  /* Gabung semua tab dengan separator halaman baru */
+  /* Gabung semua tab dengan penanda halaman baru */
   const isiTab = GENERATOR.tabs.map((t, i) => {
     const konten = result[t.id] || '';
-    const bersih = _bersihkanUntukWord(konten);
     return `<div ${i > 0 ? 'class="halaman-baru"' : ''}>
       <h3>${t.label}</h3>
-      ${bersih}
+      ${konten}
     </div>`;
   }).join('\n');
 
-  const meta = `Mapel: ${data.mapel} | Kelas: ${data.kelas} | Sekolah: ${data.sekolah} | Guru: ${data.guru}`;
   const judulDoc = `Perangkat Pembelajaran — ${data.mapel} Kelas ${data.kelas}`;
-  const htmlWord = _buatHTMLWord(judulDoc, `<h1>${judulDoc}</h1>\n${isiTab}`, meta);
-
-  _downloadBlob(htmlWord, `PerangkatPembelajaran_${data.mapel}_Kelas${data.kelas}.doc`, 'application/msword');
-  showToast('📄 File Word berhasil diunduh — buka dengan Microsoft Word');
+  const nama = `PerangkatPembelajaran_${data.mapel}_Kelas${data.kelas}.docx`;
+  _unduhDocx(judulDoc, isiTab, nama);
+  showToast('📄 File .docx berhasil diunduh — buka dengan Microsoft Word');
 }
 
 function exportPDF() {
@@ -5422,12 +5693,10 @@ function exportRPPMWord() {
     htmlIsi += '</table>';
   }
 
-  const meta     = 'Mapel: '+(d.mapel||'—')+' | Kelas: '+(d.fase||'—')+' | Sekolah: '+(d.sekolah||'—')+' | Guru: '+(d.guru||'—');
   const judul    = 'RPPM — '+(d.mapel||'Perangkat')+' '+(d.fase||'');
-  const wordHTML = _buatHTMLWord(judul, htmlIsi, meta);
-  const nama     = 'RPPM_'+((d.mapel||'Dokumen').replace(/\s+/g,'_'))+'_'+((d.fase||'').replace(/\s+/g,'_'))+'.doc';
-  _downloadBlob(wordHTML, nama, 'application/msword');
-  showToast('RPPM berhasil diexport ke Word! Buka dengan Microsoft Word.');
+  const nama     = 'RPPM_'+((d.mapel||'Dokumen').replace(/\s+/g,'_'))+'_'+((d.fase||'').replace(/\s+/g,'_'))+'.docx';
+  _unduhDocx(judul, htmlIsi, nama);
+  showToast('RPPM berhasil diexport ke .docx! Buka dengan Microsoft Word.');
 }
 
 function exportRPPMFromTab() {
@@ -7661,7 +7930,7 @@ function _atpRenderTimeline() {
  * TP besar, atau gabungan beberapa TP kecil. Pindah ke Impor ChatGPT
  * dengan prompt yang sudah terisi konteks gabungan TP-nya.
  */
-function atpBuatRPPM(sesiKe) {
+async function atpBuatRPPM(sesiKe) {
   const s = ATP_STATE.sesi.find(x => x.ke === sesiKe);
   if (!s) return;
   const d = currentGenerated?.data || UTIL.getFormData();
@@ -7700,11 +7969,40 @@ function atpBuatRPPM(sesiKe) {
     s.bagian.map(b => STATE_ANALISIS.tpBab?.[globalIdx(b.tpIdx)]).filter(Boolean)
   )].join(', ');
 
+  /* Muat hasil yang SUDAH ADA untuk pertemuan ini (kalau pernah dibuat
+     sebelumnya, mis. RPPM sudah jadi dan sekarang mau lanjut buat LKPD-nya
+     di sesi lain) — supaya tab yang sudah jadi TIDAK HILANG. Kalau belum
+     pernah, siapkan currentGenerated baru dengan historyId yang STABIL,
+     supaya cgptTerapkan() nanti langsung memakainya (bukan menimpa
+     pertemuan lain yang kebetulan sedang aktif di currentGenerated). */
+  const idPertemuanIni = `atp_k${ATP_KELAS_AKTIF}_s${sesiKe}`;
+  if (!currentGenerated || currentGenerated.historyId !== idPertemuanIni) {
+    const existingResult = await IDB.get('result_' + idPertemuanIni, null);
+    const existingHist   = DATABASE.history.find(h => h.id === idPertemuanIni);
+    if (existingResult && existingHist) {
+      currentGenerated = { data: { ...existingHist }, result: existingResult, historyId: idPertemuanIni };
+    } else {
+      const dataBaru = {
+        ...UTIL.getFormData(),
+        kelas: KELAS_ROMAWI[ATP_KELAS_AKTIF], mapel: d.mapel || '', fase: d.fase || '',
+        waktu: d.waktu || '', model: d.model || 'PBL', guru: d.guru || '',
+        sekolah: d.sekolah || '', cp: d.cp || '',
+        tp: tpKhusus, materi: materiGabungan, topik: topikGabungan,
+      };
+      const resultBaru = GENERATOR.generate(dataBaru);
+      currentGenerated = { data: dataBaru, result: resultBaru, historyId: idPertemuanIni };
+    }
+  }
+
   /* Simpan info sesi aktif ke state global agar prompt bisa membacanya.
      Kelas ikut tab ATP yang sedang aktif — bukan field Modul Ajar yang
-     mungkin sudah tidak sesuai. */
+     mungkin sudah tidak sesuai.
+     historyId STABIL per (kelas, sesi) — supaya tiap pertemuan jadi entri
+     riwayat TERPISAH (bukan menimpa RPPM pertemuan lain yang sudah
+     dibuat, yang sebelumnya bikin dashboard "cuma muat sesi terakhir"). */
   window._atpAktif = {
     sesiKe, key: `SESI${sesiKe}`,
+    historyId: idPertemuanIni,
     tpTeks:   tpGabungan,
     tpKhusus: tpKhusus,
     materi:   materiGabungan,
