@@ -4924,6 +4924,13 @@ function _catatKeRiwayat(historyId, data, result) {
   IDB.set('main', payload);
   STORAGE.save(_lsKeyProject(), payload);
 
+  /* PENTING: tandai riwayat ini sebagai yang "terakhir dikerjakan" —
+     sebelumnya last_historyId HANYA diset saat guru buka riwayat manual
+     dari dashboard (loadHistory), sehingga RPPM yang baru dibuat lewat
+     generate() atau alur ATP→ChatGPT tidak pernah otomatis muncul lagi
+     di preview saat project dibuka ulang/pindah-balik. */
+  IDB.set('last_historyId', historyId);
+
   /* Setiap kali RPPM dibuat/diperbarui dan tab Soal-nya sudah ada isinya,
      otomatis simpan sebagai "paket soal" di Bank Soal — supaya soal &
      kunci yang sudah dibuat tidak perlu dicari lagi di riwayat RPPM */
