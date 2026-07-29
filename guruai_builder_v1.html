@@ -604,7 +604,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 
   /* Cards */
   .preview-card       { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
-  .preview-card-header{ background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .preview-card-header{ background: #fff !important; border-bottom: 2px solid #000 !important; font-weight: 800 !important; }
   .preview-card-body  { overflow: visible !important; height: auto !important; max-height: none !important; }
 
   /* RPPM tabel */
@@ -627,19 +627,29 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   /* Margin halaman */
   @page { margin: 1.5cm; size: A4; }
 
-  /* Paksa teks jadi HITAM PEKAT saat print/PDF — sebelumnya warna "muted"
-     (abu-abu) dari style aplikasi, atau isi yang ditempel dari ChatGPT,
-     ikut tercetak dan terlihat pudar/kabur. Band dengan latar gelap
-     (section-head) tetap dibuat terang supaya kontras & terbaca. */
-  body, p, td, th, li, h1, h2, h3, h4, span, div, strong, b {
+  /* Paksa teks jadi HITAM PEKAT dan LATAR JADI PUTIH POLOS saat print/PDF —
+     sebelumnya warna "muted" (abu-abu) dan latar gelap navy (tema aplikasi)
+     ikut tercetak, bikin hasil PDF terlihat gelap/pudar dan boros tinta
+     kalau dicetak fisik. Band judul (section-head) dibuat putih + border
+     tebal + tebal font sebagai pengganti warna, bukan dihilangkan sama
+     sekali, supaya strukturnya tetap terlihat. */
+  * {
+    background: #fff !important;
+    background-color: #fff !important;
+    background-image: none !important;
     color: #000 !important;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   .section-head, .rppm-section-head,
   [style*="background:#1a1a2e"], [style*="background: #1a1a2e"],
   [style*="background:#1a1a2e"] *, [style*="background: #1a1a2e"] * {
-    color: #fff !important;
+    background: #fff !important;
+    color: #000 !important;
+    border-top: 2px solid #000 !important;
+    border-bottom: 2px solid #000 !important;
+    font-weight: 800 !important;
   }
+  td, th { border: 1px solid #666 !important; }
 }
 
 /* ---- SCROLL ---- */
@@ -2403,6 +2413,22 @@ const DATABASE = {
   settings: { dark: false, sekolah: '', guru: '', nip: '' },
 };
 
+/* Salinan bersih soal contoh bawaan — dipakai untuk reset DATABASE.soal
+   saat pindah/buat project, sebelum memuat paket soal milik project itu */
+const _SOAL_CONTOH_BAWAAN = DATABASE.soal.map(s => ({ ...s }));
+
+/** Simpan hanya paket soal (custom, hasil RPPM) ke IDB — soal contoh
+ *  bawaan tidak perlu ikut disimpan, cukup dibuat ulang dari kode */
+function _simpanBankSoalPaket() {
+  IDB.set('bank_soal_paket', DATABASE.soal.filter(s => s.tipe === 'paket'));
+}
+
+/** Muat paket soal tersimpan (project aktif) + gabung dengan soal bawaan */
+async function _muatBankSoal() {
+  const paket = await IDB.get('bank_soal_paket', []);
+  DATABASE.soal = [..._SOAL_CONTOH_BAWAAN.map(s => ({ ...s })), ...(paket || [])];
+}
+
 /* ============================================================
    TEMPLATE ENGINE — Render placeholder ke nilai aktual
    ============================================================ */
@@ -2663,6 +2689,8 @@ const PROJECT = {
     }
     /* Kumpulkan progress ATP & Pertemuan */
     const atpState = await IDB.get('atp_state', null);
+    /* Kumpulkan paket soal (hasil RPPM) di Bank Soal */
+    const bankSoalPaket = await IDB.get('bank_soal_paket', []);
 
     return {
       version:  CONFIG.VERSION,
@@ -2673,6 +2701,7 @@ const PROJECT = {
       history:  DATABASE.history,
       results,                     /* NEW: hasil generate lengkap per riwayat */
       atpState: atpState || null,  /* NEW: progress ATP & Pertemuan */
+      bankSoalPaket: bankSoalPaket || [], /* NEW: paket soal hasil RPPM di Bank Soal */
       form:     { ...UTIL.getFormData(), analisis: STATE_ANALISIS.sudahAnalisis ? STATE_ANALISIS : null },
       rppm:     getRPPMData?.() ?? {},
       aiCache:  AI_CACHE._store,   /* ikut tersimpan di .gaib */
@@ -2741,6 +2770,15 @@ const PROJECT = {
     }
     if (data.history && data.history.length) {
       await IDB.set('last_historyId', data.history[data.history.length - 1].id);
+    }
+
+    /* Restore paket soal Bank Soal (hasil RPPM) */
+    if (data.bankSoalPaket) {
+      await IDB.set('bank_soal_paket', data.bankSoalPaket);
+      if (typeof _muatBankSoal === 'function') {
+        await _muatBankSoal();
+        if (typeof renderBankSoal === 'function') renderBankSoal();
+      }
     }
 
     /* Restore progress ATP & Pertemuan (semua kelas VII/VIII/IX) */
@@ -2999,6 +3037,7 @@ async function _reloadAppState() {
     ATP_STATE = ATP_ALL_KELAS[ATP_KELAS_AKTIF];
   }
   currentGenerated = null;
+  DATABASE.soal = _SOAL_CONTOH_BAWAAN.map(s => ({ ...s })); /* reset ke bawaan dulu, sebelum muat punya project ini */
 
   /* 2. Reset TAMPILAN semua halaman yang datanya spesifik per-project.
      Tanpa ini, field/preview lama masih terlihat di layar walau
@@ -3009,6 +3048,7 @@ async function _reloadAppState() {
   let saved = await IDB.get('main', null);
   if (saved?.stats)   Object.assign(DATABASE.stats, saved.stats);
   if (saved?.history) DATABASE.history = saved.history;
+  await _muatBankSoal();
 
   let lastForm = await IDB.get('form', null);
   if (lastForm) {
@@ -4714,7 +4754,7 @@ function renderBankSoal() {
   let soal = DATABASE.soal.filter(s => {
     if (mapel && s.mapel !== mapel) return false;
     if (level && s.level !== level) return false;
-    if (cari  && !s.pertanyaan.toLowerCase().includes(cari) && !s.materi?.toLowerCase().includes(cari)) return false;
+    if (cari && !(s.pertanyaan || '').toLowerCase().includes(cari) && !(s.materi || '').toLowerCase().includes(cari)) return false;
     return true;
   });
 
@@ -4723,7 +4763,30 @@ function renderBankSoal() {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Tidak ditemukan soal</h3><p>Coba ubah filter atau kata kunci pencarian</p></div>`;
     return;
   }
-  el.innerHTML = soal.map((s, i) => `
+  el.innerHTML = soal.map((s, i) => {
+    if (s.tipe === 'paket') {
+      /* Paket soal dari RPPM — tampilkan HTML apa adanya, bukan format PG */
+      return `
+      <div class="soal-card" id="soal-${s.id}">
+        <div class="soal-card-header" onclick="toggleSoal('${s.id}')">
+          <span style="font-weight:700;color:var(--text-muted);min-width:28px;">${i+1}.</span>
+          <span class="soal-q">${s.pertanyaan}</span>
+          <div class="soal-meta">
+            <span class="badge badge-teal">${s.mapel}</span>
+            <span class="badge badge-amber">📦 Dari RPPM</span>
+          </div>
+          <span style="color:var(--text-muted);font-size:18px;margin-left:8px;">▾</span>
+        </div>
+        <div class="soal-body">
+          <div style="font-size:13px;line-height:1.6;">${s.kontenHtml}</div>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>Kelas: ${s.kelas || '—'} | Materi: ${s.materi || '—'}</span>
+            <span onclick="event.stopPropagation();hapusPaketSoal('${s.id}')" style="color:var(--danger);cursor:pointer;">🗑️ Hapus</span>
+          </p>
+        </div>
+      </div>`;
+    }
+    return `
     <div class="soal-card" id="soal-${s.id}">
       <div class="soal-card-header" onclick="toggleSoal('${s.id}')">
         <span style="font-weight:700;color:var(--text-muted);min-width:28px;">${i+1}.</span>
@@ -4752,7 +4815,17 @@ function renderBankSoal() {
         </p>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
+}
+
+/** Hapus satu paket soal (dari RPPM) di Bank Soal */
+function hapusPaketSoal(id) {
+  if (!confirm('Hapus paket soal ini dari Bank Soal?')) return;
+  DATABASE.soal = DATABASE.soal.filter(s => s.id !== id);
+  _simpanBankSoalPaket();
+  renderBankSoal();
+  showToast('🗑️ Paket soal dihapus');
 }
 
 /** Toggle buka/tutup kartu soal */
@@ -4827,7 +4900,7 @@ function _simpanResult(historyId, result) {
  *  sebelumnya cgptTerapkan() TIDAK PERNAH memanggil ini, jadi RPPM yang
  *  dibuat lewat ATP tidak pernah masuk riwayat/statistik, dan hilang saat
  *  pindah project karena tidak pernah benar-benar tersimpan permanen. */
-function _catatKeRiwayat(historyId, data) {
+function _catatKeRiwayat(historyId, data, result) {
   if (!historyId) return;
   const existing = DATABASE.history.find(h => h.id === historyId);
   if (existing) {
@@ -4850,8 +4923,41 @@ function _catatKeRiwayat(historyId, data) {
   const payload = { stats: DATABASE.stats, history: DATABASE.history };
   IDB.set('main', payload);
   STORAGE.save(_lsKeyProject(), payload);
+
+  /* Setiap kali RPPM dibuat/diperbarui dan tab Soal-nya sudah ada isinya,
+     otomatis simpan sebagai "paket soal" di Bank Soal — supaya soal &
+     kunci yang sudah dibuat tidak perlu dicari lagi di riwayat RPPM */
+  if (result?.soal) _isiKeBankSoal(historyId, data, result.soal);
+
   RENDER.renderHistory();
   RENDER.updateStats();
+}
+
+/** Simpan/perbarui satu "paket soal" (soal+kunci dari satu RPPM/pertemuan)
+ *  ke Bank Soal. Beda dari soal contoh bawaan aplikasi (pilihan ganda
+ *  terstruktur), paket ini menyimpan HTML soal+kunci apa adanya (format
+ *  hasil RPPM bisa macam-macam: esai, PG, atau campuran) — dibuka sebagai
+ *  satu kesatuan, bukan dipaksa dipecah per soal. */
+function _isiKeBankSoal(historyId, data, soalHtml) {
+  const idPaket = 'PAKET_' + historyId;
+  const materiTeks = (Array.isArray(data.materi) ? data.materi.join(', ') : data.materi) || '';
+  const entry = {
+    id: idPaket,
+    tipe: 'paket',
+    mapel: data.mapel || '—',
+    kelas: data.kelas || '',
+    materi: materiTeks,
+    tp: (Array.isArray(data.tp) ? data.tp.join(' | ') : data.tp) || '',
+    level: 'Paket RPPM',
+    pertanyaan: `📦 Soal & Kunci — ${data.mapel || 'Mapel'}${data.kelas ? ' Kelas ' + data.kelas : ''}${materiTeks ? ' · ' + materiTeks.split(',')[0] : ''}`,
+    kontenHtml: soalHtml,
+    historyId,
+    ts: Date.now(),
+  };
+  const idx = DATABASE.soal.findIndex(s => s.id === idPaket);
+  if (idx >= 0) DATABASE.soal[idx] = entry;
+  else DATABASE.soal.push(entry);
+  _simpanBankSoalPaket();
 }
 
 function generate() {
@@ -4883,8 +4989,8 @@ function generate() {
     /* Tampilkan preview — sertakan historyId agar bisa di-persist */
     _tampilkanPreview(data, result, 'rppm', historyId);
 
-    /* Catat ke riwayat + statistik + IDB */
-    _catatKeRiwayat(historyId, data);
+    /* Catat ke riwayat + statistik + IDB + Bank Soal */
+    _catatKeRiwayat(historyId, data, result);
 
     /* Persist result tab ke IDB — key: result_<historyId> */
     _simpanResult(historyId, result);
@@ -7152,7 +7258,7 @@ function cgptTerapkan() {
      dipanggil di sini, jadi RPPM hasil ATP/ChatGPT tidak pernah muncul di
      riwayat, statistik tidak update, dan hilang permanen saat pindah
      project (karena tidak pernah benar-benar tercatat) */
-  _catatKeRiwayat(currentGenerated.historyId, currentGenerated.data);
+  _catatKeRiwayat(currentGenerated.historyId, currentGenerated.data, currentGenerated.result);
   _simpanResult(currentGenerated.historyId, currentGenerated.result);
 
   /* Pindah ke Modul Ajar dan tampilkan tab */
