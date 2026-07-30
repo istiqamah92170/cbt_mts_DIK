@@ -6069,7 +6069,24 @@ function hapusCacheAI() {
  */
 function generateTabLokal(tabId) {
   if (!currentGenerated) { showToast('Generate dulu perangkat terlebih dahulu', 'error'); return; }
-  const { data, historyId } = currentGenerated;
+  let { data, historyId } = currentGenerated;
+
+  /* Sama seperti generateTabAI — utamakan TP/materi/kelas dari RPPM yang
+     sudah jadi, supaya tab lain tetap konsisten dengan RPPM ini */
+  if (tabId !== 'rppm' && currentGenerated.result?.rppm) {
+    const rppmHtml       = currentGenerated.result.rppm;
+    const materiDariRPPM = _ekstrakDariRPPMHtml(rppmHtml, 'Materi Pelajaran');
+    const tpDariRPPM     = _ekstrakDariRPPMHtml(rppmHtml, 'Tujuan Pembelajaran');
+    const kelasFaseRPPM  = _ekstrakDariRPPMHtml(rppmHtml, 'Fase / Kelas');
+    data = { ...data };
+    if (materiDariRPPM) data.materi = materiDariRPPM;
+    if (tpDariRPPM)     data.tp     = tpDariRPPM;
+    if (kelasFaseRPPM && kelasFaseRPPM.includes('/')) {
+      const [f, k] = kelasFaseRPPM.split('/').map(s => s.trim());
+      if (f && f !== '—') data.fase  = f;
+      if (k && k !== '—') data.kelas = k;
+    }
+  }
 
   /* RPPM menggunakan buatRPPM, bukan buatModul */
   const fnName = 'buat' + tabId.charAt(0).toUpperCase() + tabId.slice(1);
@@ -6082,6 +6099,9 @@ function generateTabLokal(tabId) {
 
   /* Persist perubahan ke IDB */
   _simpanResult(historyId, currentGenerated.result);
+
+  /* Kalau tab Soal direvisi, update juga paket soal di Bank Soal */
+  if (tabId === 'soal') _isiKeBankSoal(historyId, data, content);
 
   RENDER.showTab(tabId, content);
   currentTab = tabId;
@@ -6101,9 +6121,28 @@ async function generateTabAI(tabId) {
     return;
   }
 
-  const { data } = currentGenerated;
+  let { data } = currentGenerated;
   const tabBody  = document.getElementById(`tabBody-${tabId}`);
   const tabLabel = GENERATOR.tabs.find(t => t.id === tabId)?.label || tabId;
+
+  /* PENTING: untuk tab SELAIN RPPM, utamakan TP/materi/kelas LANGSUNG dari
+     RPPM yang sudah jadi (bukan currentGenerated.data yang bisa basi) —
+     supaya Gemini tidak menyebut banyak TP atau bahkan membuat TP baru
+     di luar konteks RPPM yang sedang dikerjakan. */
+  if (tabId !== 'rppm' && currentGenerated.result?.rppm) {
+    const rppmHtml       = currentGenerated.result.rppm;
+    const materiDariRPPM = _ekstrakDariRPPMHtml(rppmHtml, 'Materi Pelajaran');
+    const tpDariRPPM     = _ekstrakDariRPPMHtml(rppmHtml, 'Tujuan Pembelajaran');
+    const kelasFaseRPPM  = _ekstrakDariRPPMHtml(rppmHtml, 'Fase / Kelas');
+    data = { ...data };
+    if (materiDariRPPM) data.materi = materiDariRPPM;
+    if (tpDariRPPM)     data.tp     = tpDariRPPM;
+    if (kelasFaseRPPM && kelasFaseRPPM.includes('/')) {
+      const [f, k] = kelasFaseRPPM.split('/').map(s => s.trim());
+      if (f && f !== '—') data.fase  = f;
+      if (k && k !== '—') data.kelas = k;
+    }
+  }
 
   /* Tampilkan loading di dalam body tab */
   if (tabBody) {
@@ -6133,6 +6172,11 @@ async function generateTabAI(tabId) {
 
     /* Persist ke IDB agar bertahan setelah browser ditutup */
     _simpanResult(currentGenerated.historyId, currentGenerated.result);
+
+    /* Kalau tab Soal direvisi (via AI), update juga paket soal di Bank Soal —
+       supaya Bank Soal selalu mengikuti revisi terbaru, bukan cuma versi
+       pertama kali RPPM dibuat */
+    if (tabId === 'soal') _isiKeBankSoal(currentGenerated.historyId, currentGenerated.data, html);
 
     /* Update badge dan konten */
     const badge = document.getElementById(`tabGenBadge-${tabId}`);
@@ -6228,6 +6272,17 @@ function cgptBuatPrompt(tabId) {
   const rppmHtml       = currentGenerated?.result?.rppm || '';
   const materiDariRPPM = tabId !== 'rppm' ? _ekstrakDariRPPMHtml(rppmHtml, 'Materi Pelajaran') : '';
   const tpDariRPPM     = tabId !== 'rppm' ? _ekstrakDariRPPMHtml(rppmHtml, 'Tujuan Pembelajaran') : '';
+
+  /* Kelas/Fase JUGA diambil langsung dari RPPM yang sudah jadi kalau ada —
+     ini yang tadinya masih menampilkan kelas lama (mis. VII) walau guru
+     sudah pindah ke Kelas VIII, karena d.kelas bisa basi (currentGenerated
+     lama) kalau LKPD/Soal dibuat terpisah tanpa lewat atpBuatRPPM lagi. */
+  const kelasFaseDariRPPM = tabId !== 'rppm' ? _ekstrakDariRPPMHtml(rppmHtml, 'Fase / Kelas') : '';
+  if (kelasFaseDariRPPM && kelasFaseDariRPPM.includes('/')) {
+    const [faseRppm, kelasRppm] = kelasFaseDariRPPM.split('/').map(s => s.trim());
+    if (faseRppm  && faseRppm  !== '—') d.fase  = faseRppm;
+    if (kelasRppm && kelasRppm !== '—') d.kelas = kelasRppm;
+  }
 
   const materi = materiDariRPPM || atpAktif?.materi || d.materi || STATE_ANALISIS.materi.join(', ') || '(belum dianalisis)';
   /* Untuk tahap 2, TP pakai yang sudah disimpan dari tahap 1 */
