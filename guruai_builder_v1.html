@@ -3512,29 +3512,46 @@ Materi: ${data.materi}
 FORMAT — HTML saja (h4 ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
 Buat PERSIS dua bagian ini lalu BERHENTI:
 
-<h4>A. Kisi-Kisi Soal</h4> — tabel: No | Tujuan Pembelajaran | Indikator Soal | Level Bloom | Bentuk | No Soal
-<h4>B. Pilihan Ganda</h4> — 5 soal bernomor, tiap soal: narasi konteks nyata spesifik materi, opsi A/B/C/D (satu benar), tanpa kunci jawaban di sini`;
+<h4>A. Kisi-Kisi Soal</h4> — tabel: No Soal (1-8) | Tujuan Pembelajaran | Indikator Soal | Level Bloom | Bentuk Soal
+<h4>B. Pilihan Ganda</h4> — 5 soal bernomor 1-5 (angka biasa, bukan kode Bloom), tiap soal: narasi konteks nyata spesifik materi, opsi A/B/C/D (satu benar), tanpa kunci jawaban di sini`;
 
       const rs1 = await kirim(s1, 4096);
       if (!rs1.html) throw new Error('Gagal membuat kisi-kisi & PG. Coba lagi.');
 
-      /* Pass 2: uraian + kunci + pembahasan */
+      /* Pass 2: uraian + kunci + pembahasan — SERTAKAN hasil Pass 1
+         (kisi-kisi + PG) sebagai konteks. SEBELUMNYA Pass 2 "buta" total
+         terhadap isi Pass 1 (panggilan API terpisah, tidak ada teks soal
+         PG yang dikirim), jadi Gemini tidak mungkin bisa membuat kunci
+         jawaban PG yang benar — itulah kenapa kunci/pembahasan PG selalu
+         kosong dan nomor soal tertukar jadi kode Bloom (C1/C2/C3). */
       if (onProgress) onProgress('Membuat soal uraian & kunci jawaban (2/2)...');
+      const pgTeksSaja = rs1.html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
       const s2 =
 `Anda pakar asesmen Kurikulum Merdeka Indonesia.
-Tugas: buat BAGIAN C, D, E soal evaluasi dalam HTML. WAJIB selesai sampai pembahasan.
+Tugas: lanjutkan soal evaluasi berikut dengan BAGIAN C, D, E dalam HTML. WAJIB selesai sampai pembahasan.
 
 DATA:
 Mapel: ${data.mapel} | Kelas: ${data.kelas}
 TP: ${data.tp}
 Materi: ${data.materi}
 
-FORMAT — HTML saja (h4 ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
-Buat PERSIS tiga bagian ini (jangan ulangi bagian sebelumnya):
+HASIL BAGIAN A & B YANG SUDAH DIBUAT (kisi-kisi + 5 soal Pilihan Ganda bernomor 1-5) — WAJIB dibaca dan dipakai sebagai acuan Kunci Jawaban & Pembahasan nomor 1-5. JANGAN dibuat ulang, JANGAN diabaikan:
+"""
+${pgTeksSaja}
+"""
 
-<h4>C. Soal Uraian</h4> — 3 soal bernomor (C4-C6), terbuka, mendalam, spesifik materi, tiap soal ada ruang jawaban (minimal: "Jawaban:_______________")
-<h4>D. Kunci Jawaban</h4> — tabel: No Soal | Kunci/Jawaban Ideal | Skor (PG: 5 soal@4poin, Uraian: 3 soal@10poin)
-<h4>E. Pembahasan</h4> — penjelasan singkat tiap soal PG (kenapa jawaban itu benar, kenapa yang lain salah)`;
+ATURAN PENOMORAN — WAJIB DIIKUTI PERSIS, jangan sampai keliru:
+- 5 soal PG di atas SUDAH bernomor 1-5 — jangan ditulis ulang di bagian C/D/E, cukup dijadikan acuan
+- Soal Uraian yang kamu buat sekarang diberi nomor LANJUTAN 6 sampai 8 (angka biasa — BUKAN kode Bloom seperti C1/C2/C3)
+- Kode Level Bloom (C1-C6) TIDAK PERNAH dipakai sebagai nomor soal di bagian manapun
+- Bagian D (Kunci Jawaban) dan E (Pembahasan) WAJIB mencakup SEMUA nomor 1 sampai 8 — nomor 1-5 mengacu ke soal PG di atas (jangan sampai kosong/terlewat), nomor 6-8 ke soal Uraian yang baru dibuat
+
+FORMAT — HTML saja (h4 ol ul li table). Tanpa Markdown. Tanpa teks di luar HTML.
+Buat PERSIS tiga bagian ini (jangan ulangi bagian A/B di atas):
+
+<h4>C. Soal Uraian</h4> — 3 soal bernomor 6-8 (level C4-C6), terbuka, mendalam, spesifik materi, tiap soal ada ruang jawaban (minimal: "Jawaban:_______________")
+<h4>D. Kunci Jawaban</h4> — tabel: No Soal (1-8) | Kunci/Jawaban Ideal | Skor. Nomor 1-5: tulis huruf jawaban PG yang benar (A/B/C/D) dari soal di atas, 4 poin/nomor. Nomor 6-8: tulis jawaban ideal Uraian, 10 poin/nomor.
+<h4>E. Pembahasan</h4> — Nomor 1-5: jelaskan singkat kenapa jawaban PG itu benar dan kenapa pilihan lain salah. Nomor 6-8: jelaskan kaitan jawaban Uraian dengan materi pembelajaran.`;
 
       const rs2 = await kirim(s2, 4096);
       if (!rs2.html) throw new Error('Gagal membuat uraian & kunci. Coba lagi.');
@@ -6623,24 +6640,33 @@ Tulis lengkap dan spesifik.`;
 
 ${konteksNonRPPM}
 
+ATURAN PENOMORAN — WAJIB DIIKUTI PERSIS, jangan sampai keliru:
+- Soal Pilihan Ganda diberi nomor 1 sampai 5 (ANGKA BIASA — bukan kode Bloom seperti C1/C2/C3)
+- Soal Uraian diberi nomor lanjutan 6 sampai 8 (angka biasa juga, bukan kode Bloom)
+- Kode Level Bloom (C1-C6) HANYA muncul di kolom "Level Bloom" pada bagian Kisi-Kisi — TIDAK PERNAH dipakai sebagai nomor soal di bagian manapun (termasuk Kunci Jawaban dan Pembahasan)
+- Bagian D (Kunci Jawaban) dan E (Pembahasan) WAJIB mencakup SEMUA 8 soal — nomor 1-5 (Pilihan Ganda) DAN nomor 6-8 (Uraian). Jangan sampai soal Pilihan Ganda terlewat/tidak ada kunci dan pembahasannya.
+
 Buat 5 bagian wajib (jangan potong):
 
 A. KISI-KISI SOAL
-   Tabel: No | Tujuan Pembelajaran | Indikator | Level Bloom | Bentuk | No Soal
+   Tabel: No Soal (1-8) | Tujuan Pembelajaran | Indikator | Level Bloom | Bentuk Soal
 
-B. SOAL PILIHAN GANDA (5 soal, level C2-C4)
+B. SOAL PILIHAN GANDA (nomor 1-5, level C2-C4)
    Tiap soal: konteks nyata spesifik materi "${materi}", pilihan A/B/C/D
 
-C. SOAL URAIAN (3 soal, level C4-C6)
+C. SOAL URAIAN (nomor 6-8, level C4-C6)
    Soal terbuka mendalam, ada ruang jawaban
 
-D. KUNCI JAWABAN
-   Tabel: No | Jawaban/Kunci | Skor (PG: 4 poin, Uraian: 10 poin)
+D. KUNCI JAWABAN — WAJIB LENGKAP NOMOR 1-8 (jangan cuma Uraian)
+   Tabel: No Soal | Kunci Jawaban | Skor
+   - Nomor 1-5 (PG): tulis huruf jawaban benar (A/B/C/D), skor 4 poin per nomor
+   - Nomor 6-8 (Uraian): tulis jawaban ideal lengkap, skor 10 poin per nomor
 
-E. PEMBAHASAN SINGKAT
-   Penjelasan mengapa jawaban PG itu benar
+E. PEMBAHASAN — WAJIB LENGKAP NOMOR 1-8 (jangan cuma Uraian)
+   - Nomor 1-5 (PG): jelaskan singkat kenapa jawaban itu benar dan kenapa pilihan lain salah
+   - Nomor 6-8 (Uraian): jelaskan kaitan jawaban ideal dengan materi pembelajaran
 
-Tulis semua bagian. Jangan potong.`;
+Tulis semua bagian, semua nomor 1 sampai 8, jangan potong dan jangan ada yang terlewat.`;
 
   if (tabId === 'pengayaan') return `Kamu pakar Kurikulum Merdeka Indonesia. Buat PROGRAM PENGAYAAN lengkap.
 
@@ -8064,7 +8090,15 @@ function _atpRenderTimeline() {
           <div class="ptm-sub">${labelTP} · ${isiTP}</div>
         </div>
         ${status === 'done'
-          ? `<span class="badge badge-teal" style="font-size:10px;flex-shrink:0;">✓ Selesai</span>`
+          ? `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:flex-end;">
+              <span class="badge badge-teal" style="font-size:10px;">✓ Selesai</span>
+              <div style="display:flex;gap:4px;">
+                <button onclick="atpBuatLKPD(${s.ke})" title="Buat LKPD untuk pertemuan ini"
+                  style="font-size:10px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--bg-surface);color:var(--text-secondary);cursor:pointer;white-space:nowrap;">📋 LKPD</button>
+                <button onclick="atpBuatSoalKunci(${s.ke})" title="Buat Soal & Kunci untuk pertemuan ini"
+                  style="font-size:10px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--bg-surface);color:var(--text-secondary);cursor:pointer;white-space:nowrap;">📝 Soal</button>
+              </div>
+             </div>`
           : `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
               <button class="btn-buat-rppm" ${isCurrent?'':'style="opacity:.6;"'}
                 onclick="atpBuatRPPM(${s.ke})">
@@ -8098,6 +8132,49 @@ function _atpRenderTimeline() {
  * TP besar, atau gabungan beberapa TP kecil. Pindah ke Impor ChatGPT
  * dengan prompt yang sudah terisi konteks gabungan TP-nya.
  */
+/** Muat currentGenerated untuk pertemuan (kelas+sesi) tertentu — dipakai
+ *  bersama oleh atpBuatLKPD/atpBuatSoalKunci supaya konteksnya (TP, materi,
+ *  RPPM yang sudah jadi) benar sebelum generate tab lain. */
+async function _atpMuatUntukPertemuan(sesiKe) {
+  const idPertemuanIni = `atp_k${ATP_KELAS_AKTIF}_s${sesiKe}`;
+  if (currentGenerated && currentGenerated.historyId === idPertemuanIni) return true;
+  const existingResult = await IDB.get('result_' + idPertemuanIni, null);
+  const existingHist   = DATABASE.history.find(h => h.id === idPertemuanIni);
+  if (existingResult && existingHist) {
+    currentGenerated = { data: { ...existingHist }, result: existingResult, historyId: idPertemuanIni };
+    return true;
+  }
+  return false;
+}
+
+/** Langsung buat LKPD (via AI Gemini) untuk pertemuan yang RPPM-nya
+ *  sudah selesai — dipanggil dari tombol "📋 LKPD" di timeline ATP */
+async function atpBuatLKPD(sesiKe) {
+  const ok = await _atpMuatUntukPertemuan(sesiKe);
+  if (!ok) { showToast('Data RPPM pertemuan ini belum ditemukan', 'error'); return; }
+  goPage('modul');
+  setTimeout(() => {
+    currentTab = 'lkpd';
+    RENDER.renderTabs('lkpd');
+    RENDER.showTab('lkpd', currentGenerated.result.lkpd || '<p class="text-muted">Menyiapkan LKPD…</p>');
+    generateTabAI('lkpd');
+  }, 300);
+}
+
+/** Langsung buat Soal & Kunci (via AI Gemini) untuk pertemuan yang
+ *  RPPM-nya sudah selesai — dipanggil dari tombol "📝 Soal" di timeline ATP */
+async function atpBuatSoalKunci(sesiKe) {
+  const ok = await _atpMuatUntukPertemuan(sesiKe);
+  if (!ok) { showToast('Data RPPM pertemuan ini belum ditemukan', 'error'); return; }
+  goPage('modul');
+  setTimeout(() => {
+    currentTab = 'soal';
+    RENDER.renderTabs('soal');
+    RENDER.showTab('soal', currentGenerated.result.soal || '<p class="text-muted">Menyiapkan Soal & Kunci…</p>');
+    generateTabAI('soal');
+  }, 300);
+}
+
 async function atpBuatRPPM(sesiKe) {
   const s = ATP_STATE.sesi.find(x => x.ke === sesiKe);
   if (!s) return;
