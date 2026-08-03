@@ -5783,7 +5783,7 @@ function exportRPPMWord() {
     htmlIsi += '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;">';
     htmlIsi += '<tr><th style="width:160pt;background:#e0e0e0;">Sekolah</th><td>'+br(d.sekolah)+'</td></tr>';
     htmlIsi += '<tr><th style="background:#e0e0e0;">Mata Pelajaran</th><td>'+br(d.mapel)+'</td></tr>';
-    htmlIsi += '<tr><th style="background:#e0e0e0;">Fase / Kelas</th><td>'+br(d.fase)+'</td></tr>';
+    htmlIsi += '<tr><th style="background:#e0e0e0;">Fase / Kelas</th><td>'+br(d.fase)+' / '+br(d.kelas)+'</td></tr>';
     htmlIsi += '<tr><th style="background:#e0e0e0;">Alokasi Waktu</th><td>'+br(d.waktu)+'</td></tr>';
     htmlIsi += '<tr><th style="background:#e0e0e0;">Tahun Pelajaran</th><td>'+br(d.tahun)+'</td></tr>';
     htmlIsi += '<tr><th style="background:#e0e0e0;">Nama Penyusun</th><td>'+br(d.guru)+'</td></tr>';
@@ -7412,7 +7412,7 @@ function cgptParseRPPM(teks) {
     const el = document.getElementById(id);
     if (el && val) el.value = val;
   };
-  let d = UTIL.getFormData();
+  let d = currentGenerated?.data || UTIL.getFormData();
   if (window._atpAktif) {
     const a = window._atpAktif;
     d = {
@@ -8147,32 +8147,56 @@ async function _atpMuatUntukPertemuan(sesiKe) {
   return false;
 }
 
-/** Langsung buat LKPD (via AI Gemini) untuk pertemuan yang RPPM-nya
- *  sudah selesai — dipanggil dari tombol "📋 LKPD" di timeline ATP */
+/** Langsung ke Impor ChatGPT (tab LKPD) untuk pertemuan yang RPPM-nya
+ *  sudah selesai — dipanggil dari tombol "📋 LKPD" di timeline ATP.
+ *  window._atpAktif diisi ulang supaya cgptBuatPrompt() dapat konteks
+ *  TP/materi/kelas yang benar untuk pertemuan ini. */
 async function atpBuatLKPD(sesiKe) {
   const ok = await _atpMuatUntukPertemuan(sesiKe);
   if (!ok) { showToast('Data RPPM pertemuan ini belum ditemukan', 'error'); return; }
-  goPage('modul');
-  setTimeout(() => {
-    currentTab = 'lkpd';
-    RENDER.renderTabs('lkpd');
-    RENDER.showTab('lkpd', currentGenerated.result.lkpd || '<p class="text-muted">Menyiapkan LKPD…</p>');
-    generateTabAI('lkpd');
-  }, 300);
+  _atpIsiUlangAtpAktif(sesiKe);
+  goPage('chatgpt');
+  setTimeout(() => { cgptPilihTab('lkpd'); }, 200);
 }
 
-/** Langsung buat Soal & Kunci (via AI Gemini) untuk pertemuan yang
- *  RPPM-nya sudah selesai — dipanggil dari tombol "📝 Soal" di timeline ATP */
+/** Sama seperti atpBuatLKPD, untuk Soal & Kunci — dipanggil dari
+ *  tombol "📝 Soal" di timeline ATP */
 async function atpBuatSoalKunci(sesiKe) {
   const ok = await _atpMuatUntukPertemuan(sesiKe);
   if (!ok) { showToast('Data RPPM pertemuan ini belum ditemukan', 'error'); return; }
-  goPage('modul');
-  setTimeout(() => {
-    currentTab = 'soal';
-    RENDER.renderTabs('soal');
-    RENDER.showTab('soal', currentGenerated.result.soal || '<p class="text-muted">Menyiapkan Soal & Kunci…</p>');
-    generateTabAI('soal');
-  }, 300);
+  _atpIsiUlangAtpAktif(sesiKe);
+  goPage('chatgpt');
+  setTimeout(() => { cgptPilihTab('soal'); }, 200);
+}
+
+/** Bangun ulang window._atpAktif untuk sesi tertentu — dipakai saat guru
+ *  klik "Buat LKPD"/"Buat Soal & Kunci" dari timeline ATP untuk pertemuan
+ *  yang RPPM-nya sudah selesai (window._atpAktif mungkin sudah kehapus
+ *  otomatis oleh atpTandaiPertemuanSelesai() sebelumnya). */
+function _atpIsiUlangAtpAktif(sesiKe) {
+  const s = ATP_STATE.sesi.find(x => x.ke === sesiKe);
+  if (!s) return;
+  const d = currentGenerated?.data || UTIL.getFormData();
+  const petaLokalKeGlobal = _tpIndexUntukKelas(ATP_KELAS_AKTIF);
+  const globalIdx = (tpIdxLokal) => petaLokalKeGlobal[tpIdxLokal] ?? tpIdxLokal;
+
+  const tpGabungan = s.bagian.length > 1
+    ? s.bagian.map((b, i) => `${i+1}. ${b.tpTeks} (${b.jp} JP dari total alokasi TP ini)`).join('\n')
+    : s.bagian[0].tpTeks;
+  const materiGabungan = [...new Set(s.bagian.map(b => STATE_ANALISIS.materi?.[globalIdx(b.tpIdx)]).filter(Boolean))].join(', ');
+  _pastikanTpTopik();
+  const topikGabungan = [...new Set(s.bagian.map(b => STATE_ANALISIS.tpBab?.[globalIdx(b.tpIdx)]).filter(Boolean))].join(', ');
+
+  window._atpAktif = {
+    sesiKe, key: `SESI${sesiKe}`,
+    historyId: `atp_k${ATP_KELAS_AKTIF}_s${sesiKe}`,
+    tpTeks: tpGabungan, tpKhusus: tpGabungan,
+    materi: materiGabungan, topik: topikGabungan,
+    ptmGlobal: sesiKe,
+    mapel: d.mapel || '', kelas: KELAS_ROMAWI[ATP_KELAS_AKTIF], fase: d.fase || '',
+    waktu: d.waktu || '', model: d.model || 'PBL', guru: d.guru || '',
+    sekolah: d.sekolah || '', cp: d.cp || '',
+  };
 }
 
 async function atpBuatRPPM(sesiKe) {
