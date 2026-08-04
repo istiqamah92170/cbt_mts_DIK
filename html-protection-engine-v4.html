@@ -134,9 +134,9 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
         <div><div class="oh"><span class="on">Blokir shortcut DevTools</span><span class="badge b1">v1</span></div>
         <div class="od">F12, Ctrl+Shift+I, Ctrl+U dinonaktifkan</div></div></label>
 
-      <label class="oc"><input type="checkbox" id="o-devdestroy" checked>
+      <label class="oc"><input type="checkbox" id="o-devdestroy">
         <div><div class="oh"><span class="on">Deteksi DevTools — destruksi halaman</span><span class="badge b2">v2</span></div>
-        <div class="od">Jika DevTools terbuka, konten dihapus dari DOM</div></div></label>
+        <div class="od">⚠ Tidak direkomendasikan untuk aplikasi mobile — dapat memicu false positive di iPhone dan beberapa Android. Gunakan hanya jika aplikasi khusus desktop.</div></div></label>
 
       <label class="oc"><input type="checkbox" id="o-textselect">
         <div><div class="oh"><span class="on">Blokir seleksi teks</span><span class="badge b1">v1</span></div>
@@ -413,7 +413,7 @@ async function runProtect(){
     jsArr.push("document.addEventListener('selectstart',function(e){e.preventDefault();});");
 
   if(document.getElementById('o-devdestroy').checked)
-    jsArr.push("(function(){var _dt=false;setInterval(function(){if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){if(!_dt){_dt=true;document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>\u26a0 Sesi Tidak Valid</h2></div>';}}},1000);})();");
+    jsArr.push("(function(){var _dt=false,_c=0;setInterval(function(){var _w=window.outerWidth-window.innerWidth,_h=window.outerHeight-window.innerHeight;if(_w>300&&_h>200){_c++;if(_c>=3&&!_dt){_dt=true;document.body.innerHTML='<div style=\"font:16px sans-serif;text-align:center;padding:4rem\"><h2>\u26a0 Sesi Tidak Valid</h2></div>';;}else{_c=0;}},2000);})();");
 
   if(document.getElementById('o-fingerprint').checked&&webhook)
     jsArr.push("(function(){try{navigator.sendBeacon('"+webhook+"',JSON.stringify({ts:new Date().toISOString(),ua:navigator.userAgent,url:window.location.href,id:'"+id+"'}));}catch(e){}})();");
