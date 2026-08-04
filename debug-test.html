@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Debug Test</title></head>
+<body>
+<div id="out" style="font-family:sans-serif;padding:1rem;font-size:13px;line-height:2"></div>
+<script>
+var out = document.getElementById('out');
+function log(label, val) {
+  var row = document.createElement('div');
+  row.innerHTML = '<b>' + label + ':</b> ' + String(val);
+  out.appendChild(row);
+}
+
+log('hostname', window.location.hostname);
+log('href', window.location.href);
+log('outerWidth', window.outerWidth);
+log('innerWidth', window.innerWidth);
+log('outerHeight', window.outerHeight);
+log('innerHeight', window.innerHeight);
+log('selisih W', window.outerWidth - window.innerWidth);
+log('selisih H', window.outerHeight - window.innerHeight);
+log('userAgent', navigator.userAgent.slice(0,80));
+log('referrer', document.referrer || '(kosong)');
+</script>
+</body></html>
