@@ -71,6 +71,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
   <div class="tabs">
     <button class="tb active" onclick="swTab('upload',this)">📂 Upload</button>
     <button class="tb" onclick="swTab('protect',this)">🔒 Proteksi</button>
+    <button class="tb" onclick="swTab('manage',this)">🧹 Kelola</button>
     <button class="tb" onclick="swTab('info',this)">ℹ️ Info</button>
   </div>
 
@@ -180,6 +181,57 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
     <div class="al al-er" id="al-er"></div>
   </div>
 
+  <div id="tab-manage" style="display:none">
+    <div class="ib" style="border-color:rgba(245,166,35,.25)">
+      <strong style="color:var(--amb);display:block;margin-bottom:5px">🧹 Kelola Proteksi</strong>
+      Upload file yang sudah diproteksi, pilih komponen yang ingin <strong style="color:var(--txt)">dihapus</strong>, lalu unduh hasilnya. Hanya komponen yang disisipkan engine ini yang dapat dihapus — kode aplikasi asli tidak diubah.
+    </div>
+
+    <p class="sl">Pilih yang ingin dihapus</p>
+    <div class="ol">
+
+      <label class="oc"><input type="checkbox" id="m-watermark" checked>
+        <div><div class="oh"><span class="on">Watermark komentar</span><span class="badge b1">v1</span></div>
+        <div class="od">Hapus blok komentar <!-- WATERMARK DIGITAL --> dan <!-- PROTECTED:... --> dari kode</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="m-meta" checked>
+        <div><div class="oh"><span class="on">Meta hak cipta</span><span class="badge b1">v1</span></div>
+        <div class="od">Hapus meta tag author, copyright, protection-id, _wm, _bh yang disisipkan engine</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="m-protscript" checked>
+        <div><div class="oh"><span class="on">Script proteksi utama</span><span class="badge b1">v1</span></div>
+        <div class="od">Hapus blok script data-pid (berisi blokir klik kanan, DevTools, console warn, dll)</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="m-brandingrt" checked>
+        <div><div class="oh"><span class="on">Runtime branding check</span><span class="badge bp">PRO</span></div>
+        <div class="od">Hapus script data-wm-rt (pengecekan branding setiap 5 detik)</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="m-honeypot" checked>
+        <div><div class="oh"><span class="on">Honeypot watermark</span><span class="badge b2">v2</span></div>
+        <div class="od">Hapus elemen span data-wm tersembunyi dari body</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="m-bodywm">
+        <div><div class="oh"><span class="on">Atribut data-wm di body</span><span class="badge b2">v2</span></div>
+        <div class="od">Hapus atribut data-wm dan data-owner dari tag body (branding watermark)</div></div></label>
+
+      <label class="oc"><input type="checkbox" id="m-csswm">
+        <div><div class="oh"><span class="on">CSS watermark tersembunyi</span><span class="badge bp">PRO</span></div>
+        <div class="od">Hapus komentar __WM dan CSS variable --_wm-id dari blok style</div></div></label>
+
+    </div>
+
+    <div class="pw-w" id="pw-w-m">
+      <div class="pw-l" id="pw-l-m">Memproses...</div>
+      <div class="pw-t"><div class="pw-b" id="pw-b-m" style="background:var(--amb)"></div></div>
+    </div>
+    <div class="ar">
+      <button class="btn btn-p" id="btn-m" onclick="runManage()" style="background:var(--amb)">🧹 Bersihkan & Unduh</button>
+      <span style="font-size:12px;color:var(--mut)" id="msg-m"></span>
+    </div>
+    <div class="al al-ok" id="al-m-ok"></div>
+    <div class="al al-er" id="al-m-er"></div>
+  </div>
+
   <div id="tab-info" style="display:none">
     <div class="ib" style="border-color:rgba(45,212,191,.25)">
       <strong style="color:var(--tel);display:block;margin-bottom:6px">🔐 Pendekatan Proteksi v4</strong>
@@ -223,7 +275,7 @@ function _lf(f){
 }
 
 function swTab(n,btn){
-  ['upload','protect','info'].forEach(function(t){document.getElementById('tab-'+t).style.display='none';});
+  ['upload','protect','manage','info'].forEach(function(t){document.getElementById('tab-'+t).style.display='none';});
   document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+n).style.display='block';
   if(btn)btn.classList.add('active');
@@ -515,6 +567,136 @@ async function runProtect(){
   _al('ok',msg);
   document.getElementById('btn-p').disabled=false;
 }
+
+// ============================================================
+// FUNGSI KELOLA PROTEKSI
+// ============================================================
+async function runManage(){
+  if(!_fc){alert('Upload file HTML terlebih dahulu.');swTab('upload',document.querySelectorAll('.tb')[0]);return;}
+
+  document.getElementById('btn-m').disabled=true;
+  document.getElementById('pw-w-m').style.display='block';
+  document.getElementById('al-m-ok').classList.remove('show');
+  document.getElementById('al-m-er').classList.remove('show');
+
+  var html=_fc;
+  var log=[];
+
+  function sp(pct,lbl){
+    document.getElementById('pw-b-m').style.width=pct+'%';
+    document.getElementById('pw-l-m').textContent=lbl;
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(10,'Menganalisis file...');
+
+  // Helper: hapus dengan split aman
+  function removePattern(str,pattern,flag){
+    try{return str.replace(new RegExp(pattern,flag||'g'),'');}
+    catch(e){return str;}
+  }
+
+  // 1. Hapus watermark komentar HTML
+  if(document.getElementById('m-watermark').checked){
+    var before=html.length;
+    // Hapus blok <!-- WATERMARK DIGITAL ... -->
+    html=removePattern(html,'<!--\s*={5,}[\s\S]*?={5,}\s*-->\s*','g');
+    // Hapus <!-- PROTECTED:... -->
+    html=removePattern(html,'<!--\s*PROTECTED:[^>]*-->\s*','g');
+    // Hapus <!-- OWNER:... -->
+    html=removePattern(html,'<!--\s*OWNER:[^>]*-->\s*','g');
+    // Hapus <!-- OWNER-PROOF:... -->
+    html=removePattern(html,'<!--\s*OWNER-PROOF:[^>]*-->\s*','g');
+    if(html.length<before)log.push('✓ Watermark komentar dihapus');
+    else log.push('— Watermark komentar tidak ditemukan');
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(25,'Menghapus meta tag...');
+
+  // 2. Hapus meta tag engine
+  if(document.getElementById('m-meta').checked){
+    var before2=html.length;
+    html=removePattern(html,'<meta\s+name="author"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="copyright"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="protection-id"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="contact"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="_wm"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="_bh"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="_owner"[^>]*>\s*','');
+    html=removePattern(html,'<meta\s+name="_brand-hash"[^>]*>\s*','');
+    if(html.length<before2)log.push('✓ Meta tag proteksi dihapus');
+    else log.push('— Meta tag tidak ditemukan');
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(40,'Menghapus script proteksi...');
+
+  // 3. Hapus script data-pid (proteksi utama)
+  if(document.getElementById('m-protscript').checked){
+    var before3=html.length;
+    html=removePattern(html,'<script[^>]+data-pid="[^"]*"[^>]*>[\s\S]*?<\/script>\s*','g');
+    if(html.length<before3)log.push('✓ Script proteksi utama dihapus');
+    else log.push('— Script data-pid tidak ditemukan');
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(55,'Menghapus runtime branding check...');
+
+  // 4. Hapus script data-wm-rt (runtime check)
+  if(document.getElementById('m-brandingrt').checked){
+    var before4=html.length;
+    html=removePattern(html,'<script[^>]+data-wm-rt="[^"]*"[^>]*>[\s\S]*?<\/script>\s*','g');
+    if(html.length<before4)log.push('✓ Runtime branding check dihapus');
+    else log.push('— Script data-wm-rt tidak ditemukan');
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(68,'Menghapus honeypot...');
+
+  // 5. Hapus honeypot span
+  if(document.getElementById('m-honeypot').checked){
+    var before5=html.length;
+    html=removePattern(html,'<span[^>]+data-wm="[^"]*"[^>]*>[\s\S]*?<\/span>\s*','g');
+    if(html.length<before5)log.push('✓ Honeypot watermark dihapus');
+    else log.push('— Honeypot tidak ditemukan');
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(78,'Menghapus atribut body...');
+
+  // 6. Hapus data-wm dan data-owner dari body tag
+  if(document.getElementById('m-bodywm').checked){
+    var before6=html.length;
+    html=removePattern(html,'\s+data-wm="[^"]*"','g');
+    html=removePattern(html,'\s+data-owner="[^"]*"','g');
+    if(html.length<before6)log.push('✓ Atribut data-wm di body dihapus');
+    else log.push('— Atribut data-wm tidak ditemukan');
+  }
+
+  await new Promise(function(r){setTimeout(r,80);});sp(88,'Menghapus CSS watermark...');
+
+  // 7. Hapus CSS watermark dari blok style
+  if(document.getElementById('m-csswm').checked){
+    var before7=html.length;
+    // Hapus komentar __WM di CSS
+    html=removePattern(html,'\/\*\s*__WM:[^*]*\*\/','g');
+    // Hapus CSS variable --_wm-id dan --_wm-d
+    html=removePattern(html,'--_wm-id:[^;]+;','g');
+    html=removePattern(html,'--_wm-d:[^;]+;','g');
+    // Hapus signature _b: di akhir style
+    html=removePattern(html,'\/\*\s*_b:[^*]*\*\/','g');
+    // Hapus _c: signature
+    html=removePattern(html,'\/\*\s*_c:[^*]*\*\/','g');
+    if(html.length<before7)log.push('✓ CSS watermark dihapus');
+    else log.push('— CSS watermark tidak ditemukan');
+  }
+
+  sp(100,'Selesai!');
+
+  var outName=_fn.replace(/\.html?$/i,'')+'_cleaned.html';
+  _dl(html,outName);
+
+  document.getElementById('msg-m').textContent=outName+' ('+log.filter(function(l){return l.startsWith('✓');}).length+' komponen dihapus)';
+  document.getElementById('al-m-ok').textContent=log.join('\n');
+  document.getElementById('al-m-ok').classList.add('show');
+  document.getElementById('btn-m').disabled=false;
+}
+
 </script>
 </body>
 </html>
