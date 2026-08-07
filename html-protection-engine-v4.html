@@ -648,6 +648,9 @@ async function runManage(){
   await new Promise(function(r){setTimeout(r,60);});sp(8,'Menganalisis file...');
 
   // Daftar fitur script — cocok dengan data-feature yang disisipkan engine
+  // Deteksi format file: granular (data-feature) atau lama (satu blok data-pid)
+  var isGranular=html.indexOf('data-feature=')>-1;
+
   var features=[
     {id:'rightclick',   el:'m-rightclick',    label:'Blokir klik kanan'},
     {id:'devtools-keys',el:'m-devtools-keys',  label:'Blokir shortcut DevTools'},
@@ -663,17 +666,87 @@ async function runManage(){
   var step=Math.floor(60/features.length);
   var pct=8;
 
-  for(var i=0;i<features.length;i++){
-    var f=features[i];
+  // Cek apakah ada fitur yang dipilih
+  var anyFeatureChecked=features.some(function(f){
     var el=document.getElementById(f.el);
-    if(el&&el.checked){
-      pct+=step;
-      await new Promise(function(r){setTimeout(r,50);});
-      sp(pct,'Menghapus: '+f.label+'...');
-      var res=removeFeature(html,f.id);
-      html=res.html;
-      if(res.removed){log.push('✓ '+f.label+' dihapus');removed++;}
-      else log.push('— '+f.label+' tidak ditemukan di file ini');
+    return el&&el.checked;
+  });
+
+  if(anyFeatureChecked){
+    if(isGranular){
+      // Format baru: hapus per data-feature
+      for(var i=0;i<features.length;i++){
+        var f=features[i];
+        var el=document.getElementById(f.el);
+        if(el&&el.checked){
+          pct+=step;
+          await new Promise(function(r){setTimeout(r,50);});
+          sp(pct,'Menghapus: '+f.label+'...');
+          var res=removeFeature(html,f.id);
+          html=res.html;
+          if(res.removed){log.push('✓ '+f.label+' dihapus');removed++;}
+          else log.push('— '+f.label+' tidak ditemukan');
+        }
+      }
+    } else {
+      // Format lama: semua fitur dalam satu blok data-pid
+      // Hapus seluruh blok lalu sisipkan ulang hanya fitur yang tidak dicentang
+      await new Promise(function(r){setTimeout(r,80);});
+      sp(35,'Mendeteksi format lama — memproses blok data-pid...');
+
+      // Ekstrak isi blok data-pid
+      var pidMatch=html.match(/<script[^>]+data-pid="([^"]*)"[^>]*>([\s\S]*?)<\/script>/);
+      if(pidMatch){
+        var pidId=pidMatch[1];
+        var pidContent=pidMatch[2];
+
+        // Petakan keyword per fitur untuk format lama
+        var featureKeywords={};
+        featureKeywords['rightclick']=['contextmenu'];
+        featureKeywords['devtools-keys']=['e.key===','F12','Ctrl'];
+        featureKeywords['textselect']=['selectstart'];
+        featureKeywords['devdestroy']=['outerWidth','_chkDbg','performance.now'];
+        featureKeywords['fingerprint']=['sendBeacon'];
+        featureKeywords['consolewarn']=['HAK CIPTA','console.log'];
+        featureKeywords['domainlock']=['location.hostname','Akses Tidak Sah'];
+        featureKeywords['timebomb']=['Kedaluwarsa','new Date()>new Date'];
+        featureKeywords['tokenlock']=['_vfy','Akses Terbatas','cbtkabutdigital'];
+
+        // Pecah konten blok menjadi statement-statement
+        // Pisah berdasarkan });  atau ; yang mengakhiri IIFE
+        var stmts=pidContent.split(/(?<=\}\)\(\);)/g);
+        var keptStmts=[];
+
+        stmts.forEach(function(stmt){
+          var trimmed=stmt.trim();
+          if(!trimmed)return;
+          // Cek apakah statement ini termasuk fitur yang ingin dihapus
+          var shouldRemove=false;
+          for(var fi=0;fi<features.length;fi++){
+            var feat=features[fi];
+            var elCheck=document.getElementById(feat.el);
+            if(!elCheck||!elCheck.checked)continue;
+            var keywords=featureKeywords[feat.id]||[];
+            var matches=keywords.some(function(kw){return trimmed.indexOf(kw)>-1;});
+            if(matches){shouldRemove=true;log.push('✓ '+feat.label+' dihapus (format lama)');removed++;break;}
+          }
+          if(!shouldRemove)keptStmts.push(trimmed);
+        });
+
+        // Bangun ulang blok dengan fitur yang tersisa
+        if(keptStmts.length>0){
+          var newPidContent='(function(){\n'+keptStmts.join('\n')+'\n})();';
+          var newPidScript='<scr'+'ipt data-pid="'+pidId+'" data-feature="mixed">'+newPidContent+'</'+'script>';
+          html=html.replace(/<script[^>]+data-pid="[^"]*"[^>]*>[\s\S]*?<\/script>/,newPidScript);
+        } else {
+          // Semua fitur dihapus — hapus seluruh blok
+          html=html.replace(/<script[^>]+data-pid="[^"]*"[^>]*>[\s\S]*?<\/script>/,'');
+          log.push('✓ Seluruh blok proteksi dihapus (semua fitur dinonaktifkan)');
+        }
+        sp(65,'Blok proteksi diproses...');
+      } else {
+        log.push('— Blok data-pid tidak ditemukan di file ini');
+      }
     }
   }
 
