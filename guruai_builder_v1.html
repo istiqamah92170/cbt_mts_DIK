@@ -3431,63 +3431,79 @@ Setiap bagian harus spesifik pada materi "${data.materi}", bukan generik.`;
 
     /* ── LKPD — 4 pass kecil, tiap pass 1-2 bagian saja ── */
     if (tabId === 'lkpd') {
-      const ctx = `Mapel: ${data.mapel} | Kelas: ${data.kelas} | Model: ${data.model}
+      const pancaCintaOpsi = ['Cinta Allah dan Rasulnya', 'Cinta Ilmu', 'Cinta Lingkungan', 'Cinta Diri dan Sesama', 'Cinta Tanah Air'];
+      const kbcTerpilih = Array.isArray(data.kbc) && data.kbc.length ? data.kbc.join(', ') : (data.kbc || 'Cinta Ilmu');
+      const ctx = `Sekolah: ${data.sekolah} | Mapel: ${data.mapel} | Fase/Kelas: ${data.fase}/${data.kelas} | Tahun: ${data.tahun} | Waktu: ${data.waktu}
 TP: ${data.tp}
-Materi: ${data.materi}`;
-      const fmt = `FORMAT: HTML saja, tag h4 p ol ul li table. TANPA Markdown. TANPA teks di luar HTML. WAJIB selesai sampai tag penutup terakhir.`;
+Materi/Bab: ${data.materi}
+Fokus Nilai Pancinta: ${kbcTerpilih}`;
+      const fmt = `FORMAT: HTML saja, tag h3 h4 p ol ul li table hr. TANPA Markdown. TANPA teks di luar HTML. WAJIB selesai sampai tag penutup terakhir.`;
 
-      /* Pass 1 — Header + Identitas + Tujuan */
-      if (onProgress) onProgress('Membuat Identitas & Tujuan (1/4)...');
+      /* Pass 1 — Header identitas + I. Tujuan Pembelajaran (Mindful) */
+      if (onProgress) onProgress('Membuat identitas & tujuan (1/4)...');
       const lp1 = await kirim(
-`Anda pakar Kurikulum Merdeka. ${fmt}
+`Anda pakar Kurikulum Merdeka & pendekatan Deep Learning (Mindful, Meaningful, Joyful). ${fmt}
 ${ctx}
-Buat HANYA dua bagian ini, lalu BERHENTI:
-<h3>Lembar Kerja Peserta Didik (LKPD)</h3>
-<p>Mata Pelajaran: ${data.mapel} | Kelas: ${data.kelas} | Model: ${data.model}</p>
-<h4>1. Identitas Peserta Didik</h4>
-Tabel 2 kolom (Label | Isian kosong): Nama Siswa, Kelas, Kelompok, Tanggal.
-<h4>2. Tujuan Pembelajaran</h4>
-Daftar bernomor dari TP berikut (tulis ulang apa adanya, jangan disingkat):
-${data.tp}`, 2048);
+Buat HANYA bagian ini, lalu BERHENTI:
+<h3 style="text-align:center;">LEMBAR KERJA PESERTA DIDIK (LKPD) KBC</h3>
+<p style="text-align:center;font-weight:700;">DEEP LEARNING MODEL (MINDFUL, MEANINGFUL, JOYFUL)</p>
+<p style="text-align:center;">TAHUN AJARAN ${data.tahun}</p>
+<hr>
+Tabel identitas (Nama Sekolah, Mata Pelajaran, Fase/Kelas, Bab/Topik dari materi "${data.materi}", Alokasi Waktu) — isi dengan data di atas.
+Lalu tabel kosong 2 kolom x 2 baris "Nama Anggota Kelompok / Mandiri" (nomor 1-4, isian titik-titik kosong).
+Lalu baris "Fokus Nilai Pancinta (Lingkari salah satu):" diikuti 5 opsi (${pancaCintaOpsi.join(' | ')}) — beri tanda [kurung siku] pada opsi yang sesuai dengan "${kbcTerpilih}".
+<hr>
+<h4>I. TUJUAN PEMBELAJARAN (Aspek Mindful – Kesadaran Penuh)</h4>
+Kalimat pembuka: "Setelah mengikuti proses pembelajaran mendalam ini, peserta didik diharapkan mampu:"
+Daftar bernomor: 1) tulis ulang TP di atas apa adanya (jangan disingkat), 2) "Menumbuhkan nilai Profil Pelajar Pancasila dan karakter Pancinta selama proses aktivitas."`, 2048);
       if (!lp1.html) throw new Error('LKPD bagian 1 gagal. Coba lagi.');
 
-      /* Pass 2 — Petunjuk + Aktivitas */
-      if (onProgress) onProgress('Membuat Petunjuk & Aktivitas (2/4)...');
+      /* Pass 2 — II. Stimulus & Pemantik (Meaningful) */
+      if (onProgress) onProgress('Membuat stimulus & pemantik (2/4)...');
       const lp2 = await kirim(
-`Anda pakar Kurikulum Merdeka. ${fmt}
+`Anda pakar Deep Learning (Mindful, Meaningful, Joyful). ${fmt}
 ${ctx}
-Buat HANYA dua bagian ini, lalu BERHENTI:
-<h4>3. Petunjuk Pengerjaan</h4>
-5 poin petunjuk konkret (durasi, cara kerja kelompok, dll).
-<h4>4. Aktivitas Pembelajaran</h4>
-Buat 3 aktivitas menggunakan model ${data.model} spesifik pada materi "${data.materi}":
-- Tiap aktivitas punya: judul fase, narasi situasi/konteks nyata, 2-3 pertanyaan/instruksi konkret yang harus dijawab siswa.
-- Aktivitas harus berurutan dan saling berkaitan.`, 2048);
+Buat HANYA bagian ini, lalu BERHENTI:
+<h4>II. STIMULUS &amp; PEMANTIK (Aspek Meaningful – Kebermaknaan)</h4>
+Kalimat pembuka: "Mari mengamati lingkungan sekitar dan menyentuh rasa empati kita."
+Petunjuk guru dalam tanda kurung siku miring: [Petunjuk Guru: Masukkan gambar/foto fenomena, cerita pendek, atau potongan berita nyata yang relevan dengan materi "${data.materi}"]
+Kotak placeholder (pakai <p style="border:1px dashed #999;padding:20px;text-align:center;">): "[TEMPATKAN GAMBAR / TEKS STIMULUS DI SINI]"
+Lalu "Pertanyaan Reflektif Awal:" — 2 pertanyaan bernomor SPESIFIK pada materi "${data.materi}" (bukan generik), tiap pertanyaan diikuti baris "Jawab: ________________________________"`, 1536);
       if (!lp2.html) throw new Error('LKPD bagian 2 gagal. Coba lagi.');
 
-      /* Pass 3 — Tabel Pengamatan + Pertanyaan Analisis */
-      if (onProgress) onProgress('Membuat Tabel & Soal Analisis (3/4)...');
+      /* Pass 3 — III. Langkah Aktivitas (Joyful) + IV. Tantangan Logika & Cinta */
+      if (onProgress) onProgress('Membuat aktivitas & tantangan (3/4)...');
       const lp3 = await kirim(
-`Anda pakar Kurikulum Merdeka. ${fmt}
+`Anda pakar Deep Learning (Mindful, Meaningful, Joyful). ${fmt}
 ${ctx}
 Buat HANYA dua bagian ini, lalu BERHENTI:
-<h4>5. Tabel Pengamatan / Data</h4>
-Tabel pengamatan spesifik materi "${data.materi}" dengan header kolom yang relevan, minimal 4 kolom dan 5 baris isian kosong (bukan contoh data).
-<h4>6. Pertanyaan Analisis</h4>
-4 soal HOTS level C4-C6 bernomor, spesifik pada materi. Tiap soal diikuti baris kosong untuk jawaban: "Jawaban: ________________________"`, 2048);
+<h4>III. LANGKAH AKTIVITAS (Aspek Joyful – Menyenangkan &amp; Kolaboratif)</h4>
+Kalimat pembuka: "Lakukan misi belajar ini bersama kelompokmu dengan penuh kegembiraan dan saling menghargai!"
+"Misi 1: Eksplorasi Bersama" — instruksi diskusi kelompok SPESIFIK materi "${data.materi}" (2-3 kalimat, bukan generik)
+"Misi 2: Ruang Berkreasi" — instruksi menuliskan hasil diskusi/analisis/solusi, boleh dalam bentuk mind mapping
+<h4>IV. TANTANGAN LOGIKA &amp; CINTA (Lembar Kerja / Tugas)</h4>
+Petunjuk guru dalam tanda kurung siku miring berisi SATU instruksi tugas/pertanyaan HOTS level C4-C6 SPESIFIK pada materi "${data.materi}" (jangan generik, buat pertanyaan konkret)
+Lalu kalimat "Silakan tuliskan jawaban/hasil karya kelompokmu pada kotak di bawah ini:" diikuti tabel kotak kosong (pakai <table><tr><td style="height:110px;">&nbsp;</td></tr></table>)`, 2048);
       if (!lp3.html) throw new Error('LKPD bagian 3 gagal. Coba lagi.');
 
-      /* Pass 4 — Kesimpulan + Refleksi */
-      if (onProgress) onProgress('Membuat Kesimpulan & Refleksi (4/4)...');
+      /* Pass 4 — V. Diary Refleksi KBC + Nilai & Paraf Guru */
+      if (onProgress) onProgress('Membuat diary refleksi (4/4)...');
       const lp4 = await kirim(
-`Anda pakar Kurikulum Merdeka. ${fmt}
+`Anda pakar Deep Learning (Mindful, Meaningful, Joyful). ${fmt}
 ${ctx}
-Buat HANYA dua bagian ini, lalu BERHENTI:
-<h4>7. Kesimpulan</h4>
-Kalimat pembuka: "Dari kegiatan pembelajaran ini, saya menyimpulkan bahwa..."
-Diikuti 5 baris kosong untuk isian siswa.
-<h4>8. Refleksi Diri</h4>
-3 pertanyaan refleksi pendek yang relevan dengan materi, tiap pertanyaan diikuti baris kosong isian.`, 1024);
+Buat HANYA bagian ini, lalu BERHENTI (SALIN PERSIS struktur berikut, isi materi "${data.materi}" hanya di bagian komitmen aksi nyata):
+<h4>V. DIARY REFLEKSI KBC (Pasca-Pembelajaran)</h4>
+<p>Bagian ini diisi secara mandiri oleh setiap peserta didik untuk melatih kejujuran.</p>
+<p>1. Berikan tanda centang (✓) pada emotikon yang paling mewakili perasaanmu setelah menyelesaikan LKPD ini:<br>
+[&nbsp;&nbsp;] 😊 Senang &amp; Puas &nbsp;&nbsp;&nbsp; [&nbsp;&nbsp;] 😐 Biasa Saja &nbsp;&nbsp;&nbsp; [&nbsp;&nbsp;] 🙁 Bingung/Tantangannya Terlalu Sulit</p>
+<p>2. <strong>Komitmen Aksi Nyata Cinta:</strong><br>
+Tuliskan 1 tindakan nyata yang akan kamu lakukan di rumah, kelas, atau lingkungan sekitar sebagai wujud penerapan ilmu cinta yang kamu dapatkan hari ini, dikaitkan dengan materi "${data.materi}"!<br>
+Jawab: "Saya berkomitmen untuk ___________________________________________________"</p>
+<hr>
+<table>
+<tr><th>Catatan Guru</th><td colspan="3">&nbsp;</td></tr>
+<tr><th>Nilai</th><td>&nbsp;</td><th>Paraf Guru</th><td>( _________________________ )</td></tr>
+</table>`, 1024);
       if (!lp4.html) throw new Error('LKPD bagian 4 gagal. Coba lagi.');
 
       return {
@@ -4381,67 +4397,77 @@ const GENERATOR = {
 
   /** LKPD — mengikuti model pembelajaran */
   buatLKPD(d) {
-    const lkpdModel = {
-      PBL: `
-        <h4>🔍 Permasalahan</h4>
-        <div class="step" style="border-color:var(--amber);">
-          <div class="step-num">📌</div>
-          <div>Bacalah masalah berikut dan diskusikan bersama kelompokmu:<br>
-          <em>"Dalam kehidupan sehari-hari, kita sering menemukan persoalan yang berkaitan dengan <strong>${d.materi}</strong>. Berikan contoh nyata dan jelaskan cara menyelesaikannya!"</em></div>
-        </div>
-        <h4>❓ Rumusan Masalah</h4>
-        <p>Berdasarkan masalah di atas, tuliskan pertanyaan-pertanyaan yang ingin kalian jawab:</p>
-        <ol><li>_______________________________________________</li><li>_______________________________________________</li><li>_______________________________________________</li></ol>
-        <h4>💡 Hipotesis / Dugaan Awal</h4>
-        <p>Apa dugaan kalian sebelum menyelidiki masalah ini?<br><br>_____________________________________________<br>_____________________________________________</p>
-        <h4>🧪 Langkah Penyelidikan</h4>
-        <ol><li>Identifikasi data yang diperlukan</li><li>Kumpulkan informasi dari buku/sumber terpercaya</li><li>Catat hasil temuan pada tabel di bawah</li></ol>
-        <h4>📊 Tabel Hasil Pengamatan</h4>
-        <table><tr><th>No</th><th>Temuan</th><th>Penjelasan</th></tr>
-        <tr><td>1</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>2</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>3</td><td>&nbsp;</td><td>&nbsp;</td></tr></table>
-        <h4>📝 Kesimpulan Kelompok</h4>
-        <p>_____________________________________________<br>_____________________________________________<br>_____________________________________________</p>
-      `,
-      PjBL: `
-        <h4>🎯 Tantangan Proyek</h4>
-        <div class="step" style="border-color:var(--amber);">
-          <div class="step-num">🚀</div>
-          <div>Buatlah sebuah proyek yang menunjukkan pemahaman kalian tentang <strong>${d.materi}</strong>. Proyek dapat berupa poster, video pendek, laporan tertulis, atau media kreatif lainnya.</div>
-        </div>
-        <h4>📋 Rencana Proyek</h4>
-        <table>
-          <tr><th>Aspek</th><th>Rencana</th></tr>
-          <tr><td>Jenis Produk</td><td>&nbsp;</td></tr>
-          <tr><td>Topik Spesifik</td><td>&nbsp;</td></tr>
-          <tr><td>Pembagian Tugas</td><td>&nbsp;</td></tr>
-          <tr><td>Target Selesai</td><td>&nbsp;</td></tr>
-        </table>
-        <h4>📊 Log Kemajuan Proyek</h4>
-        <table><tr><th>Sesi</th><th>Kegiatan</th><th>Hasil</th><th>Kendala</th></tr>
-        <tr><td>1</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>2</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>3</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></table>
-      `,
-    };
-    const isiLkpd = lkpdModel[d.model] || lkpdModel.PBL;
+    const pancaCintaOpsi = ['Cinta Allah dan Rasulnya', 'Cinta Ilmu', 'Cinta Lingkungan', 'Cinta Diri dan Sesama', 'Cinta Tanah Air'];
+    const kbcList = Array.isArray(d.kbc) ? d.kbc : (d.kbc ? [d.kbc] : []);
+    const pancaCintaHtml = pancaCintaOpsi
+      .map(p => kbcList.some(k => p.toLowerCase().includes(String(k).toLowerCase().replace('cinta ', '')) || k === p) ? `<strong>[${p}]</strong>` : p)
+      .join(' &nbsp;|&nbsp; ');
+    const topikBab = (Array.isArray(d.topik) ? d.topik.join(', ') : d.topik) || d.materi || '—';
+
     return `
-      <h3>LKPD — ${d.materi}</h3>
+      <h3 style="text-align:center;">LEMBAR KERJA PESERTA DIDIK (LKPD) KBC</h3>
+      <p style="text-align:center;font-weight:700;">DEEP LEARNING MODEL (MINDFUL, MEANINGFUL, JOYFUL)</p>
+      <p style="text-align:center;">TAHUN AJARAN ${d.tahun || '—'}</p>
+      <hr>
       <table>
-        <tr><th>Nama Siswa</th><td>___________________________</td><th>Kelas</th><td>${d.kelas}</td></tr>
-        <tr><th>Kelompok</th><td>___________________________</td><th>Tanggal</th><td>___________</td></tr>
+        <tr><th>Nama Sekolah</th><td>${d.sekolah || '—'}</td></tr>
+        <tr><th>Mata Pelajaran</th><td>${d.mapel || '—'}</td></tr>
+        <tr><th>Fase / Kelas</th><td>${d.fase || '—'} / ${d.kelas || '—'}</td></tr>
+        <tr><th>Bab / Topik</th><td>${topikBab}</td></tr>
+        <tr><th>Alokasi Waktu</th><td>${d.waktu || '—'}</td></tr>
       </table>
-      <h4>📌 Tujuan Pembelajaran</h4>
-      <p>${d.tp}</p>
-      <h4>⏱️ Petunjuk Umum</h4>
-      <ul>
-        <li>Kerjakan secara berkelompok (3–4 orang)</li>
-        <li>Diskusikan setiap pertanyaan bersama anggota kelompok</li>
-        <li>Tuliskan jawaban dengan lengkap dan jelas</li>
-        <li>Waktu pengerjaan: ${d.waktu}</li>
-      </ul>
-      ${isiLkpd}
+
+      <p><strong>Nama Anggota Kelompok / Mandiri:</strong></p>
+      <table>
+        <tr><td>1. ___________________________</td><td>3. ___________________________</td></tr>
+        <tr><td>2. ___________________________</td><td>4. ___________________________</td></tr>
+      </table>
+
+      <p><strong>Fokus Nilai Pancinta</strong> (Lingkari salah satu):<br>${pancaCintaHtml}</p>
+      <hr>
+
+      <h4>I. TUJUAN PEMBELAJARAN <span style="font-weight:400;">(Aspek Mindful – Kesadaran Penuh)</span></h4>
+      <p>Setelah mengikuti proses pembelajaran mendalam ini, peserta didik diharapkan mampu:</p>
+      <ol>
+        <li>${d.tp}</li>
+        <li>Menumbuhkan nilai Profil Pelajar Pancasila dan karakter Pancinta selama proses aktivitas.</li>
+      </ol>
+
+      <h4>II. STIMULUS &amp; PEMANTIK <span style="font-weight:400;">(Aspek Meaningful – Kebermaknaan)</span></h4>
+      <p>Mari mengamati lingkungan sekitar dan menyentuh rasa empati kita.</p>
+      <p><em>[Petunjuk Guru: Masukkan gambar/foto fenomena, cerita pendek, atau potongan berita nyata yang relevan dengan materi "${d.materi}"]</em></p>
+      <p style="border:1px dashed var(--border);padding:20px;text-align:center;color:var(--text-muted);">[TEMPATKAN GAMBAR / TEKS STIMULUS DI SINI]</p>
+      <p><strong>Pertanyaan Reflektif Awal:</strong></p>
+      <ol>
+        <li>Apa yang kamu rasakan setelah membaca/melihat fenomena di atas? Jelaskan secara jujur!<br>Jawab: ________________________________________________</li>
+        <li>Mengapa menurutmu materi "${d.materi}" sangat penting bagi kehidupanmu atau orang-orang di sekitarmu?<br>Jawab: ________________________________________________</li>
+      </ol>
+
+      <h4>III. LANGKAH AKTIVITAS <span style="font-weight:400;">(Aspek Joyful – Menyenangkan &amp; Kolaboratif)</span></h4>
+      <p>Lakukan misi belajar ini bersama kelompokmu dengan penuh kegembiraan dan saling menghargai!</p>
+      <p><strong>Misi 1: Eksplorasi Bersama</strong><br>
+      Diskusikan dengan teman kelompokmu untuk mengidentifikasi masalah utama dari stimulus di atas. Cari referensi tambahan dari buku cetak atau gawai (internet/AI) jika diizinkan oleh gurumu.</p>
+      <p><strong>Misi 2: Ruang Berkreasi</strong><br>
+      Tuliskan hasil diskusi, analisis, atau solusi kelompokmu pada lembar jawaban di bawah. Anda juga diperbolehkan menyajikannya dalam bentuk mind mapping (peta konsep) kreatif.</p>
+
+      <h4>IV. TANTANGAN LOGIKA &amp; CINTA <span style="font-weight:400;">(Lembar Kerja / Tugas)</span></h4>
+      <p><em>[Petunjuk Guru: Tuliskan instruksi tugas utama atau pertanyaan berbasis HOTS terkait "${d.materi}" di sini]</em></p>
+      <p>Silakan tuliskan jawaban/hasil karya kelompokmu pada kotak di bawah ini:</p>
+      <table><tr><td style="height:110px;">&nbsp;</td></tr></table>
+
+      <h4>V. DIARY REFLEKSI KBC <span style="font-weight:400;">(Pasca-Pembelajaran)</span></h4>
+      <p>Bagian ini diisi secara mandiri oleh setiap peserta didik untuk melatih kejujuran.</p>
+      <p>1. Berikan tanda centang (✓) pada emotikon yang paling mewakili perasaanmu setelah menyelesaikan LKPD ini:<br>
+      [&nbsp;&nbsp;] 😊 Senang &amp; Puas &nbsp;&nbsp;&nbsp; [&nbsp;&nbsp;] 😐 Biasa Saja &nbsp;&nbsp;&nbsp; [&nbsp;&nbsp;] 🙁 Bingung/Tantangannya Terlalu Sulit</p>
+      <p>2. <strong>Komitmen Aksi Nyata Cinta:</strong><br>
+      Tuliskan 1 tindakan nyata yang akan kamu lakukan di rumah, kelas, atau lingkungan sekitar sebagai wujud penerapan ilmu cinta yang kamu dapatkan hari ini!<br>
+      Jawab: "Saya berkomitmen untuk ___________________________________________________"</p>
+
+      <hr>
+      <table>
+        <tr><th>Catatan Guru</th><td colspan="3">&nbsp;</td></tr>
+        <tr><th>Nilai</th><td>&nbsp;</td><th>Paraf Guru</th><td>( _________________________ )</td></tr>
+      </table>
     `;
   },
 
@@ -6557,39 +6583,48 @@ CP: ${d.cp || '—'}
 TP: ${tpUntukPrompt}
 Materi Pokok  : ${materi}`;
 
-  if (tabId === 'lkpd') return `Kamu pakar Kurikulum Merdeka Indonesia. Buat LKPD lengkap dan kontekstual.
+  if (tabId === 'lkpd') return `Kamu pakar Kurikulum Merdeka Indonesia & pendekatan Deep Learning (Mindful, Meaningful, Joyful). Buat LKPD lengkap dan kontekstual.
 
 ${konteksNonRPPM}
+Fokus Nilai Pancinta: ${Array.isArray(d.kbc) && d.kbc.length ? d.kbc.join(', ') : (d.kbc || 'Cinta Ilmu')}
 
-Buat LKPD dengan 8 bagian wajib (JANGAN disingkat atau dipotong):
+Buat LKPD dengan format PERSIS berikut (JANGAN disingkat atau dipotong):
 
-1. IDENTITAS PESERTA DIDIK
-   Nama: _________ | Kelas: _____ | Kelompok: _____ | Tanggal: _____
+LEMBAR KERJA PESERTA DIDIK (LKPD) KBC
+DEEP LEARNING MODEL (MINDFUL, MEANINGFUL, JOYFUL)
+TAHUN AJARAN ${d.tahun || '—'}
 
-2. TUJUAN PEMBELAJARAN
-   (salin semua TP di atas persis apa adanya)
+Tabel identitas: Nama Sekolah, Mata Pelajaran, Fase/Kelas, Bab/Topik (dari materi "${materi}"), Alokasi Waktu — isi dengan data di atas.
+Tabel kosong "Nama Anggota Kelompok / Mandiri" (4 baris titik-titik, nomor 1-4).
+Baris "Fokus Nilai Pancinta (Lingkari salah satu):" dengan 5 opsi (Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama | Cinta Tanah Air) — tandai [kurung siku] pada opsi yang sesuai fokus nilai di atas.
 
-3. PETUNJUK PENGERJAAN
-   (5 poin petunjuk konkret)
+I. TUJUAN PEMBELAJARAN (Aspek Mindful – Kesadaran Penuh)
+   Kalimat pembuka: "Setelah mengikuti proses pembelajaran mendalam ini, peserta didik diharapkan mampu:"
+   1) salin TP di atas apa adanya, 2) "Menumbuhkan nilai Profil Pelajar Pancasila dan karakter Pancinta selama proses aktivitas."
 
-4. AKTIVITAS PEMBELAJARAN (model ${d.model || 'PBL'})
-   3 aktivitas berurutan. Tiap aktivitas: judul fase, narasi situasi nyata spesifik materi "${materi}", 2-3 pertanyaan/instruksi konkret.
+II. STIMULUS & PEMANTIK (Aspek Meaningful – Kebermaknaan)
+   Kalimat pembuka: "Mari mengamati lingkungan sekitar dan menyentuh rasa empati kita."
+   [Petunjuk Guru: masukkan gambar/foto fenomena, cerita pendek, atau berita nyata relevan dengan materi "${materi}"]
+   Kotak: "[TEMPATKAN GAMBAR / TEKS STIMULUS DI SINI]"
+   "Pertanyaan Reflektif Awal:" — 2 pertanyaan bernomor SPESIFIK materi "${materi}" (bukan generik), tiap pertanyaan diikuti "Jawab: ________________________________"
 
-5. TABEL PENGAMATAN / DATA
-   Tabel dengan header kolom spesifik materi "${materi}", minimal 4 kolom, 5 baris kosong.
+III. LANGKAH AKTIVITAS (Aspek Joyful – Menyenangkan & Kolaboratif)
+   Kalimat pembuka: "Lakukan misi belajar ini bersama kelompokmu dengan penuh kegembiraan dan saling menghargai!"
+   "Misi 1: Eksplorasi Bersama" — instruksi diskusi kelompok spesifik materi "${materi}"
+   "Misi 2: Ruang Berkreasi" — instruksi menuliskan hasil diskusi/analisis/solusi (boleh mind mapping)
 
-6. PERTANYAAN ANALISIS
-   4 soal HOTS level C4-C6, spesifik pada materi.
-   Tiap soal diikuti: Jawaban: ___________________________
+IV. TANTANGAN LOGIKA & CINTA (Lembar Kerja / Tugas)
+   [Petunjuk Guru: satu instruksi tugas/pertanyaan HOTS level C4-C6 spesifik materi "${materi}", jangan generik]
+   Kalimat "Silakan tuliskan jawaban/hasil karya kelompokmu pada kotak di bawah ini:" diikuti kotak jawaban kosong.
 
-7. KESIMPULAN
-   "Dari kegiatan ini saya menyimpulkan bahwa..."
-   (5 baris kosong)
+V. DIARY REFLEKSI KBC (Pasca-Pembelajaran)
+   "Bagian ini diisi secara mandiri oleh setiap peserta didik untuk melatih kejujuran."
+   1) "Berikan tanda centang (✓) pada emotikon yang paling mewakili perasaanmu setelah menyelesaikan LKPD ini:" — 3 opsi kotak centang: 😊 Senang & Puas | 😐 Biasa Saja | 🙁 Bingung/Tantangannya Terlalu Sulit
+   2) "Komitmen Aksi Nyata Cinta:" — ajakan menuliskan 1 tindakan nyata terkait materi "${materi}", diikuti "Jawab: "Saya berkomitmen untuk ___________________________________________________""
 
-8. REFLEKSI DIRI
-   3 pertanyaan refleksi dengan baris kosong isian.
+Tabel penutup: Catatan Guru (kosong), Nilai (kosong) dan Paraf Guru (kosong).
 
-Tulis SEMUA bagian. Jangan potong.`;
+Tulis SEMUA bagian I sampai V, jangan potong.`;
 
   if (tabId === 'rubrik') return `Kamu pakar asesmen Kurikulum Merdeka Indonesia. Buat RUBRIK PENILAIAN lengkap.
 
