@@ -3438,6 +3438,65 @@ TP: ${data.tp}
 Materi/Bab: ${data.materi}
 Fokus Nilai Pancinta: ${kbcTerpilih}`;
       const fmt = `FORMAT: HTML saja, tag h3 h4 p ol ul li table hr. TANPA Markdown. TANPA teks di luar HTML. WAJIB selesai sampai tag penutup terakhir.`;
+      const pakaiPBL = (data.model || 'PBL') === 'PBL';
+
+      /* ── Model PBL: format ringkas "KBC • Pembelajaran Mendalam • PBL", 2 pass ──
+         Model SELAIN PBL turun ke jalur lama (Mindful/Meaningful/Joyful, 4 pass)
+         di bawah — JANGAN diubah, pilihan eksplisit Rapian. */
+      if (pakaiPBL) {
+        if (onProgress) onProgress('Membuat identitas, tujuan & stimulus (1/2)...');
+        const pb1 = await kirim(
+`Anda pakar Kurikulum Merdeka & pendekatan Pembelajaran Mendalam (PBL). ${fmt}
+${ctx}
+Buat HANYA bagian ini, lalu BERHENTI:
+<h3 style="text-align:center;">LEMBAR KERJA PESERTA DIDIK (LKPD)</h3>
+<p style="text-align:center;font-weight:700;">KURIKULUM BERBASIS CINTA (KBC) • PEMBELAJARAN MENDALAM • PBL</p>
+<p style="text-align:center;">TAHUN AJARAN ${data.tahun}</p>
+<hr>
+Tabel identitas (Nama Sekolah, Mata Pelajaran, Fase/Kelas, Bab/Topik dari materi "${data.materi}", Alokasi Waktu) — isi dengan data di atas.
+Lalu tabel kosong 2 kolom x 2 baris "Nama Anggota Kelompok / Mandiri" (nomor 1-4, isian titik-titik kosong).
+<hr>
+<h4>A. TUJUAN &amp; INTEGRASI KBC</h4>
+Tabel 2 kolom: kolom kiri "Tujuan Pembelajaran" berisi daftar bernomor (tulis ulang TP di atas apa adanya, jangan disingkat); kolom kanan "Panca Cinta / Nilai yang Diintegrasikan" berisi 5 opsi (${pancaCintaOpsi.join(' | ')}) dengan simbol ☑ pada opsi yang sesuai "${kbcTerpilih}" dan ☐ pada opsi lainnya.
+<h4>B. STIMULUS &amp; PEMANTIK</h4>
+Petunjuk guru dalam tanda kurung siku miring: [Petunjuk Guru: masukkan gambar/kasus/berita/fenomena yang relevan dengan materi "${data.materi}"]
+Kotak placeholder (pakai <p style="border:1px dashed #999;padding:16px;text-align:center;">): "[TEMPATKAN STIMULUS DI SINI]"
+Lalu "Pertanyaan Pemantik:" — 2 pertanyaan bernomor SPESIFIK pada materi "${data.materi}" (bukan generik, tanpa baris jawaban kosong).
+<h4>C. AKTIVITAS PEMBELAJARAN (PBL)</h4>
+Tabel 3 kolom (Tahap | Aktivitas/Tugas | Hasil), 5 baris tahap PBL: Orientasi, Investigasi, Analisis, Solusi/Karya, Presentasi — kolom Aktivitas/Tugas diisi instruksi SPESIFIK materi "${data.materi}" (1 kalimat tiap tahap), kolom Hasil dikosongkan (&nbsp;) untuk diisi siswa.`, 2560);
+        if (!pb1.html) throw new Error('LKPD bagian 1 gagal. Coba lagi.');
+
+        if (onProgress) onProgress('Membuat lembar kerja & refleksi (2/2)...');
+        const pb2 = await kirim(
+`Anda pakar Kurikulum Merdeka & pendekatan Pembelajaran Mendalam (PBL). ${fmt}
+${ctx}
+Buat HANYA bagian ini, lalu BERHENTI:
+<h4>D. LEMBAR KERJA</h4>
+Tabel 3 kolom (No. | Pertanyaan/Tugas | Jawaban/Hasil Kerja), 3 baris — kolom Pertanyaan/Tugas diisi pertanyaan SPESIFIK materi "${data.materi}" (bukan generik), kolom Jawaban/Hasil Kerja dikosongkan (&nbsp;).
+<h4>E. ANALISIS &amp; KREASI</h4>
+Petunjuk guru dalam tanda kurung siku miring berisi SATU instruksi tugas/pertanyaan HOTS level C4-C6 SPESIFIK pada materi "${data.materi}" (jangan generik).
+Lalu tabel kotak kosong (pakai <table><tr><td style="height:80px;">&nbsp;</td></tr></table>)
+<h4>F. REFLEKSI PEMBELAJARAN MENDALAM</h4>
+SALIN PERSIS tabel 2 kolom (Pertanyaan Refleksi | Jawaban) berikut, kolom Jawaban dikosongkan (&nbsp;) semua baris:
+Apa yang saya pahami? / Apa yang paling bermakna bagi saya? / Bagaimana saya belajar dengan sadar &amp; menyenangkan? / Nilai cinta apa yang saya praktikkan?
+<h4>G. AKSI NYATA KBC</h4>
+Kalimat: "Saya berkomitmen untuk: " diikuti garis kosong panjang untuk diisi siswa (bukan diisi AI).
+<h4>H. ASESMEN</h4>
+Tabel (Aspek | 1 | 2 | 3 | 4) dengan simbol ☐ di tiap sel angka, 5 baris aspek: Pemahaman konsep, Analisis/bernalar, Kolaborasi/komunikasi, Kreativitas/solusi, Penerapan nilai KBC.
+<h4>I. CATATAN &amp; PENGESAHAN</h4>
+<hr>
+<table>
+<tr><th>Catatan Guru</th><td colspan="3">&nbsp;</td></tr>
+<tr><th>Nilai</th><td>&nbsp;</td><th>Paraf Guru</th><td>( _________________________ )</td></tr>
+<tr><th>Nama Peserta Didik/Kelompok</th><td colspan="2">&nbsp;</td><th>Tanggal</th></tr>
+</table>`, 2048);
+        if (!pb2.html) throw new Error('LKPD bagian 2 gagal. Coba lagi.');
+
+        return {
+          html: pb1.html + '\n' + pb2.html,
+          modelLabel: pb1.modelLabel,
+        };
+      }
 
       /* Pass 1 — Header identitas + I. Tujuan Pembelajaran (Mindful) */
       if (onProgress) onProgress('Membuat identitas & tujuan (1/4)...');
@@ -4395,14 +4454,112 @@ const GENERATOR = {
     `;
   },
 
-  /** LKPD — mengikuti model pembelajaran */
+  /** LKPD — mengikuti model pembelajaran.
+   *  Model PBL: format ringkas "KBC • Pembelajaran Mendalam • PBL" (2 halaman A4,
+   *  struktur A-I, sintaks tahap C mengikuti PBL: Orientasi/Investigasi/Analisis/
+   *  Solusi-Karya/Presentasi). Model SELAIN PBL: tetap format lama (Mindful/
+   *  Meaningful/Joyful, I-V) — JANGAN diubah, ini pilihan eksplisit Rapian. */
   buatLKPD(d) {
+    const pakaiPBL = (d.model || 'PBL') === 'PBL';
     const pancaCintaOpsi = ['Cinta Allah dan Rasulnya', 'Cinta Ilmu', 'Cinta Lingkungan', 'Cinta Diri dan Sesama', 'Cinta Tanah Air'];
     const kbcList = Array.isArray(d.kbc) ? d.kbc : (d.kbc ? [d.kbc] : []);
+    const kbcTerpilih = p => kbcList.some(k => p.toLowerCase().includes(String(k).toLowerCase().replace('cinta ', '')) || k === p);
     const pancaCintaHtml = pancaCintaOpsi
-      .map(p => kbcList.some(k => p.toLowerCase().includes(String(k).toLowerCase().replace('cinta ', '')) || k === p) ? `<strong>[${p}]</strong>` : p)
+      .map(p => kbcTerpilih(p) ? `<strong>[${p}]</strong>` : p)
       .join(' &nbsp;|&nbsp; ');
     const topikBab = (Array.isArray(d.topik) ? d.topik.join(', ') : d.topik) || d.materi || '—';
+
+    if (pakaiPBL) {
+      const pancaCintaChecklist = pancaCintaOpsi
+        .map(p => `${kbcTerpilih(p) ? '☑' : '☐'} ${p}`)
+        .join('&nbsp;&nbsp;&nbsp;');
+      const tpList = String(d.tp || '—').split('\n').map(s => s.trim()).filter(Boolean);
+      const tpHtml = tpList.length ? tpList.map(t => `<li>${t}</li>`).join('') : '<li>—</li>';
+
+      return `
+      <h3 style="text-align:center;">LEMBAR KERJA PESERTA DIDIK (LKPD)</h3>
+      <p style="text-align:center;font-weight:700;">KURIKULUM BERBASIS CINTA (KBC) • PEMBELAJARAN MENDALAM • PBL</p>
+      <p style="text-align:center;">TAHUN AJARAN ${d.tahun || '—'}</p>
+      <hr>
+      <table>
+        <tr><th>Nama Sekolah</th><td>${d.sekolah || '—'}</td></tr>
+        <tr><th>Mata Pelajaran</th><td>${d.mapel || '—'}</td></tr>
+        <tr><th>Fase / Kelas</th><td>${d.fase || '—'} / ${d.kelas || '—'}</td></tr>
+        <tr><th>Bab / Topik</th><td>${topikBab}</td></tr>
+        <tr><th>Alokasi Waktu</th><td>${d.waktu || '—'}</td></tr>
+      </table>
+      <p><strong>Nama Anggota Kelompok / Mandiri:</strong></p>
+      <table>
+        <tr><td>1. ___________________________</td><td>3. ___________________________</td></tr>
+        <tr><td>2. ___________________________</td><td>4. ___________________________</td></tr>
+      </table>
+      <hr>
+
+      <h4>A. TUJUAN &amp; INTEGRASI KBC</h4>
+      <table>
+        <tr><th style="width:60%;">Tujuan Pembelajaran</th><th>Panca Cinta / Nilai yang Diintegrasikan</th></tr>
+        <tr><td><ol style="margin:0;padding-left:18px;">${tpHtml}</ol></td><td>${pancaCintaChecklist}</td></tr>
+      </table>
+
+      <h4>B. STIMULUS &amp; PEMANTIK</h4>
+      <p><em>[Petunjuk Guru: masukkan gambar/kasus/berita/fenomena yang relevan dengan materi "${d.materi}"]</em></p>
+      <p style="border:1px dashed var(--border);padding:16px;text-align:center;color:var(--text-muted);">[TEMPATKAN STIMULUS DI SINI]</p>
+      <p><strong>Pertanyaan Pemantik:</strong><br>
+      1) Apa yang kamu ketahui atau rasakan tentang "${d.materi}" dari stimulus di atas?<br>
+      2) Mengapa "${d.materi}" penting dipelajari dan dikaitkan dengan kehidupan sehari-hari?</p>
+
+      <h4>C. AKTIVITAS PEMBELAJARAN (PBL)</h4>
+      <table>
+        <tr><th>Tahap</th><th>Aktivitas/Tugas</th><th>Hasil</th></tr>
+        <tr><td>Orientasi</td><td>Identifikasi masalah utama dari stimulus terkait "${d.materi}".</td><td>&nbsp;</td></tr>
+        <tr><td>Investigasi</td><td>Cari informasi/data; diskusikan bukti dan konsep "${d.materi}" bersama kelompok.</td><td>&nbsp;</td></tr>
+        <tr><td>Analisis</td><td>Hubungkan fakta, sebab-akibat, dan konsep "${d.materi}".</td><td>&nbsp;</td></tr>
+        <tr><td>Solusi/Karya</td><td>Rumuskan solusi, kesimpulan, atau karya terkait "${d.materi}".</td><td>&nbsp;</td></tr>
+        <tr><td>Presentasi</td><td>Sajikan hasil dan berikan/tanggapi umpan balik.</td><td>&nbsp;</td></tr>
+      </table>
+
+      <h4>D. LEMBAR KERJA</h4>
+      <table>
+        <tr><th style="width:6%;">No.</th><th>Pertanyaan/Tugas</th><th>Jawaban/Hasil Kerja</th></tr>
+        <tr><td>1</td><td>Jelaskan konsep dasar "${d.materi}" menurut pemahamanmu sendiri.</td><td>&nbsp;</td></tr>
+        <tr><td>2</td><td>Berikan satu contoh penerapan "${d.materi}" dalam kehidupan sehari-hari.</td><td>&nbsp;</td></tr>
+        <tr><td>3</td><td>Selesaikan latihan/kasus terkait "${d.materi}" yang diberikan gurumu.</td><td>&nbsp;</td></tr>
+      </table>
+
+      <h4>E. ANALISIS &amp; KREASI</h4>
+      <p><em>[Petunjuk Guru: satu tugas/pertanyaan HOTS level C4-C6 spesifik terkait "${d.materi}"]</em></p>
+      <table><tr><td style="height:80px;">&nbsp;</td></tr></table>
+
+      <h4>F. REFLEKSI PEMBELAJARAN MENDALAM</h4>
+      <table>
+        <tr><th>Pertanyaan Refleksi</th><th>Jawaban</th></tr>
+        <tr><td>Apa yang saya pahami?</td><td>&nbsp;</td></tr>
+        <tr><td>Apa yang paling bermakna bagi saya?</td><td>&nbsp;</td></tr>
+        <tr><td>Bagaimana saya belajar dengan sadar &amp; menyenangkan?</td><td>&nbsp;</td></tr>
+        <tr><td>Nilai cinta apa yang saya praktikkan?</td><td>&nbsp;</td></tr>
+      </table>
+
+      <h4>G. AKSI NYATA KBC</h4>
+      <p>Saya berkomitmen untuk: _________________________________________________________________</p>
+
+      <h4>H. ASESMEN</h4>
+      <table>
+        <tr><th>Aspek</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+        <tr><td>Pemahaman konsep</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>Analisis/bernalar</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>Kolaborasi/komunikasi</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>Kreativitas/solusi</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>Penerapan nilai KBC</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+      </table>
+
+      <h4>I. CATATAN &amp; PENGESAHAN</h4>
+      <table>
+        <tr><th>Catatan Guru</th><td colspan="3">&nbsp;</td></tr>
+        <tr><th>Nilai</th><td>&nbsp;</td><th>Paraf Guru</th><td>( _________________________ )</td></tr>
+        <tr><th>Nama Peserta Didik/Kelompok</th><td colspan="2">&nbsp;</td><th>Tanggal</th></tr>
+      </table>
+      `;
+    }
 
     return `
       <h3 style="text-align:center;">LEMBAR KERJA PESERTA DIDIK (LKPD) KBC</h3>
@@ -6582,6 +6739,56 @@ Guru          : ${d.guru || '—'}
 CP: ${d.cp || '—'}
 TP: ${tpUntukPrompt}
 Materi Pokok  : ${materi}`;
+
+  /* Model PBL: format ringkas "KBC • Pembelajaran Mendalam • PBL" (2 halaman A4).
+     Model SELAIN PBL turun ke jalur lama (Mindful/Meaningful/Joyful) di bawah —
+     JANGAN diubah, pilihan eksplisit Rapian. */
+  if (tabId === 'lkpd' && (d.model || 'PBL') === 'PBL') return `Kamu pakar Kurikulum Merdeka Indonesia & pendekatan Pembelajaran Mendalam (PBL). Buat LKPD lengkap dan kontekstual, RINGKAS cukup untuk 2 halaman A4.
+
+${konteksNonRPPM}
+Fokus Nilai Pancinta: ${Array.isArray(d.kbc) && d.kbc.length ? d.kbc.join(', ') : (d.kbc || 'Cinta Ilmu')}
+
+Buat LKPD dengan format PERSIS berikut (JANGAN disingkat struktur, tapi tetap ringkas — ini worksheet PBL 2 halaman, bukan modul panjang):
+
+LEMBAR KERJA PESERTA DIDIK (LKPD)
+KURIKULUM BERBASIS CINTA (KBC) • PEMBELAJARAN MENDALAM • PBL
+TAHUN AJARAN ${d.tahun || '—'}
+
+Tabel identitas: Nama Sekolah, Mata Pelajaran, Fase/Kelas, Bab/Topik (dari materi "${materi}"), Alokasi Waktu — isi dengan data di atas.
+Tabel kosong "Nama Anggota Kelompok / Mandiri" (4 baris titik-titik, nomor 1-4).
+
+A. TUJUAN & INTEGRASI KBC
+   Tabel 2 kolom: kolom kiri "Tujuan Pembelajaran" (salin TP di atas apa adanya, daftar bernomor); kolom kanan "Panca Cinta / Nilai yang Diintegrasikan" berisi 5 opsi (Cinta Allah dan Rasulnya | Cinta Ilmu | Cinta Lingkungan | Cinta Diri dan Sesama | Cinta Tanah Air) dengan simbol ☑ pada opsi yang sesuai fokus nilai di atas dan ☐ pada opsi lainnya.
+
+B. STIMULUS & PEMANTIK
+   [Petunjuk Guru: masukkan gambar/kasus/berita/fenomena relevan dengan materi "${materi}"]
+   Kotak: "[TEMPATKAN STIMULUS DI SINI]"
+   "Pertanyaan Pemantik:" — 2 pertanyaan bernomor SPESIFIK materi "${materi}" (bukan generik, tanpa baris jawaban).
+
+C. AKTIVITAS PEMBELAJARAN (PBL)
+   Tabel 3 kolom (Tahap | Aktivitas/Tugas | Hasil), 5 baris tahap PBL: Orientasi, Investigasi, Analisis, Solusi/Karya, Presentasi — kolom Aktivitas/Tugas diisi instruksi SPESIFIK materi "${materi}" (1 kalimat/tahap), kolom Hasil dikosongkan untuk diisi siswa.
+
+D. LEMBAR KERJA
+   Tabel 3 kolom (No. | Pertanyaan/Tugas | Jawaban/Hasil Kerja), 3 baris — Pertanyaan/Tugas SPESIFIK materi "${materi}", Jawaban/Hasil Kerja dikosongkan.
+
+E. ANALISIS & KREASI
+   [Petunjuk Guru: satu tugas/pertanyaan HOTS level C4-C6 SPESIFIK materi "${materi}"]
+   Kotak jawaban kosong (tabel 1 sel tinggi).
+
+F. REFLEKSI PEMBELAJARAN MENDALAM
+   SALIN PERSIS tabel 2 kolom (Pertanyaan Refleksi | Jawaban), Jawaban dikosongkan semua baris:
+   Apa yang saya pahami? / Apa yang paling bermakna bagi saya? / Bagaimana saya belajar dengan sadar & menyenangkan? / Nilai cinta apa yang saya praktikkan?
+
+G. AKSI NYATA KBC
+   Kalimat "Saya berkomitmen untuk: " diikuti garis kosong panjang untuk diisi siswa.
+
+H. ASESMEN
+   Tabel (Aspek | 1 | 2 | 3 | 4) dengan simbol ☐ di tiap sel angka, 5 baris aspek: Pemahaman konsep, Analisis/bernalar, Kolaborasi/komunikasi, Kreativitas/solusi, Penerapan nilai KBC.
+
+I. CATATAN & PENGESAHAN
+   Tabel: Catatan Guru (kosong), Nilai (kosong) & Paraf Guru (kosong), Nama Peserta Didik/Kelompok (kosong) & Tanggal (kosong).
+
+Tulis SEMUA bagian A sampai I, jangan potong, tapi jaga tetap ringkas (worksheet 2 halaman).`;
 
   if (tabId === 'lkpd') return `Kamu pakar Kurikulum Merdeka Indonesia & pendekatan Deep Learning (Mindful, Meaningful, Joyful). Buat LKPD lengkap dan kontekstual.
 
