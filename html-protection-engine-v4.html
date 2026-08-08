@@ -308,7 +308,25 @@ function _lf(f){
   if(!f.name.match(/\.html?$/i)){alert('Hanya .html atau .htm');return;}
   _fn=f.name;
   var r=new FileReader();
-  r.onload=function(e){_fc=e.target.result;document.getElementById('finfo').classList.add('show');document.getElementById('fn').textContent=_fn;document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB';};
+  r.onload=function(e){
+    _fc=e.target.result;
+    document.getElementById('finfo').classList.add('show');
+    document.getElementById('fn').textContent=_fn;
+    // Scan fitur proteksi yang aktif di file
+    var allFeatures=['rightclick','devtools-keys','textselect','devdestroy',
+      'fingerprint','consolewarn','domainlock','timebomb','tokenlock'];
+    var found=allFeatures.filter(function(fid){
+      return _fc.indexOf('data-feature="'+fid+'"')>-1;
+    });
+    var isOldFormat=_fc.indexOf('data-pid=')>-1&&found.length===0;
+    var info='';
+    if(found.length>0){
+      info=' | Fitur aktif: '+found.join(', ');
+    } else if(isOldFormat){
+      info=' | Format lama (blok gabungan)';
+    }
+    document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB'+info;
+  };
   r.readAsText(f);
 }
 
@@ -629,11 +647,19 @@ async function runManage(){
   var log=[];
   var removed=0;
 
-  // DEBUG: tampilkan info file
-  var dbgGranular=html.indexOf('data-feature=')>-1;
-  var dbgPid=html.indexOf('data-pid=')>-1;
-  var dbgLen=html.length;
-  log.push('DEBUG: panjang file='+dbgLen+', isGranular='+dbgGranular+', hasPid='+dbgPid);
+  // Deteksi fitur apa saja yang aktif di file ini
+  var activeFeatures=[];
+  ['rightclick','devtools-keys','textselect','devdestroy','fingerprint',
+   'consolewarn','domainlock','timebomb','tokenlock'].forEach(function(fid){
+    if(html.indexOf('data-feature="'+fid+'"')>-1)activeFeatures.push(fid);
+  });
+  if(activeFeatures.length>0){
+    log.push('Fitur aktif di file: '+activeFeatures.join(', '));
+  } else if(html.indexOf('data-pid=')>-1){
+    log.push('File menggunakan format proteksi lama (satu blok gabungan)');
+  } else {
+    log.push('File tidak memiliki proteksi engine ini');
+  }
 
   function sp(pct,lbl){
     document.getElementById('pw-b-m').style.width=pct+'%';
@@ -811,7 +837,19 @@ async function runManage(){
   await new Promise(function(r){setTimeout(r,60);});sp(100,'Selesai!');
 
   if(removed===0){
-    document.getElementById('al-m-er').textContent='Tidak ada komponen yang ditemukan atau dipilih.\n\n'+log.join('\n');
+    var errLines=['Tidak ada komponen yang bisa dihapus.',''];
+    var activeInFile=features.filter(function(f){
+      return html.indexOf('data-feature="'+f.id+'"')>-1||_fc.indexOf('data-feature="'+f.id+'"')>-1;
+    }).map(function(f){return f.id;});
+    if(activeInFile.length>0){
+      errLines.push('Fitur yang ADA di file ini: '+activeInFile.join(', '));
+      errLines.push('Fitur yang kamu pilih mungkin tidak diaktifkan saat proteksi.');
+    } else {
+      errLines.push('Tidak ada fitur proteksi engine yang terdeteksi di file ini.');
+    }
+    errLines.push('');
+    errLines=errLines.concat(log);
+    document.getElementById('al-m-er').textContent=errLines.join('\n');
     document.getElementById('al-m-er').classList.add('show');
   } else {
     var outName=_fn.replace(/\.html?$/i,'')+'_cleaned.html';
