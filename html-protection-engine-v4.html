@@ -629,6 +629,12 @@ async function runManage(){
   var log=[];
   var removed=0;
 
+  // DEBUG: tampilkan info file
+  var dbgGranular=html.indexOf('data-feature=')>-1;
+  var dbgPid=html.indexOf('data-pid=')>-1;
+  var dbgLen=html.length;
+  log.push('DEBUG: panjang file='+dbgLen+', isGranular='+dbgGranular+', hasPid='+dbgPid);
+
   function sp(pct,lbl){
     document.getElementById('pw-b-m').style.width=pct+'%';
     document.getElementById('pw-l-m').textContent=lbl;
@@ -805,7 +811,7 @@ async function runManage(){
   await new Promise(function(r){setTimeout(r,60);});sp(100,'Selesai!');
 
   if(removed===0){
-    document.getElementById('al-m-er').textContent='Tidak ada komponen yang ditemukan atau dipilih.';
+    document.getElementById('al-m-er').textContent='Tidak ada komponen yang ditemukan atau dipilih.\n\n'+log.join('\n');
     document.getElementById('al-m-er').classList.add('show');
   } else {
     var outName=_fn.replace(/\.html?$/i,'')+'_cleaned.html';
