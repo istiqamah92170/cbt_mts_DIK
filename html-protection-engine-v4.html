@@ -189,7 +189,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
 
     <div class="ib" style="border-color:rgba(62,207,142,.2);margin-bottom:1rem">
       <strong style="color:var(--grn);display:block;margin-bottom:4px">Cara kerja</strong>
-      Setiap fitur proteksi kini punya script terpisah. Centang fitur yang ingin <strong style="color:var(--txt)">dihapus</strong> → klik Bersihkan → unduh file hasil. File tetap terproteksi oleh fitur yang tidak dicentang.
+      Setelah upload file, engine otomatis mendeteksi dan <strong style="color:var(--txt)">mencentang fitur yang aktif</strong>. Hilangkan centang fitur yang ingin <strong style="color:var(--txt)">dipertahankan</strong>, biarkan tercentang yang ingin <strong style="color:var(--red)">dihapus</strong>, lalu klik Bersihkan.
     </div>
 
     <p class="sl">Fitur proteksi (centang = hapus)</p>
@@ -263,7 +263,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
       <div class="pw-t"><div class="pw-b" id="pw-b-m" style="background:var(--amb)"></div></div>
     </div>
     <div class="ar">
-      <button class="btn btn-p" id="btn-m" onclick="runManage()" style="background:var(--amb)">🧹 Bersihkan & Unduh</button>
+      <button class="btn btn-p" id="btn-m" onclick="runManage()" style="background:var(--amb)">🧹 Hapus Fitur Tercentang & Unduh</button>
       <span style="font-size:12px;color:var(--mut)" id="msg-m"></span>
     </div>
     <div class="al al-ok" id="al-m-ok"></div>
@@ -312,18 +312,51 @@ function _lf(f){
     _fc=e.target.result;
     document.getElementById('finfo').classList.add('show');
     document.getElementById('fn').textContent=_fn;
-    // Scan fitur proteksi yang aktif di file
-    var allFeatures=['rightclick','devtools-keys','textselect','devdestroy',
-      'fingerprint','consolewarn','domainlock','timebomb','tokenlock'];
-    var found=allFeatures.filter(function(fid){
-      return _fc.indexOf('data-feature="'+fid+'"')>-1;
+
+    // Scan semua fitur aktif di file
+    var allFeatures=[
+      {id:'rightclick',   el:'m-rightclick'},
+      {id:'devtools-keys',el:'m-devtools-keys'},
+      {id:'textselect',   el:'m-textselect'},
+      {id:'devdestroy',   el:'m-devdestroy'},
+      {id:'fingerprint',  el:'m-fingerprint'},
+      {id:'consolewarn',  el:'m-consolewarn'},
+      {id:'domainlock',   el:'m-domainlock'},
+      {id:'timebomb',     el:'m-timebomb'},
+      {id:'tokenlock',    el:'m-tokenlock'},
+    ];
+
+    var found=[];
+    allFeatures.forEach(function(f2){
+      var isActive=_fc.indexOf('data-feature="'+f2.id+'"')>-1;
+      var el=document.getElementById(f2.el);
+      if(el){
+        el.checked=isActive; // auto-centang jika aktif
+        if(isActive)found.push(f2.id);
+      }
     });
+
+    // Scan juga komponen non-script
+    var nonScript=[
+      {check:_fc.indexOf('WATERMARK DIGITAL')>-1||_fc.indexOf('<!-- PROTECTED:')>-1, el:'m-watermark'},
+      {check:_fc.indexOf('name="author"')>-1||_fc.indexOf('name="copyright"')>-1, el:'m-meta'},
+      {check:_fc.indexOf('data-wm-rt=')>-1, el:'m-brandingrt'},
+      {check:_fc.indexOf('data-wm=')>-1, el:'m-honeypot'},
+      {check:_fc.indexOf('--_wm-id:')>-1||_fc.indexOf('__WM:')>-1, el:'m-csswm'},
+    ];
+    nonScript.forEach(function(ns){
+      var el=document.getElementById(ns.el);
+      if(el)el.checked=ns.check;
+    });
+
     var isOldFormat=_fc.indexOf('data-pid=')>-1&&found.length===0;
     var info='';
     if(found.length>0){
-      info=' | Fitur aktif: '+found.join(', ');
+      info=' • '+found.length+' fitur aktif terdeteksi';
     } else if(isOldFormat){
-      info=' | Format lama (blok gabungan)';
+      info=' • Format lama';
+    } else {
+      info=' • Tidak ada proteksi engine';
     }
     document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB'+info;
   };
