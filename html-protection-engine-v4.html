@@ -673,8 +673,25 @@ async function runManage(){
   // Helper: hapus script berdasarkan data-feature
   function removeFeature(h,featureId){
     var before=h.length;
-    h=rmPat(h,'<script[^>]+data-feature="'+featureId+'"[^>]*>[\s\S]*?<\/script>\s*','g');
-    return {html:h,removed:h.length<before};
+    var marker='data-feature="'+featureId+'"';
+    var result='';
+    var remaining=h;
+    while(remaining.indexOf(marker)>-1){
+      var mIdx=remaining.indexOf(marker);
+      // Cari awal tag <script sebelum marker
+      var tagStart=remaining.lastIndexOf('<script',mIdx);
+      if(tagStart===-1){break;}
+      // Cari akhir tag </script> setelah marker
+      var tagEnd=remaining.indexOf('</script>',mIdx);
+      if(tagEnd===-1){break;}
+      tagEnd+=9; // panjang '</script>'
+      // Lewati newline setelah </script>
+      while(tagEnd<remaining.length&&(remaining[tagEnd]==='\n'||remaining[tagEnd]==='\r')){tagEnd++;}
+      result+=remaining.slice(0,tagStart);
+      remaining=remaining.slice(tagEnd);
+    }
+    result+=remaining;
+    return {html:result,removed:result.length<before};
   }
 
   await new Promise(function(r){setTimeout(r,60);});sp(8,'Menganalisis file...');
