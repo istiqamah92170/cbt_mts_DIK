@@ -1362,21 +1362,26 @@ h1,h2,h3,h4 { color: var(--text-primary); }
             📄 Atau Impor Tabel ATP dari Word
           </button>
 
-          <div id="panelImporWord" style="display:none;margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-surface);">
+          <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;" onclick="toggleImporBuku()" id="btnToggleImporBuku">
+            📖 Atau Impor Materi dari Buku Paket
+          </button>
+
+          <div id="panelImporBuku" style="display:none;margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-surface);">
             <div class="form-group">
               <label>Kelas tujuan untuk data ini</label>
-              <select id="importAtpKelas">
+              <select id="importBukuKelas">
                 <option value="7">Kelas VII</option>
                 <option value="8">Kelas VIII</option>
                 <option value="9">Kelas IX</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Tempel tabel ATP dari Word (Bab, Alur Tujuan Pembelajaran, Materi, Alokasi Waktu — hasil copy langsung dari tabel Word)</label>
-              <textarea id="importAtpTeks" rows="6" placeholder="Bab&#9;Alur Tujuan Pembelajaran&#9;Materi&#9;Alokasi Waktu&#10;BAB 1: ...&#9;Peserta didik mampu...&#9;Materi ...&#9;4"></textarea>
+              <label>Tempel isi buku paket (daftar isi Bab + sub-poin, boleh sekaligus tempel bagian Kompetensi Dasar/Tujuan Pembelajaran/Kata Kunci kalau ada di buku)</label>
+              <textarea id="importBukuTeks" rows="8" placeholder="Bab 1&#10;Judul Bab...&#10;A. Sub-poin...&#10;B. Sub-poin...&#10;&#10;(tempel juga bagian Kompetensi Dasar / Tujuan Pembelajaran / Kata Kunci per bab kalau buku kamu punya)"></textarea>
             </div>
-            <button class="btn btn-primary btn-sm" style="width:100%;" onclick="importTabelATPWord()">📥 Proses & Tambahkan ke Kelas Ini</button>
-            <p class="text-muted" style="font-size:11px;margin-top:6px;">Baris yang tidak diawali "Peserta didik mampu/dapat..." otomatis diabaikan (judul kolom, baris Total, dll). Kolom Bab yang kosong (sel gabungan) otomatis mengikuti Bab di atasnya.</p>
+            <button class="btn btn-primary btn-sm" style="width:100%;" onclick="prosesBukuPaket()">📥 Proses Buku Paket</button>
+            <p class="text-muted" style="font-size:11px;margin-top:6px;">Tetap 100% format Kurikulum Merdeka KBC — buku cuma jadi sumber materi &amp; TP. Bab yang sudah punya Tujuan Pembelajaran di buku dipakai apa adanya; bab yang belum, kamu akan diberi 1 prompt ChatGPT gabungan untuk merumuskan TP-nya berdasarkan CP Merdeka yang sudah dianalisis.</p>
+            <div id="bukuPaketHasil" style="margin-top:10px;"></div>
           </div>
 
           <!-- PANEL HASIL ANALISIS — tersembunyi sampai Analisis dijalankan -->
@@ -4112,6 +4117,303 @@ function importTabelATPWord() {
 
   document.getElementById('importAtpTeks').value = '';
   showToast(`✅ ${parsed.length} TP dari ${babUnik.length} Bab berhasil diimpor ke Kelas ${KELAS_ROMAWI[kelasTarget]}`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPOR MATERI DARI BUKU PAKET — tetap 100% Kurikulum Merdeka KBC.
+   Buku (termasuk buku K13) jadi SUMBER TAMBAHAN materi+TP:
+   - Bab yang bukunya sudah punya Tujuan Pembelajaran eksplisit → dipakai
+     apa adanya, langsung masuk STATE_ANALISIS (tanpa AI).
+   - Bab yang belum ada TP → digabung jadi SATU prompt ChatGPT (bukan
+     Gemini langsung — konsisten dgn preferensi Rapian utk LKPD/Soal),
+     guru tempel hasilnya balik untuk diterapkan.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** Cari batas awal "bagian kedua" (KD/TP/Kata Kunci per-bab) dari teks buku
+ *  — dideteksi lewat pengulangan nomor bab (bagian kedua SELALU mengulang
+ *  "bab 1, bab 2, ..." lagi dari awal), BUKAN lewat kata kunci tertentu
+ *  ("Kompetensi Dasar" dsb bisa tidak ada sama sekali di sebagian buku). */
+function _cariBatasBagianKeduaBuku(teks) {
+  const regex = /^\s*bab\s+(\d+)\s*$/gim;
+  const seen = new Set();
+  let m;
+  while ((m = regex.exec(teks)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (seen.has(n)) return m.index;
+    seen.add(n);
+  }
+  return -1;
+}
+
+/** Ambil judul tiap Bab dari bagian "daftar isi" (sebelum bagian kedua) */
+function _parseBukuJudulBab(teksToc) {
+  const baris = teksToc.split('\n').map(b => b.trim());
+  const judulBab = {};
+  let babAktif = null, judulBuf = [];
+  const flush = () => { if (babAktif != null && judulBuf.length) judulBab[babAktif] = judulBuf.join(' ').trim(); judulBuf = []; };
+  for (const b of baris) {
+    const mBab = b.match(/^bab\s+(\d+)\s*$/i);
+    if (mBab) { flush(); babAktif = parseInt(mBab[1], 10); continue; }
+    if (babAktif == null) continue;
+    if (/^[A-Z]\.\s+/.test(b)) { flush(); babAktif = null; continue; }
+    if (!b) continue;
+    judulBuf.push(b);
+  }
+  flush();
+  return judulBab;
+}
+
+/** Untuk tiap blok "bab N" di bagian kedua: cari TP eksplisit (kalau ada),
+ *  KD (kalau ada), dan Kata Kunci (kalau ada, jadi konteks tambahan utk
+ *  prompt ChatGPT nanti kalau bab ini tidak punya TP). */
+function _parseBukuBagianKedua(teks) {
+  const blokRegex = /^\s*bab\s+(\d+)\s*$/gim;
+  const potongan = [];
+  let m, lastIdx = -1, lastNum = null;
+  while ((m = blokRegex.exec(teks)) !== null) {
+    if (lastNum != null) potongan.push({ bab: lastNum, teks: teks.slice(lastIdx, m.index) });
+    lastNum = parseInt(m[1], 10);
+    lastIdx = blokRegex.lastIndex;
+  }
+  if (lastNum != null) potongan.push({ bab: lastNum, teks: teks.slice(lastIdx) });
+
+  const hasil = {};
+  for (const p of potongan) {
+    const adaTp = /tujuan pembelajaran/i.test(p.teks);
+    let tp = [];
+    if (adaTp) {
+      const tpStart = p.teks.search(/tujuan pembelajaran/i);
+      const tpLines = p.teks.slice(tpStart).split('\n').map(l => l.trim());
+      for (const l of tpLines) {
+        const mNum = l.match(/^\d+\.\s+(.+)$/);
+        const mBul = l.match(/^[*\-]\s+(.+)$/);
+        const t = mNum ? mNum[1] : (mBul ? mBul[1] : null);
+        if (t) tp.push(t.replace(/[;.]\s*$/, '').trim());
+      }
+    }
+    let kataKunci = null;
+    const kkMatch = p.teks.match(/kata kunci\s*\n+([\s\S]*?)(?:\n\s*\n|$)/i);
+    if (kkMatch) kataKunci = kkMatch[1].trim().replace(/\s+/g, ' ');
+
+    hasil[p.bab] = { adaTp, tp, kataKunci };
+  }
+  return hasil;
+}
+
+/** Gabungkan judul bab (daftar isi) + info bagian kedua jadi 1 daftar terurut */
+function _parseBukuPaket(teks) {
+  const batas = _cariBatasBagianKeduaBuku(teks);
+  const teksToc = batas >= 0 ? teks.slice(0, batas) : teks;
+  const judulBab = _parseBukuJudulBab(teksToc);
+  const bagianDua = _parseBukuBagianKedua(teks);
+
+  const nomorBab = [...new Set([...Object.keys(judulBab), ...Object.keys(bagianDua)])]
+    .map(n => parseInt(n, 10)).sort((a, b) => a - b);
+
+  return nomorBab.map(n => ({
+    bab: n,
+    judul: judulBab[n] || `Bab ${n}`,
+    adaTp: bagianDua[n]?.adaTp || false,
+    tp: bagianDua[n]?.tp || [],
+    kataKunci: bagianDua[n]?.kataKunci || null,
+  }));
+}
+
+let _bukuPaketHasil = []; // hasil parse terakhir, menunggu diterapkan/dibuatkan prompt
+
+/** Buka/tutup panel Impor Materi dari Buku Paket */
+function toggleImporBuku() {
+  const panel = document.getElementById('panelImporBuku');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+/** Parse teks buku yang ditempel, tampilkan preview per-bab */
+function prosesBukuPaket() {
+  const teks = document.getElementById('importBukuTeks')?.value || '';
+  const hasil = _parseBukuPaket(teks);
+  if (!hasil.length) {
+    showToast('Tidak ada Bab yang terdeteksi. Pastikan ada baris "Bab 1", "Bab 2", dst.', 'error');
+    return;
+  }
+  _bukuPaketHasil = hasil;
+  _renderBukuPaketPreview();
+}
+
+function _renderBukuPaketPreview() {
+  const el = document.getElementById('bukuPaketHasil');
+  if (!el) return;
+  if (!_bukuPaketHasil.length) { el.innerHTML = ''; return; }
+
+  const adaTpList  = _bukuPaketHasil.filter(b => b.adaTp);
+  const tanpaTpList = _bukuPaketHasil.filter(b => !b.adaTp);
+
+  const baris = _bukuPaketHasil.map(b => `
+    <div style="padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px;">
+      <strong>Bab ${b.bab}</strong> — ${(b.judul || '').slice(0, 60)}${(b.judul || '').length > 60 ? '…' : ''}<br>
+      ${b.adaTp
+        ? `<span class="badge badge-teal" style="font-size:10px;">✅ ${b.tp.length} TP eksplisit di buku</span>`
+        : `<span class="badge" style="font-size:10px;background:var(--warning-bg,#fff3cd);color:var(--warning-text,#856404);">⚠️ Belum ada TP</span>`}
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:var(--r-md);max-height:220px;overflow-y:auto;">${baris}</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+      ${adaTpList.length ? `<button class="btn btn-primary btn-sm" onclick="terapkanBukuPaketTp()">📥 Terapkan ${adaTpList.length} Bab yang Sudah Ada TP</button>` : ''}
+      ${tanpaTpList.length ? `<button class="btn btn-secondary btn-sm" onclick="bukuPaketBuatPromptTp()">✨ Buat Prompt ChatGPT untuk ${tanpaTpList.length} Bab Tanpa TP</button>` : ''}
+    </div>
+    <div id="bukuPaketPromptArea"></div>
+  `;
+}
+
+/** Terapkan langsung Bab yang bukunya sudah punya TP eksplisit ke STATE_ANALISIS */
+function terapkanBukuPaketTp() {
+  const kelasTarget = parseInt(document.getElementById('importBukuKelas')?.value || '7', 10);
+  const siapDiterapkan = _bukuPaketHasil.filter(b => b.adaTp);
+  if (!siapDiterapkan.length) { showToast('Tidak ada Bab dengan TP eksplisit untuk diterapkan.', 'error'); return; }
+
+  if (!Array.isArray(STATE_ANALISIS.tpKelas)) STATE_ANALISIS.tpKelas = [];
+  if (!Array.isArray(STATE_ANALISIS.tpBab))   STATE_ANALISIS.tpBab   = [];
+
+  let jumlahTp = 0;
+  siapDiterapkan.forEach(b => {
+    b.tp.forEach(t => {
+      const idx = STATE_ANALISIS.tp.length;
+      STATE_ANALISIS.tp.push(t);
+      STATE_ANALISIS.materi.push(b.judul);
+      STATE_ANALISIS.tpKelas[idx] = kelasTarget;
+      STATE_ANALISIS.tpBab[idx]   = `Bab ${b.bab}: ${b.judul}`;
+      jumlahTp++;
+    });
+  });
+
+  STATE_ANALISIS.sudahAnalisis = true;
+  syncHiddenFields();
+  renderHasilAnalisis();
+  const panelHasil = document.getElementById('panelAnalisis');
+  if (panelHasil) panelHasil.style.display = 'block';
+  autoSave();
+
+  /* Sisa yang belum diterapkan (Bab tanpa TP) tetap ada di _bukuPaketHasil
+     supaya tombol "Buat Prompt ChatGPT" masih bisa dipakai sesudahnya —
+     hapus HANYA yang barusan diterapkan */
+  _bukuPaketHasil = _bukuPaketHasil.filter(b => !b.adaTp);
+  _renderBukuPaketPreview();
+
+  showToast(`✅ ${jumlahTp} TP dari ${siapDiterapkan.length} Bab berhasil diterapkan ke Kelas ${KELAS_ROMAWI[kelasTarget]}`);
+}
+
+/** Buat 1 prompt ChatGPT gabungan untuk semua Bab yang belum ada TP —
+ *  merujuk gaya rumusan TP dari CP Merdeka yang sudah dianalisis (kalau
+ *  ada), plus Kata Kunci dari buku sebagai konteks tambahan (kalau ada). */
+function bukuPaketBuatPromptTp() {
+  const tanpaTpList = _bukuPaketHasil.filter(b => !b.adaTp);
+  if (!tanpaTpList.length) { showToast('Semua Bab sudah ada TP.', 'error'); return; }
+
+  const contohTp = (STATE_ANALISIS.tp || []).slice(0, 5);
+  const konteksGaya = contohTp.length
+    ? `Contoh gaya rumusan TP yang SUDAH DIPAKAI di mapel/kelas ini (ikuti gaya bahasa & tingkat kedalamannya):\n${contohTp.map(t => `- ${t}`).join('\n')}\n`
+    : '';
+
+  const daftarBab = tanpaTpList.map(b => {
+    const kk = b.kataKunci ? `\nKata Kunci dari buku: ${b.kataKunci}` : '';
+    return `[BAB ${b.bab}]\nJudul: ${b.judul}${kk}`;
+  }).join('\n\n');
+
+  const nomorBabList = tanpaTpList.map(b => b.bab).join(', ');
+  const prompt = `Kamu pakar Kurikulum Merdeka Indonesia. Rumuskan Tujuan Pembelajaran (TP) untuk beberapa Bab berikut, berdasarkan judul bab & kata kunci yang tersedia (buku sumbernya belum mencantumkan TP eksplisit).
+
+${konteksGaya}
+Bab yang perlu dirumuskan TP-nya:
+${daftarBab}
+
+ATURAN:
+- Buat 4-8 TP per Bab, kalimat aktif operasional (kata kerja terukur: menjelaskan, menganalisis, menyajikan, dst), SPESIFIK pada judul & kata kunci bab tsb.
+- WAJIB format PERSIS berikut untuk SETIAP bab (jangan diubah strukturnya), lalu lanjut ke bab berikutnya:
+
+[BAB <nomor>]
+[TP HASIL ANALISIS]
+TP1: ...
+TP2: ...
+[/TP HASIL ANALISIS]
+[/BAB <nomor>]
+
+- Urutan bab yang harus dibuat: ${nomorBabList}. Jangan lewatkan satupun, jangan gabung dua bab jadi satu blok.`;
+
+  const area = document.getElementById('bukuPaketPromptArea');
+  if (!area) return;
+  area.innerHTML = `
+    <div class="form-group" style="margin-top:10px;">
+      <label>Prompt untuk ChatGPT (salin, tempel ke ChatGPT, lalu tempel balik hasilnya di bawah)</label>
+      <textarea readonly rows="6" style="font-size:11px;" onclick="this.select()">${prompt}</textarea>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:4px;" onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(()=>showToast('✅ Prompt disalin'))">📋 Salin Prompt</button>
+    </div>
+    <div class="form-group">
+      <label>Tempel hasil dari ChatGPT di sini</label>
+      <textarea id="bukuPaketPasteArea" rows="6" placeholder="Tempel balasan ChatGPT (format [BAB N][TP HASIL ANALISIS]...) di sini"></textarea>
+    </div>
+    <button class="btn btn-primary btn-sm" style="width:100%;" onclick="bukuPaketTerapkanHasilChatGPT()">📥 Terapkan Hasil ChatGPT</button>
+  `;
+}
+
+/** Parse hasil ChatGPT (format [BAB N][TP HASIL ANALISIS]...[/TP HASIL ANALISIS][/BAB N])
+ *  dan terapkan ke STATE_ANALISIS */
+function bukuPaketTerapkanHasilChatGPT() {
+  const raw = document.getElementById('bukuPaketPasteArea')?.value?.trim();
+  if (!raw) { showToast('Tempel hasil ChatGPT terlebih dahulu', 'error'); return; }
+
+  const kelasTarget = parseInt(document.getElementById('importBukuKelas')?.value || '7', 10);
+  const babRegex = /\[BAB\s+(\d+)\]([\s\S]*?)\[\/BAB\s+\1\]/gi;
+  let m, totalTp = 0, babDitemukan = 0;
+
+  if (!Array.isArray(STATE_ANALISIS.tpKelas)) STATE_ANALISIS.tpKelas = [];
+  if (!Array.isArray(STATE_ANALISIS.tpBab))   STATE_ANALISIS.tpBab   = [];
+
+  while ((m = babRegex.exec(raw)) !== null) {
+    const nomorBab = parseInt(m[1], 10);
+    const blokBab  = m[2];
+    const tpMatch  = blokBab.match(/\[TP HASIL ANALISIS\]([\s\S]*?)\[\/TP HASIL ANALISIS\]/i);
+    if (!tpMatch) continue;
+
+    const info  = _bukuPaketHasil.find(b => b.bab === nomorBab);
+    const judul = info ? info.judul : `Bab ${nomorBab}`;
+
+    const tpList = tpMatch[1].trim().split('\n')
+      .map(l => l.replace(/^TP\d+[:.]\s*/i, '').trim())
+      .filter(l => l.length > 10)
+      .filter(l => !_adalahJudulElemen(l));
+
+    if (!tpList.length) continue;
+    babDitemukan++;
+    tpList.forEach(t => {
+      const idx = STATE_ANALISIS.tp.length;
+      STATE_ANALISIS.tp.push(t);
+      STATE_ANALISIS.materi.push(judul);
+      STATE_ANALISIS.tpKelas[idx] = kelasTarget;
+      STATE_ANALISIS.tpBab[idx]   = `Bab ${nomorBab}: ${judul}`;
+      totalTp++;
+    });
+  }
+
+  if (!totalTp) {
+    showToast('Format tidak dikenali. Pastikan hasil ChatGPT memakai format [BAB N][TP HASIL ANALISIS]... yang diminta di prompt.', 'error');
+    return;
+  }
+
+  STATE_ANALISIS.sudahAnalisis = true;
+  syncHiddenFields();
+  renderHasilAnalisis();
+  const panelHasil = document.getElementById('panelAnalisis');
+  if (panelHasil) panelHasil.style.display = 'block';
+  autoSave();
+
+  const babDiterapkan = new Set();
+  raw.replace(babRegex, (_, n) => { babDiterapkan.add(parseInt(n, 10)); return _; });
+  _bukuPaketHasil = _bukuPaketHasil.filter(b => !babDiterapkan.has(b.bab));
+  _renderBukuPaketPreview();
+
+  document.getElementById('importBukuTeks').value = '';
+  showToast(`✅ ${totalTp} TP dari ${babDitemukan} Bab berhasil diterapkan ke Kelas ${KELAS_ROMAWI[kelasTarget]}`);
 }
 
 function _pastikanTpKelas() {
