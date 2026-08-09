@@ -5891,10 +5891,15 @@ function _nodeKeRunsDocx(node, bold) {
 
 function _paragrafDocx(runsXml, opts) {
   opts = opts || {};
-  const align = opts.center ? '<w:jc w:val="center"/>' : '';
-  const rPr   = opts.heading ? `<w:rPr><w:b/><w:sz w:val="${opts.heading===1?28:24}"/></w:rPr>` : '';
-  const isi   = runsXml || '<w:r><w:t xml:space="preserve"> </w:t></w:r>';
-  return `<w:p>${align?`<w:pPr>${align}</w:pPr>`:''}${opts.heading ? isi.replace(/<w:r>/g, `<w:r>${rPr}`).replace(/<w:rPr><\/w:rPr>/g,'') : isi}</w:p>`;
+  const align   = opts.center ? '<w:jc w:val="center"/>' : '';
+  /* Spasi rapat — Word default (spacing-after ~160-200 twips + line 1.08) bikin
+     dokumen (khususnya LKPD 2-halaman) jadi lebar/boros halaman. Sel tabel
+     dibuat after=0 (dipanggil dari _tabelKeDocx), paragraf biasa after=40. */
+  const after   = opts.after != null ? opts.after : (opts.heading ? 120 : 40);
+  const spacing = `<w:spacing w:before="0" w:after="${after}" w:line="240" w:lineRule="auto"/>`;
+  const rPr     = opts.heading ? `<w:rPr><w:b/><w:sz w:val="${opts.heading===1?28:24}"/></w:rPr>` : '';
+  const isi     = runsXml || '<w:r><w:t xml:space="preserve"> </w:t></w:r>';
+  return `<w:p><w:pPr>${spacing}${align}</w:pPr>${opts.heading ? isi.replace(/<w:r>/g, `<w:r>${rPr}`).replace(/<w:rPr><\/w:rPr>/g,'') : isi}</w:p>`;
 }
 
 function _tabelKeDocx(table) {
@@ -5905,7 +5910,7 @@ function _tabelKeDocx(table) {
       const isHeader = td.tagName === 'TH';
       const runs = _nodeKeRunsDocx(td, isHeader);
       const shading = isHeader ? '<w:shd w:val="clear" w:fill="E0E0E0"/>' : '';
-      cells += `<w:tc><w:tcPr>${shading}<w:tcW w:w="0" w:type="auto"/></w:tcPr>${_paragrafDocx(runs)}</w:tc>`;
+      cells += `<w:tc><w:tcPr>${shading}<w:tcW w:w="0" w:type="auto"/></w:tcPr>${_paragrafDocx(runs, { after: 0 })}</w:tc>`;
     });
     rows += `<w:tr>${cells}</w:tr>`;
   });
@@ -5949,7 +5954,7 @@ function _buatDocumentXmlDocx(bodyXml, judul) {
 <w:body>
 ${_paragrafDocx(`<w:r><w:t xml:space="preserve">${_escXml(judul)}</w:t></w:r>`, { heading: 1, center: true })}
 ${bodyXml}
-<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417"/></w:sectPr>
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"/></w:sectPr>
 </w:body>
 </w:document>`;
 }
@@ -7724,6 +7729,7 @@ function cgptTeksKeHTML(teks, tabId) {
     .replace(/\r/g, '\n')
     .replace(/\t/g, '  ')
     .replace(/\u00a0/g, ' ')   /* non-breaking space */
+    .replace(/^[ \t]*\[FIELD:\w+\][ \t]*$/gim, '') /* buang tag [FIELD:xxx] nyasar dari konteks Prompt RPPM — tabId lain (LKPD dst) tidak memakai konvensi ini */
     .replace(/\n{3,}/g, '\n\n'); /* max 2 baris kosong berturut */
 
   const baris = norm.split('\n');
