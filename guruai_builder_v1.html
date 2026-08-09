@@ -4146,21 +4146,53 @@ function _cariBatasBagianKeduaBuku(teks) {
 }
 
 /** Ambil judul tiap Bab dari bagian "daftar isi" (sebelum bagian kedua) */
+/** Ambil judul bab + daftar sub-bab (A/B/C/...) dari bagian "daftar isi" */
 function _parseBukuJudulBab(teksToc) {
   const baris = teksToc.split('\n').map(b => b.trim());
-  const judulBab = {};
-  let babAktif = null, judulBuf = [];
-  const flush = () => { if (babAktif != null && judulBuf.length) judulBab[babAktif] = judulBuf.join(' ').trim(); judulBuf = []; };
+  const babData = {}; // { N: { judul, subbab: [{label,teks}] } }
+  let babAktif = null, judulBuf = [], subbabBuf = [];
+  const flush = () => {
+    if (babAktif != null) babData[babAktif] = { judul: judulBuf.join(' ').trim(), subbab: subbabBuf.slice() };
+    judulBuf = []; subbabBuf = [];
+  };
   for (const b of baris) {
     const mBab = b.match(/^bab\s+(\d+)\s*$/i);
     if (mBab) { flush(); babAktif = parseInt(mBab[1], 10); continue; }
     if (babAktif == null) continue;
-    if (/^[A-Z]\.\s+/.test(b)) { flush(); babAktif = null; continue; }
+    const mSub = b.match(/^([A-Z])\.\s+(.+)$/);
+    if (mSub) { subbabBuf.push({ label: mSub[1], teks: mSub[2].replace(/[.…]+\s*$/, '').trim() }); continue; }
     if (!b) continue;
-    judulBuf.push(b);
+    if (!subbabBuf.length) judulBuf.push(b); // judul cuma diisi SEBELUM sub-poin pertama muncul
   }
   flush();
-  return judulBab;
+  return babData;
+}
+
+/** Cocokkan teks TP ke sub-bab paling relevan lewat overlap kata kunci
+ *  (lokal, tanpa AI) — supaya TP dlm 1 Bab tidak semuanya dapat "materi"
+ *  yang sama persis (judul Bab utuh berulang-ulang). Kalau tidak ada
+ *  sub-bab yang cocok sama sekali, fallback ke judul Bab. */
+const _BUKU_STOPWORDS = new Set(['dan','di','pada','dalam','serta','yang','dengan','dari','untuk','ke','atau',
+  'sebagai','adalah','akan','ini','itu','para','antar','antara','terhadap','oleh','atas','bagi','dapat',
+  'akibat','proses','berbagai','beberapa']);
+function _tokenisasiBuku(s) {
+  return (s || '').toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !_BUKU_STOPWORDS.has(w));
+}
+function _cocokkanSubBab(tpText, subbabList) {
+  if (!subbabList || !subbabList.length) return null;
+  const tpTokens = new Set(_tokenisasiBuku(tpText));
+  let best = null, bestScore = 0;
+  for (const sb of subbabList) {
+    let score = 0;
+    for (const t of _tokenisasiBuku(sb.teks)) if (tpTokens.has(t)) score++;
+    if (score > bestScore) { bestScore = score; best = sb; }
+  }
+  return bestScore > 0 ? best : null;
+}
+function _pilihMateriUntukTp(tpText, babItem) {
+  const match = _cocokkanSubBab(tpText, babItem.subbab);
+  return match ? match.teks : babItem.judul;
 }
 
 /** Untuk tiap blok "bab N" di bagian kedua: cari TP eksplisit (kalau ada),
@@ -4200,19 +4232,20 @@ function _parseBukuBagianKedua(teks) {
   return hasil;
 }
 
-/** Gabungkan judul bab (daftar isi) + info bagian kedua jadi 1 daftar terurut */
+/** Gabungkan judul+subbab bab (daftar isi) + info bagian kedua jadi 1 daftar terurut */
 function _parseBukuPaket(teks) {
   const batas = _cariBatasBagianKeduaBuku(teks);
   const teksToc = batas >= 0 ? teks.slice(0, batas) : teks;
-  const judulBab = _parseBukuJudulBab(teksToc);
+  const babData = _parseBukuJudulBab(teksToc);
   const bagianDua = _parseBukuBagianKedua(teks);
 
-  const nomorBab = [...new Set([...Object.keys(judulBab), ...Object.keys(bagianDua)])]
+  const nomorBab = [...new Set([...Object.keys(babData), ...Object.keys(bagianDua)])]
     .map(n => parseInt(n, 10)).sort((a, b) => a - b);
 
   return nomorBab.map(n => ({
     bab: n,
-    judul: judulBab[n] || `Bab ${n}`,
+    judul: babData[n]?.judul || `Bab ${n}`,
+    subbab: babData[n]?.subbab || [],
     adaTp: bagianDua[n]?.adaTp || false,
     tp: bagianDua[n]?.tp || [],
     kataKunci: bagianDua[n]?.kataKunci || null,
@@ -4280,7 +4313,7 @@ function terapkanBukuPaketTp() {
     b.tp.forEach(t => {
       const idx = STATE_ANALISIS.tp.length;
       STATE_ANALISIS.tp.push(t);
-      STATE_ANALISIS.materi.push(b.judul);
+      STATE_ANALISIS.materi.push(_pilihMateriUntukTp(t, b));
       STATE_ANALISIS.tpKelas[idx] = kelasTarget;
       STATE_ANALISIS.tpBab[idx]   = `Bab ${b.bab}: ${b.judul}`;
       jumlahTp++;
@@ -4377,6 +4410,7 @@ function bukuPaketTerapkanHasilChatGPT() {
 
     const info  = _bukuPaketHasil.find(b => b.bab === nomorBab);
     const judul = info ? info.judul : `Bab ${nomorBab}`;
+    const babUntukMateri = info || { judul, subbab: [] };
 
     const tpList = tpMatch[1].trim().split('\n')
       .map(l => l.replace(/^TP\d+[:.]\s*/i, '').trim())
@@ -4388,7 +4422,7 @@ function bukuPaketTerapkanHasilChatGPT() {
     tpList.forEach(t => {
       const idx = STATE_ANALISIS.tp.length;
       STATE_ANALISIS.tp.push(t);
-      STATE_ANALISIS.materi.push(judul);
+      STATE_ANALISIS.materi.push(_pilihMateriUntukTp(t, babUntukMateri));
       STATE_ANALISIS.tpKelas[idx] = kelasTarget;
       STATE_ANALISIS.tpBab[idx]   = `Bab ${nomorBab}: ${judul}`;
       totalTp++;
