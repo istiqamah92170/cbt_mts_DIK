@@ -624,8 +624,18 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   table{ border-collapse: collapse !important; }
   td, th { border: 1px solid #999 !important; padding: 4pt 6pt !important; font-size: 10pt !important; }
 
-  /* Margin halaman */
-  @page { margin: 1.5cm; size: A4; }
+  /* Margin halaman — disamakan dgn export .docx (0.5 inci) */
+  @page { margin: 0.5in; size: A4; }
+
+  /* Spasi rapat — SEBELUMNYA line-height:1.6 bawaan (dari body utama) dan
+     margin <p>/<li> default browser ikut kebawa ke print/PDF, bikin hasil
+     print/"Save as PDF" boros halaman persis seperti gejala di .docx
+     sebelum diperbaiki. Disamakan gaya rapatnya di sini. */
+  body { line-height: 1.35 !important; }
+  p    { margin: 3pt 0 !important; }
+  ul, ol { margin: 3pt 0 3pt 16pt !important; }
+  li   { margin-bottom: 2pt !important; }
+  h3, h4 { margin: 6pt 0 3pt !important; }
 
   /* Paksa teks jadi HITAM PEKAT dan LATAR JADI PUTIH POLOS saat print/PDF —
      sebelumnya warna "muted" (abu-abu) dan latar gelap navy (tema aplikasi)
