@@ -5199,10 +5199,11 @@ const RENDER = {
 
     /* Tombol aksi di header tab */
     let headerBtns = '';
+    const exportBtn = `<button class="btn btn-secondary btn-sm" onclick="exportTabWord('${id}')" style="font-size:11px;">📄 Export Word</button>`;
     if (id === 'rppm') {
       headerBtns = `<button class="btn btn-secondary btn-sm" onclick="exportRPPMFromTab()" style="font-size:11px;">📄 Export Word</button>`;
-    } else if (['rppm','lkpd','soal'].includes(id)) {
-      /* Tab yang mendukung Generate AI */
+    } else if (['lkpd','soal'].includes(id)) {
+      /* Tab yang mendukung Generate AI, + Export Word */
       const aiAvail = AI_ENGINE.hasKey();
       headerBtns = `
         <button class="btn-tab-action btn-tab-lokal" onclick="generateTabLokal('${id}')" title="Regenerate dengan template lokal">
@@ -5212,7 +5213,11 @@ const RENDER = {
           onclick="${aiAvail ? "generateTabAI('" + id + "')" : "showToast('Isi API Key di AI Settings','warning');goPage('aisettings')"}"
           title="${aiAvail ? 'Generate dengan Gemini AI' : 'API Key belum diisi — buka AI Settings'}">
           ✨ AI
-        </button>`;
+        </button>
+        ${exportBtn}`;
+    } else {
+      /* rubrik, asesmen, pengayaan, remedial — belum ada tombol Generate per-tab, tapi tetap bisa Export Word */
+      headerBtns = exportBtn;
     }
 
     el.innerHTML = `
@@ -5869,16 +5874,46 @@ const _DOCX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="ye
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
 </Types>`;
 
 const _DOCX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
 </Relationships>`;
 
 const _DOCX_DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 </Relationships>`;
+
+/** docProps/core.xml & app.xml — TANPA ini Google Docs & python-docx tetap
+ *  toleran membuka file, tapi Microsoft Word ASLI (terutama versi mobile)
+ *  memvalidasi lebih ketat dan bisa menolak/"file rusak" tanpa metadata
+ *  paket standar ini, meski struktur ZIP & word/document.xml sendiri valid. */
+function _docxCoreXml(judul) {
+  const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<dc:title>${_escXml(judul)}</dc:title>
+<dc:creator>GuruAI Builder</dc:creator>
+<cp:lastModifiedBy>GuruAI Builder</cp:lastModifiedBy>
+<dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
+<dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
+</cp:coreProperties>`;
+}
+const _DOCX_APP_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+<Application>Microsoft Office Word</Application>
+<DocSecurity>0</DocSecurity>
+<ScaleCrop>false</ScaleCrop>
+<LinksUpToDate>false</LinksUpToDate>
+<SharedDoc>false</SharedDoc>
+<HyperlinksChanged>false</HyperlinksChanged>
+<AppVersion>16.0000</AppVersion>
+</Properties>`;
 
 /** Buang karakter kontrol yang ILEGAL di XML 1.0 (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F, 0x7F)
  *  — kalau lolos ke <w:t>, Word akan menganggap file .docx rusak/perlu diperbaiki
@@ -5993,6 +6028,8 @@ function _unduhDocx(judul, rppmHtml, namaFile) {
   const blob = _buatZip([
     { name: '[Content_Types].xml',          data: _DOCX_CONTENT_TYPES },
     { name: '_rels/.rels',                  data: _DOCX_RELS },
+    { name: 'docProps/core.xml',            data: _docxCoreXml(judul) },
+    { name: 'docProps/app.xml',             data: _DOCX_APP_XML },
     { name: 'word/document.xml',            data: documentXml },
     { name: 'word/_rels/document.xml.rels', data: _DOCX_DOC_RELS },
   ]);
@@ -6108,6 +6145,25 @@ function exportWord() {
   const nama = `PerangkatPembelajaran_${data.mapel}_Kelas${data.kelas}.docx`;
   _unduhDocx(judulDoc, isiTab, nama);
   showToast('📄 File .docx berhasil diunduh — buka dengan Microsoft Word');
+}
+
+/** Export SATU tab saja ke .docx (LKPD, Rubrik, Asesmen, Soal, Pengayaan,
+ *  Remedial) — sebelumnya cuma RPPM yang punya tombol per-tab sendiri,
+ *  tab lain terpaksa lewat exportWord() yang menggabung SEMUA tab jadi
+ *  satu file (bikin LKPD ikut kebawa isi RPPM dkk, tidak diinginkan kalau
+ *  guru cuma mau cetak LKPD-nya saja). */
+function exportTabWord(tabId) {
+  if (!currentGenerated) { showToast('Generate dulu sebelum export', 'error'); return; }
+  const { data, result } = currentGenerated;
+  const konten = (result[tabId] || '').trim();
+  if (!konten) { showToast('Tab ini belum ada isinya', 'error'); return; }
+
+  const tabInfo = GENERATOR.tabs.find(t => t.id === tabId);
+  const labelBersih = (tabInfo?.label || tabId).replace(/^\S+\s/, ''); // buang emoji di depan label
+  const judulDoc = `${labelBersih} — ${data.mapel || ''} Kelas ${data.kelas || ''}`.trim();
+  const namaFile = `${labelBersih.replace(/\s+/g, '_')}_${(data.mapel || 'Dokumen').replace(/\s+/g, '_')}_Kelas${data.kelas || ''}.docx`;
+  _unduhDocx(judulDoc, konten, namaFile);
+  showToast(`📄 ${labelBersih} berhasil diunduh — buka dengan Microsoft Word`);
 }
 
 function exportPDF() {
