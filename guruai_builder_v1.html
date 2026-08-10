@@ -636,6 +636,12 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   ul, ol { margin: 3pt 0 3pt 16pt !important; }
   li   { margin-bottom: 2pt !important; }
   h3, h4 { margin: 6pt 0 3pt !important; }
+  /* .preview-card-body (kontainer SUNGGUHAN yang di-print utk tab Modul
+     Ajar/LKPD/dst) dan #cgptPreviewBox (preview Impor ChatGPT) masing-masing
+     punya line-height:1.8 sendiri di stylesheet utama — rule "body" di atas
+     TIDAK menimpanya krn keduanya elemen dgn rule eksplisit sendiri, bukan
+     mewarisi dari body. Harus ditarget langsung. */
+  .preview-card-body, #cgptPreviewBox { line-height: 1.35 !important; }
 
   /* Paksa teks jadi HITAM PEKAT dan LATAR JADI PUTIH POLOS saat print/PDF —
      sebelumnya warna "muted" (abu-abu) dan latar gelap navy (tema aplikasi)
@@ -5874,8 +5880,16 @@ const _DOCX_DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 </Relationships>`;
 
+/** Buang karakter kontrol yang ILEGAL di XML 1.0 (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F, 0x7F)
+ *  — kalau lolos ke <w:t>, Word akan menganggap file .docx rusak/perlu diperbaiki
+ *  walau parser yang lebih toleran (mis. python-docx) masih bisa membukanya.
+ *  Sering nyelip dari copy-paste HP/keyboard prediktif/aplikasi ChatGPT mobile. */
+function _bersihkanKarakterIlegalXml(s) {
+  return String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+}
+
 function _escXml(s) {
-  return (s == null ? '' : String(s))
+  return _bersihkanKarakterIlegalXml(s == null ? '' : String(s))
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
@@ -7739,7 +7753,7 @@ function cgptTeksKeHTML(teks, tabId) {
     .replace(/\r/g, '\n')
     .replace(/\t/g, '  ')
     .replace(/\u00a0/g, ' ')   /* non-breaking space */
-    .replace(/^[ \t]*\[FIELD:\w+\][ \t]*$/gim, '') /* buang tag [FIELD:xxx] nyasar dari konteks Prompt RPPM — tabId lain (LKPD dst) tidak memakai konvensi ini */
+    .replace(/^[ \t]*\[\/?FIELD(:\w+)?\][ \t]*$/gim, '') /* buang tag [FIELD:xxx]/[/FIELD] nyasar dari konteks Prompt RPPM — tabId lain (LKPD dst) tidak memakai konvensi ini; sebelumnya cuma tag PEMBUKA yang disaring, tag PENUTUP [/FIELD] lolos */
     .replace(/\n{3,}/g, '\n\n'); /* max 2 baris kosong berturut */
 
   const baris = norm.split('\n');
