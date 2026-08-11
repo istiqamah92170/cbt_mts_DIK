@@ -97,6 +97,10 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   grid-template-rows: 56px 1fr;
   height: 100vh;
   overflow: hidden;
+  transition: grid-template-columns var(--t);
+}
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 0px 1fr;
 }
 
 /* ---- HEADER ---- */
@@ -146,6 +150,13 @@ h1,h2,h3,h4 { color: var(--text-primary); }
   flex-direction: column;
   padding: 16px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
+  transition: opacity var(--t);
+  white-space: nowrap;
+}
+.app-shell.sidebar-collapsed .app-sidebar {
+  opacity: 0;
+  pointer-events: none;
 }
 .sidebar-section-label {
   font-size: 10px; font-weight: 700;
@@ -1160,6 +1171,7 @@ h1,h2,h3,h4 { color: var(--text-primary); }
 
   <!-- HEADER -->
   <header class="app-header">
+    <button class="btn-icon" onclick="toggleSidebar()" title="Sembunyikan/Tampilkan Menu" id="sidebarToggleBtn">☰</button>
     <div class="app-logo">
       <div class="logo-mark">G</div>
       Guru<span>AI</span> Builder
@@ -5763,6 +5775,15 @@ function toggleDark() {
   STORAGE.save(CONFIG.LS_SETTINGS, DATABASE.settings);
 }
 
+/** Sembunyikan/tampilkan sidebar — biar layar HP lebih lega. Preferensi
+ *  disimpan sama seperti dark mode (global per perangkat, bukan per-project). */
+function toggleSidebar() {
+  const shell = document.querySelector('.app-shell');
+  const collapsed = shell.classList.toggle('sidebar-collapsed');
+  DATABASE.settings.sidebarCollapsed = collapsed;
+  STORAGE.save(CONFIG.LS_SETTINGS, DATABASE.settings);
+}
+
 /* ============================================================
    EXPORT
    ============================================================ */
@@ -5941,6 +5962,10 @@ function _nodeKeRunsDocx(node, bold) {
       runs += `<w:r><w:br/></w:r>`;
     } else if (child.nodeName === 'B' || child.nodeName === 'STRONG') {
       runs += _nodeKeRunsDocx(child, true);
+    } else if (child.nodeName === 'LI' || child.nodeName === 'P') {
+      /* <li>/<p> nested (mis. daftar TP di dalam sel tabel LKPD) — tanpa
+         pemisah, teks tiap item nempel jadi satu baris panjang */
+      runs += _nodeKeRunsDocx(child, bold) + '<w:r><w:br/></w:r>';
     } else if (child.nodeType === 1) {
       runs += _nodeKeRunsDocx(child, bold);
     }
@@ -7842,10 +7867,17 @@ function cgptTeksKeHTML(teks, tabId) {
   };
   const tutupTable = () => {
     if (!inTable || !tableRows.length) { inTable = false; return; }
-    const isHeader = tableRows.length > 1 &&
-      /^[-:\s|]+$/.test((tableRows[1] || []).join('|'));
+    /* Baris pertama SELALU dianggap header (konvensi tabel markdown).
+       CATATAN BUG LAMA: baris pemisah "|---|---|" sebelumnya disimpan
+       sebagai array kosong [] lalu dites via regex terhadap string kosong
+       (SELALU false) — akibatnya baris kosong itu ikut lolos sbg baris
+       tabel sungguhan (<tr> tanpa <td> sama sekali), yg jadi struktur
+       tabel tidak valid di skema Word (beda jumlah sel per baris vs
+       tblGrid) dan bikin file "rusak" khusus utk tabel hasil ChatGPT.
+       Sekarang baris pemisah di-skip TOTAL saat parsing (lihat di bawah),
+       jadi tidak pernah masuk ke tableRows sama sekali. */
     const header = tableRows[0];
-    const rows   = isHeader ? tableRows.slice(2) : tableRows.slice(1);
+    const rows   = tableRows.slice(1);
     html += '<table><thead><tr>' +
       header.map(h => `<th>${inline(h)}</th>`).join('') +
       '</tr></thead><tbody>' +
@@ -7871,9 +7903,10 @@ function cgptTeksKeHTML(teks, tabId) {
     if (trim.startsWith('|') && trim.endsWith('|')) {
       tutupList();
       inTable = true;
-      /* Baris separator |---|---| → skip tapi tandai */
+      /* Baris separator |---|---| → SKIP TOTAL, jangan dimasukkan ke
+         tableRows sama sekali (dulu dipush sbg [] placeholder lalu bikin
+         <tr> kosong tanpa sel — lihat catatan di tutupTable()) */
       if (/^\|[\s\-:|]+\|$/.test(trim)) {
-        tableRows.push([]); /* placeholder separator */
         continue;
       }
       const cols = trim.slice(1, -1).split('|').map(c => c.trim());
@@ -9218,6 +9251,11 @@ async function init() {
     document.documentElement.setAttribute('data-theme', 'dark');
     document.getElementById('themeBtn').textContent = '☀️';
     document.getElementById('settingDark').checked = true;
+  }
+
+  /* 2b. Terapkan preferensi sidebar tersembunyi/tidak (global per perangkat) */
+  if (DATABASE.settings.sidebarCollapsed) {
+    document.querySelector('.app-shell').classList.add('sidebar-collapsed');
   }
 
   /* 3. Terapkan settings ke form pengaturan */
