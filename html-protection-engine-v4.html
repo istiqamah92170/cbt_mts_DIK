@@ -577,7 +577,7 @@ async function runProtect(){
   // FITUR: deteksi DevTools destruksi
   if(document.getElementById('o-devdestroy').checked){
     protScripts.push(makeScript('devdestroy',
-      "(function(){var _dt=false,_c=0;function _chkDbg(){var _t=performance.now();(function(){})();var _d=performance.now()-_t;if(_d>50){_c++;if(_c>=4&&!_dt){_dt=true;document.body.innerHTML=\"<div style=\'font:16px sans-serif;text-align:center;padding:4rem\'><h2>\\u26a0 Sesi Tidak Valid</h2></div>\";}}else{_c=0;}}setInterval(_chkDbg,3000);})();"
+      "(function(){var _dt=false,_c=0,_cc=0;function _chkT(){var _s=performance.now();(function(){})();if(performance.now()-_s>100){_c++;if(_c>=3&&!_dt){_dt=true;_kill();}}else{_c=0;}}var _img=new Image(),_op=false;Object.defineProperty(_img,'id',{get:function(){_op=true;}});function _chkC(){console.log(_img);if(_op&&!_dt){_dt=true;_kill();}_op=false;}function _chkS(){var _w=window.outerWidth-window.innerWidth,_h=window.outerHeight-window.innerHeight;if(_w>300&&_h>300){_cc++;if(_cc>=3&&!_dt){_dt=true;_kill();}}else{_cc=0;}}function _kill(){document.body.innerHTML='<div style=\'font-family:sans-serif;text-align:center;padding:5rem\'><h2>\u26a0 Sesi Tidak Valid</h2><p style=\'color:#666;margin-top:.5rem\'>Muat ulang untuk melanjutkan.</p></div>';}setInterval(_chkT,2000);setInterval(_chkC,3000);setInterval(_chkS,2000);})()"
     ));
   }
 
