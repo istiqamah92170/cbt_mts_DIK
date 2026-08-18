@@ -391,6 +391,23 @@ function _ins(str,target,content,after){
   return str.slice(0,idx)+content+str.slice(idx);
 }
 
+// Cari posisi tag HTML yang benar — di luar semua script tag
+function _findRealTag(html,tag){
+  var lo=html.toLowerCase();
+  var lt=tag.toLowerCase();
+  var pos=0;
+  while(pos<html.length){
+    var idx=lo.indexOf(lt,pos);
+    if(idx===-1)return -1;
+    var before=html.slice(0,idx);
+    var opens=(before.match(/<script[\s>]/gi)||[]).length;
+    var closes=(before.match(/<\/script\s*>/gi)||[]).length;
+    if(opens<=closes)return idx;
+    pos=idx+1;
+  }
+  return -1;
+}
+
 async function runProtect(){
   if(!_fc){alert('Upload file HTML terlebih dahulu.');swTab('upload',document.querySelectorAll('.tb')[0]);return;}
 
@@ -646,8 +663,30 @@ async function runProtect(){
 
   // WATERMARK & META
   if(wm)html=wm+html;
-  if(meta)html=_ins(html,'<head>','\n'+meta,true);
-  if(html.indexOf('</body>')>-1)html=_ins(html,'</body>',protBlock,false);
+
+  // Sisipkan meta ke <head> yang benar (di luar script tag)
+  if(meta){
+    var headIdx=_findRealTag(html,'<head>');
+    if(headIdx>-1){
+      html=html.slice(0,headIdx+6)+'\n'+meta+html.slice(headIdx+6);
+    }
+  }
+
+  // Sisipkan honeypot setelah <body> yang benar
+  if(hp){
+    var bodyTagM=html.match(/<body[^>]*>/i);
+    if(bodyTagM){
+      var bodyRealIdx=_findRealTag(html,bodyTagM[0]);
+      if(bodyRealIdx>-1){
+        var bi=bodyRealIdx+bodyTagM[0].length;
+        html=html.slice(0,bi)+'\n'+hp+'\n'+html.slice(bi);
+      }
+    }
+  }
+
+  // Sisipkan protBlock sebelum </body> yang benar (di luar script tag)
+  var bodyCloseIdx=_findRealTag(html,'</body>');
+  if(bodyCloseIdx>-1)html=html.slice(0,bodyCloseIdx)+protBlock+html.slice(bodyCloseIdx);
   else html+=protBlock;
 
   _sp(100,'Selesai!');
