@@ -123,9 +123,7 @@ code{background:var(--sur2);padding:1px 5px;border-radius:3px;font-size:12px}
         <div><div class="oh"><span class="on">Branding integrity lock</span><span class="badge bp">PRO</span><span class="badge bn">Baru</span></div>
         <div class="od">6 watermark tersebar di CSS, JS, HTML, dan meta + runtime check setiap 5 detik — jika nama app atau branding diubah, muncul peringatan merah</div></div></label>
 
-      <label class="oc"><input type="checkbox" id="o-obfuscate" checked>
-        <div><div class="oh"><span class="on">Obfuskasi script inline</span><span class="badge bp">PRO</span></div>
-        <div class="od">Semua blok script diobfuskasi dengan Base64 eval — sangat sulit dibaca manual</div></div></label>
+
 
       <label class="oc"><input type="checkbox" id="o-rightclick" checked>
         <div><div class="oh"><span class="on">Blokir klik kanan</span><span class="badge b1">v1</span></div>
@@ -392,18 +390,33 @@ function _ins(str,target,content,after){
 }
 
 // Cari posisi tag HTML yang benar — di luar semua script tag
+// Versi ultra-cepat: pakai indexOf sederhana
 function _findRealTag(html,tag){
   var lo=html.toLowerCase();
   var lt=tag.toLowerCase();
-  var pos=0;
-  while(pos<html.length){
-    var idx=lo.indexOf(lt,pos);
-    if(idx===-1)return -1;
-    var before=html.slice(0,idx);
-    var opens=(before.match(/<script[\s>]/gi)||[]).length;
-    var closes=(before.match(/<\/script\s*>/gi)||[]).length;
-    if(opens<=closes)return idx;
-    pos=idx+1;
+  // Pre-compute script ranges sekali saja
+  var ranges=[],si=0;
+  var sOpen='<script',sClose='<'+'/script>';
+  while(true){
+    var so=lo.indexOf(sOpen,si);
+    if(so===-1)break;
+    // pastikan ini tag bukan substring (harus diikuti space atau >)
+    var nc=html[so+7];
+    if(!nc||nc==='>'||nc===' '||nc==='\n'||nc==='\r'){
+      var sc=lo.indexOf(sClose,so);
+      if(sc>-1){ranges.push([so,sc+sClose.length]);si=sc+sClose.length;}
+      else{si=so+7;}
+    } else {si=so+7;}
+  }
+  // Cari tag di luar semua range
+  var idx=lo.indexOf(lt);
+  while(idx>-1){
+    var inScript=false;
+    for(var ri=0;ri<ranges.length;ri++){
+      if(idx>=ranges[ri][0]&&idx<ranges[ri][1]){inScript=true;break;}
+    }
+    if(!inScript)return idx;
+    idx=lo.indexOf(lt,idx+1);
   }
   return -1;
 }
@@ -425,11 +438,11 @@ async function runProtect(){
   document.getElementById('al-ok').classList.remove('show');
   document.getElementById('al-er').classList.remove('show');
 
-  await _sleep(80);_sp(8,'Menganalisis struktur HTML...');
+  await _sleep(10);_sp(8,'Menganalisis struktur HTML...');
   var html=_fc;
 
   // AUTO-RELOCATE PWA script
-  await _sleep(80);_sp(18,'Merelokasi script PWA...');
+  await _sleep(10);_sp(18,'Merelokasi script PWA...');
   var pwaOk=false;
   (function(){
     var p=new DOMParser();
@@ -438,7 +451,7 @@ async function runProtect(){
     if(sw.length){sw.forEach(function(s){d.head.appendChild(s.cloneNode(true));s.remove();});html='<!DOCTYPE html>\n'+d.documentElement.outerHTML;pwaOk=true;}
   })();
 
-  await _sleep(80);_sp(28,'Menyisipkan watermark & meta...');
+  await _sleep(10);_sp(28,'Menyisipkan watermark & meta...');
 
   // WATERMARK KOMENTAR
   var wm='';
@@ -461,7 +474,7 @@ async function runProtect(){
     meta+='<meta name="protection-id" content="'+id+'">\n';
   }
 
-  await _sleep(80);_sp(38,'Branding integrity lock...');
+  await _sleep(10);_sp(38,'Branding integrity lock...');
 
   // BRANDING INTEGRITY LOCK — 6 WATERMARK TERSEBAR
   if(document.getElementById('o-branding').checked){
@@ -512,7 +525,9 @@ async function runProtect(){
     }
 
     // WM6: Comment di setiap akhir blok style
-    html=html.split('</style>').join('/* _b:'+ownerHash.slice(0,6)+' */</style>');
+    // WM6: signature di </style> pertama saja (bukan semua - terlalu berat untuk file besar)
+    var firstStyle=html.indexOf('<'+'/style>');
+    if(firstStyle>-1)html=html.slice(0,firstStyle)+'/* _b:'+ownerHash.slice(0,6)+' */'+html.slice(firstStyle);
 
     // RUNTIME CHECK — cek branding setiap 5 detik
     var wid=JSON.stringify(id);
@@ -554,7 +569,7 @@ async function runProtect(){
     else html+=rcTag;
   }
 
-  await _sleep(100);_sp(50,'Membangun lapisan proteksi JS...');
+  await _sleep(10);_sp(50,'Membangun lapisan proteksi JS...');
 
   // SCRIPT PROTEKSI GRANULAR — setiap fitur punya script terpisah
   // sehingga bisa dihapus/diubah secara individual via tab Kelola
@@ -699,7 +714,7 @@ async function runProtect(){
   if(pwaOk)msg+='\n\n📲 Script PWA otomatis dipindah ke <head>.';
   if(document.getElementById('o-branding').checked)msg+='\n\n🛡 Branding lock: 6 watermark tersebar + runtime check aktif setiap 5 detik.';
   if(document.getElementById('o-token')&&document.getElementById('o-token').checked&&secret)msg+='\n\n🔑 Token gateway lock aktif — aplikasi hanya bisa dibuka dari gateway.html\nPastikan CONFIG.secret di gateway.html = '+secret;
-  if(document.getElementById('o-obfuscate').checked)msg+='\n\n🔐 Semua script inline diobfuskasi Base64 eval.';
+
   _al('ok',msg);
   document.getElementById('btn-p').disabled=false;
 }
