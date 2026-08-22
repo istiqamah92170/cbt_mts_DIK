@@ -447,8 +447,11 @@ async function runProtect(){
   // BRANDING INTEGRITY LOCK — 6 WATERMARK TERSEBAR
   if(document.getElementById('o-branding').checked){
     // Ekstrak nilai branding dari file
+    await new Promise(function(r){setTimeout(r,0);});
     var appNameM=html.match(/institution_name\s*:\s*['"]([^'"]+)['"]/);
+    await new Promise(function(r){setTimeout(r,0);});
     var themeM=html.match(/--blue-main\s*:\s*(#[a-fA-F0-9]{3,6})/);
+    await new Promise(function(r){setTimeout(r,0);});
     var titleM=html.match(/<title>([^<]+)<\/title>/);
     var appName=appNameM?appNameM[1]:(titleM?titleM[1]:'App');
     var themeColor=themeM?themeM[1]:'#059669';
@@ -470,6 +473,7 @@ async function runProtect(){
     }
 
     // WM3: data-wm di body tag
+    await new Promise(function(r){setTimeout(r,0);});
     var bodyM=html.match(/<body([^>]*)>/i);
     if(bodyM){
       var newBody='<body'+bodyM[1]+' data-wm="'+id+'" data-owner="'+btoa(unescape(encodeURIComponent(owner)))+'">';
@@ -645,6 +649,7 @@ async function runProtect(){
     +protScripts.join('\n')+'\n';
 
   // WATERMARK & META
+  await new Promise(function(r){setTimeout(r,0);});
   if(wm)html=wm+html;
 
   // Sisipkan meta ke <head> — pakai indexOf biasa (cepat)
@@ -658,6 +663,7 @@ async function runProtect(){
 
   // Sisipkan honeypot setelah <body>
   if(hp){
+    await new Promise(function(r){setTimeout(r,0);});
     var bodyTagM=html.match(/<body[^>]*>/i);
     if(bodyTagM){
       var bi=html.indexOf(bodyTagM[0])+bodyTagM[0].length;
@@ -666,6 +672,7 @@ async function runProtect(){
   }
 
   // Sisipkan protBlock sebelum </body> terakhir — lastIndexOf untuk dapat yang benar
+  await new Promise(function(r){setTimeout(r,0);});
   var bodyCloseIdx=html.lastIndexOf('</body>');
   if(bodyCloseIdx===-1)bodyCloseIdx=html.lastIndexOf('</BODY>');
   if(bodyCloseIdx>-1)html=html.slice(0,bodyCloseIdx)+protBlock+html.slice(bodyCloseIdx);
