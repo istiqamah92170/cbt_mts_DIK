@@ -541,10 +541,8 @@ async function runProtect(){
     else html+=rcTag;
   }
 
-  await _sleep(10);_sp(50,'Membangun lapisan proteksi JS...');
+  await new Promise(function(r){setTimeout(r,0);});_sp(50,'Membangun lapisan proteksi JS...');
 
-  // SCRIPT PROTEKSI GRANULAR — setiap fitur punya script terpisah
-  // sehingga bisa dihapus/diubah secara individual via tab Kelola
   var protScripts=[];
 
   function makeScript(featureId,code){
@@ -553,10 +551,11 @@ async function runProtect(){
     return '<scr'+'ipt data-pid="'+id+'" data-feature="'+featureId+'">\n'+js+'\n'+'</'+'script>';
   }
 
-  // FITUR: blokir klik kanan
+  // Deteksi konteksmenu bawaan file — pakai substring pendek agar cepat
+  await new Promise(function(r){setTimeout(r,0);});
+  var hasCtx=html.indexOf('contextmenu')>-1;
+
   if(document.getElementById('o-rightclick').checked){
-    var hasCtx=html.indexOf("addEventListener('contextmenu')")>-1
-      ||html.indexOf('addEventListener("contextmenu")')>-1;
     if(!hasCtx){
       protScripts.push(makeScript('rightclick',
         "document.addEventListener('contextmenu',function(e){e.preventDefault();});"
@@ -564,6 +563,7 @@ async function runProtect(){
     }
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: blokir shortcut DevTools
   if(document.getElementById('o-devtools').checked){
     protScripts.push(makeScript('devtools-keys',
@@ -571,6 +571,7 @@ async function runProtect(){
     ));
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: blokir seleksi teks
   if(document.getElementById('o-textselect').checked){
     protScripts.push(makeScript('textselect',
@@ -578,6 +579,7 @@ async function runProtect(){
     ));
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: deteksi DevTools destruksi
   if(document.getElementById('o-devdestroy').checked){
     protScripts.push(makeScript('devdestroy',
@@ -585,6 +587,7 @@ async function runProtect(){
     ));
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: fingerprint webhook
   if(document.getElementById('o-fingerprint').checked&&webhook){
     protScripts.push(makeScript('fingerprint',
@@ -592,6 +595,7 @@ async function runProtect(){
     ));
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: console warning
   if(document.getElementById('o-consolewarn').checked){
     protScripts.push(makeScript('consolewarn',
@@ -599,6 +603,7 @@ async function runProtect(){
     ));
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: self-destruct domain salah
   if(document.getElementById('o-selfmod').checked&&domain&&domain.trim().length>3){
     var cd=domain.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
@@ -607,6 +612,7 @@ async function runProtect(){
     ));
   }
 
+  await new Promise(function(r){setTimeout(r,0);});
   // FITUR: time-lock kedaluwarsa
   if(document.getElementById('o-timebomb').checked&&expiry){
     protScripts.push(makeScript('timebomb',
