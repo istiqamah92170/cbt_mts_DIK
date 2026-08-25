@@ -370,6 +370,11 @@ function swTab(n,btn){
 
 function _uid(){return 'WM-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();}
 function _sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+// Yield ke browser — pakai rAF agar tidak freeze di mobile
+function _yield(){return new Promise(function(r){
+  if(typeof requestAnimationFrame!=='undefined'){requestAnimationFrame(function(){r();});}
+  else{setTimeout(r,0);}
+});}
 function _sp(pct,lbl){document.getElementById('pw-b').style.width=pct+'%';document.getElementById('pw-l').textContent=lbl;}
 function _dl(content,name){var blob=new Blob([content],{type:'text/html;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 function _al(type,msg){['ok','er'].forEach(function(t){var el=document.getElementById('al-'+t);el.textContent='';el.classList.remove('show');});var el=document.getElementById('al-'+type);el.textContent=msg;el.classList.add('show');}
@@ -406,11 +411,11 @@ async function runProtect(){
   document.getElementById('al-ok').classList.remove('show');
   document.getElementById('al-er').classList.remove('show');
 
-  await _sleep(10);_sp(8,'Menganalisis struktur HTML...');
+  await _yield();_sp(8,'Menganalisis struktur HTML...');
   var html=_fc;
 
   // AUTO-RELOCATE PWA script
-  await _sleep(10);_sp(18,'Merelokasi script PWA...');
+  await _yield();_sp(18,'Merelokasi script PWA...');
   var pwaOk=false;
   (function(){
     var p=new DOMParser();
@@ -419,7 +424,7 @@ async function runProtect(){
     if(sw.length){sw.forEach(function(s){d.head.appendChild(s.cloneNode(true));s.remove();});html='<!DOCTYPE html>\n'+d.documentElement.outerHTML;pwaOk=true;}
   })();
 
-  await _sleep(10);_sp(28,'Menyisipkan watermark & meta...');
+  await _yield();_sp(28,'Menyisipkan watermark & meta...');
 
   // WATERMARK KOMENTAR
   var wm='';
@@ -442,16 +447,16 @@ async function runProtect(){
     meta+='<meta name="protection-id" content="'+id+'">\n';
   }
 
-  await _sleep(10);_sp(38,'Branding integrity lock...');
+  await _yield();_sp(38,'Branding integrity lock...');
 
   // BRANDING INTEGRITY LOCK — 6 WATERMARK TERSEBAR
   if(document.getElementById('o-branding').checked){
     // Ekstrak nilai branding dari file
-    await new Promise(function(r){setTimeout(r,0);});
+    await _yield();
     var appNameM=html.match(/institution_name\s*:\s*['"]([^'"]+)['"]/);
-    await new Promise(function(r){setTimeout(r,0);});
+    await _yield();
     var themeM=html.match(/--blue-main\s*:\s*(#[a-fA-F0-9]{3,6})/);
-    await new Promise(function(r){setTimeout(r,0);});
+    await _yield();
     var titleM=html.match(/<title>([^<]+)<\/title>/);
     var appName=appNameM?appNameM[1]:(titleM?titleM[1]:'App');
     var themeColor=themeM?themeM[1]:'#059669';
@@ -473,7 +478,7 @@ async function runProtect(){
     }
 
     // WM3: data-wm di body tag
-    await new Promise(function(r){setTimeout(r,0);});
+    await _yield();
     var bodyM=html.match(/<body([^>]*)>/i);
     if(bodyM){
       var newBody='<body'+bodyM[1]+' data-wm="'+id+'" data-owner="'+btoa(unescape(encodeURIComponent(owner)))+'">';
@@ -541,7 +546,7 @@ async function runProtect(){
     else html+=rcTag;
   }
 
-  await new Promise(function(r){setTimeout(r,0);});_sp(50,'Membangun lapisan proteksi JS...');
+  await _yield();_sp(50,'Membangun lapisan proteksi JS...');
 
   var protScripts=[];
 
@@ -552,7 +557,7 @@ async function runProtect(){
   }
 
   // Deteksi konteksmenu bawaan file — pakai substring pendek agar cepat
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   var hasCtx=html.indexOf('contextmenu')>-1;
 
   if(document.getElementById('o-rightclick').checked){
@@ -563,7 +568,7 @@ async function runProtect(){
     }
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: blokir shortcut DevTools
   if(document.getElementById('o-devtools').checked){
     protScripts.push(makeScript('devtools-keys',
@@ -571,7 +576,7 @@ async function runProtect(){
     ));
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: blokir seleksi teks
   if(document.getElementById('o-textselect').checked){
     protScripts.push(makeScript('textselect',
@@ -579,7 +584,7 @@ async function runProtect(){
     ));
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: deteksi DevTools destruksi
   if(document.getElementById('o-devdestroy').checked){
     protScripts.push(makeScript('devdestroy',
@@ -587,7 +592,7 @@ async function runProtect(){
     ));
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: fingerprint webhook
   if(document.getElementById('o-fingerprint').checked&&webhook){
     protScripts.push(makeScript('fingerprint',
@@ -595,7 +600,7 @@ async function runProtect(){
     ));
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: console warning
   if(document.getElementById('o-consolewarn').checked){
     protScripts.push(makeScript('consolewarn',
@@ -603,7 +608,7 @@ async function runProtect(){
     ));
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: self-destruct domain salah
   if(document.getElementById('o-selfmod').checked&&domain&&domain.trim().length>3){
     var cd=domain.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
@@ -612,7 +617,7 @@ async function runProtect(){
     ));
   }
 
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   // FITUR: time-lock kedaluwarsa
   if(document.getElementById('o-timebomb').checked&&expiry){
     protScripts.push(makeScript('timebomb',
@@ -655,7 +660,7 @@ async function runProtect(){
     +protScripts.join('\n')+'\n';
 
   // WATERMARK & META
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   if(wm)html=wm+html;
 
   // Sisipkan meta ke <head> — pakai indexOf biasa (cepat)
@@ -669,7 +674,7 @@ async function runProtect(){
 
   // Sisipkan honeypot setelah <body>
   if(hp){
-    await new Promise(function(r){setTimeout(r,0);});
+    await _yield();
     var bodyTagM=html.match(/<body[^>]*>/i);
     if(bodyTagM){
       var bi=html.indexOf(bodyTagM[0])+bodyTagM[0].length;
@@ -678,7 +683,7 @@ async function runProtect(){
   }
 
   // Sisipkan protBlock sebelum </body> terakhir — lastIndexOf untuk dapat yang benar
-  await new Promise(function(r){setTimeout(r,0);});
+  await _yield();
   var bodyCloseIdx=html.lastIndexOf('</body>');
   if(bodyCloseIdx===-1)bodyCloseIdx=html.lastIndexOf('</BODY>');
   if(bodyCloseIdx>-1)html=html.slice(0,bodyCloseIdx)+protBlock+html.slice(bodyCloseIdx);
