@@ -673,6 +673,11 @@ async function runProtect(){
   }
 
   // Sisipkan honeypot setelah <body>
+  var hp='';
+  if(document.getElementById('o-honeypot').checked){
+    hp='<!-- OWNER:'+id+':'+encodeURIComponent(owner)+':'+date+' -->'
+      +'<span style="display:none!important;position:absolute;left:-9999px" data-wm="'+id+'">'+id+'</span>';
+  }
   if(hp){
     await _yield();
     var bodyTagM=html.match(/<body[^>]*>/i);
