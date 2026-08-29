@@ -436,6 +436,9 @@ async function runProtect(){
       +'  ID Unik  : '+id+'\n'
       +'  Tanggal  : '+date+'\n'
       +'  Hak Cipta: \u00a9 '+year+' '+owner+'\n'
+      +'  PERINGATAN: Dilarang menyalin, mendistribusikan ulang,\n'
+      +'  atau menghapus atribusi ini tanpa izin tertulis dari pemilik.\n'
+      +'  Pelanggaran dapat dikenai sanksi hukum sesuai UU Hak Cipta.\n'
       +'================================================ -->\n';
   }
 
@@ -588,7 +591,7 @@ async function runProtect(){
   // FITUR: deteksi DevTools destruksi
   if(document.getElementById('o-devdestroy').checked){
     protScripts.push(makeScript('devdestroy',
-      "eval(atob('KGZ1bmN0aW9uKCl7CnZhciBfZHQ9ZmFsc2UsX2M9MCxfY2M9MDsKZnVuY3Rpb24gX2tpbGwoKXsKICBkb2N1bWVudC5ib2R5LmlubmVySFRNTD0nPGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6c2Fucy1zZXJpZjt0ZXh0LWFsaWduOmNlbnRlcjtwYWRkaW5nOjVyZW0iPicKICAgICsnPGgyPlx1MjZhMCBTZXNpIFRpZGFrIFZhbGlkPC9oMj4nCiAgICArJzxwIHN0eWxlPSJjb2xvcjojNjY2O21hcmdpbi10b3A6LjVyZW0iPk11YXQgdWxhbmcgdW50dWsgbWVsYW5qdXRrYW4uPC9wPicKICAgICsnPC9kaXY+JzsKfQpmdW5jdGlvbiBfY2hrVCgpewogIHZhciBfcz1wZXJmb3JtYW5jZS5ub3coKTsKICAoZnVuY3Rpb24oKXt9KSgpOwogIGlmKHBlcmZvcm1hbmNlLm5vdygpLV9zPjEwMCl7X2MrKztpZihfYz49MyYmIV9kdCl7X2R0PXRydWU7X2tpbGwoKTt9fQogIGVsc2V7X2M9MDt9Cn0KdmFyIF9pbWc9bmV3IEltYWdlKCksX29wPWZhbHNlOwpPYmplY3QuZGVmaW5lUHJvcGVydHkoX2ltZywnaWQnLHtnZXQ6ZnVuY3Rpb24oKXtfb3A9dHJ1ZTt9fSk7CmZ1bmN0aW9uIF9jaGtDKCl7CiAgY29uc29sZS5sb2coX2ltZyk7CiAgaWYoX29wJiYhX2R0KXtfZHQ9dHJ1ZTtfa2lsbCgpO30KICBfb3A9ZmFsc2U7Cn0KZnVuY3Rpb24gX2Noa1MoKXsKICB2YXIgX3c9d2luZG93Lm91dGVyV2lkdGgtd2luZG93LmlubmVyV2lkdGg7CiAgdmFyIF9oPXdpbmRvdy5vdXRlckhlaWdodC13aW5kb3cuaW5uZXJIZWlnaHQ7CiAgaWYoX3c+MzAwJiZfaD4zMDApe19jYysrO2lmKF9jYz49MyYmIV9kdCl7X2R0PXRydWU7X2tpbGwoKTt9fQogIGVsc2V7X2NjPTA7fQp9CnNldEludGVydmFsKF9jaGtULDIwMDApOwpzZXRJbnRlcnZhbChfY2hrQywzMDAwKTsKc2V0SW50ZXJ2YWwoX2Noa1MsMjAwMCk7Cn0pKCk='))"
+      "eval(atob('KGZ1bmN0aW9uKCl7CnZhciBfZHQ9ZmFsc2UsX2M9MCxfY2M9MCxfdGM9MDsKdmFyIF9tc2c9JzxkaXYgc3R5bGU9ImZvbnQtZmFtaWx5OnNhbnMtc2VyaWY7dGV4dC1hbGlnbjpjZW50ZXI7cGFkZGluZzo1cmVtO2JhY2tncm91bmQ6I2ZmZiI+JwogICsnPGgyIHN0eWxlPSJjb2xvcjojZGMyNjI2Ij5cdTI2YTAgU2VzaSBUaWRhayBWYWxpZDwvaDI+JwogICsnPHAgc3R5bGU9ImNvbG9yOiM2NjY7bWFyZ2luLXRvcDouNXJlbSI+RGV2VG9vbHMgdGVyZGV0ZWtzaS4gTXVhdCB1bGFuZyBoYWxhbWFuLjwvcD4nCiAgKyc8cCBzdHlsZT0iY29sb3I6Izk5OTtmb250LXNpemU6MTJweDttYXJnaW4tdG9wOjFyZW0iPlx1MDBhOSBEaWxpbmR1bmdpIEhhayBDaXB0YTwvcD4nCiAgKyc8L2Rpdj4nOwpmdW5jdGlvbiBfa2lsbCgpe2lmKCFfZHQpe19kdD10cnVlO2RvY3VtZW50LmJvZHkuaW5uZXJIVE1MPV9tc2c7fX0KZnVuY3Rpb24gX2Noa1QoKXt2YXIgX3M9cGVyZm9ybWFuY2Uubm93KCk7ZGVidWdnZXI7dmFyIF9kPXBlcmZvcm1hbmNlLm5vdygpLV9zO2lmKF9kPjE1MCl7X3RjKys7aWYoX3RjPj0yKV9raWxsKCk7fWVsc2V7X3RjPTA7fX0KdmFyIF9pbWc9bmV3IEltYWdlKCksX29wPWZhbHNlOwpPYmplY3QuZGVmaW5lUHJvcGVydHkoX2ltZywnaWQnLHtnZXQ6ZnVuY3Rpb24oKXtfb3A9dHJ1ZTt9fSk7CmZ1bmN0aW9uIF9jaGtDKCl7Y29uc29sZS5sb2coX2ltZyk7aWYoX29wKXtfY2MrKztpZihfY2M+PTIpX2tpbGwoKTt9X29wPWZhbHNlO30KZnVuY3Rpb24gX2Noa1MoKXt2YXIgX3c9d2luZG93Lm91dGVyV2lkdGgtd2luZG93LmlubmVyV2lkdGgsX2g9d2luZG93Lm91dGVySGVpZ2h0LXdpbmRvdy5pbm5lckhlaWdodDtpZihfdz4zMDAmJl9oPjMwMCl7X2MrKztpZihfYz49Mylfa2lsbCgpO31lbHNle19jPTA7fX0Kc2V0SW50ZXJ2YWwoX2Noa1QsMzAwMCk7CnNldEludGVydmFsKF9jaGtDLDQwMDApOwpzZXRJbnRlcnZhbChfY2hrUywzMDAwKTsKfSkoKQ=='))"
     ));
   }
 
@@ -604,7 +607,7 @@ async function runProtect(){
   // FITUR: console warning
   if(document.getElementById('o-consolewarn').checked){
     protScripts.push(makeScript('consolewarn',
-      "console.log('%c\u26a0 HAK CIPTA\n%c\u00a9 "+year+" "+owner+(email?" | "+email:"")+"\nID: "+id+"','color:#f26b6b;font-size:15px;font-weight:bold','color:#888;font-size:12px');"
+      "console.log('%c\\u26a0 HAK CIPTA\\n%c\\u00a9 "+year+" "+owner+(email?" | "+email:"")+"\\nID: "+id+"\\nDilarang menyalin atau mendistribusikan tanpa izin tertulis pemilik.',\'color:#f26b6b;font-size:15px;font-weight:bold\',\'color:#888;font-size:12px\');"
     ));
   }
 
