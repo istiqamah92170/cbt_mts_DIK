@@ -2869,6 +2869,14 @@ const PROJECT = {
         renderHasilAnalisis();
         document.getElementById('panelAnalisis').style.display = 'block';
       }
+      /* PENTING: simpan ke IDB 'form' project ini — sebelumnya STATE_ANALISIS
+         cuma di-set di MEMORI saat restore .gaib, tidak pernah ditulis ke
+         IDB. Jadi begitu guru pindah ke project lain lalu kembali lagi
+         (_reloadAppState membaca ulang dari IDB 'form'), TP/materi/topik
+         hasil restore .gaib ini hilang lagi karena tidak pernah tersimpan
+         permanen. autoSave() menulis dengan format & key yang konsisten
+         dipakai di seluruh aplikasi. */
+      if (typeof autoSave === 'function') autoSave();
     }
 
     /* Restore form Pengaturan */
