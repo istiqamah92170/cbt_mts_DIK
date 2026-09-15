@@ -7464,6 +7464,33 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
 //                      {type:'GH_KLASIFIKASI_ERROR', pesan}        (gagal total)
 // ════════════════════════════════════════════════════════════════
 (function () {
+  // FITUR-FIX (2026-09): classifier ini pakai ANGKA ROMAWI ("VII","VIII","IX")
+  // sebagai kunci Kelas di Database Materi, sedangkan Bank Soal Guru Hub
+  // menyimpan Kelas sebagai ANGKA biasa ("7","8","9"). Tanpa konversi ini,
+  // getMateriListForKelas() akan SELALU gagal cocok walau datanya sebenarnya
+  // ADA -- persis kasus yang dilaporkan ("Belum ada Database Materi untuk
+  // IPS kelas 9" padahal ada "9 materi untuk IPS Kelas IX"). Dicoba beberapa
+  // varian format, dipakai yang pertama ketemu isinya.
+  var GH_ANGKA_KE_ROMAWI = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V', '6': 'VI', '7': 'VII', '8': 'VIII', '9': 'IX', '10': 'X', '11': 'XI', '12': 'XII' };
+  var GH_ROMAWI_KE_ANGKA = { 'I': '1', 'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8', 'IX': '9', 'X': '10', 'XI': '11', 'XII': '12' };
+  function ghVarianKelas(kelas) {
+    var k = String(kelas || '').trim();
+    var varian = [k];
+    if (GH_ANGKA_KE_ROMAWI[k]) varian.push(GH_ANGKA_KE_ROMAWI[k]);
+    var kUpper = k.toUpperCase();
+    if (GH_ROMAWI_KE_ANGKA[kUpper]) varian.push(GH_ROMAWI_KE_ANGKA[kUpper]);
+    if (kUpper !== k) varian.push(kUpper); // jaga-jaga kalau tersimpan huruf besar/kecil beda
+    return varian.filter(function (v, i, arr) { return arr.indexOf(v) === i; }); // unik
+  }
+  function ghAmbilMateriListFleksibel(mapel, kelas) {
+    var varian = ghVarianKelas(kelas);
+    for (var i = 0; i < varian.length; i++) {
+      var list = getMateriListForKelas(mapel, varian[i]);
+      if (list && list.length) return list;
+    }
+    return [];
+  }
+
   function ghKirimKeParent(type, data, targetOrigin) {
     if (window.parent === window) return; // tidak sedang dibuka sebagai iframe -- abaikan
     window.parent.postMessage(Object.assign({ type: type, _sumber: 'topik-bloom-classifier' }, data), targetOrigin || '*');
@@ -7492,7 +7519,7 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
     for (var k in grup) {
       var parts = k.split('||'), mapel = parts[0], kelas = parts[1];
       var soalGrup = grup[k];
-      var materiList = getMateriListForKelas(mapel, kelas);
+      var materiList = ghAmbilMateriListFleksibel(mapel, kelas);
       if (!materiList.length) {
         soalGrup.forEach(function (s) { hasilSemua.push({ ref: s.ref, error: 'Belum ada Database Materi untuk ' + mapel + ' kelas ' + kelas + ' di aplikasi ini.' }); selesai++; });
         ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: selesai, total: totalSoal, label: 'Lewati ' + mapel + ' kelas ' + kelas + ' (Database Materi kosong)' }, replyOrigin);
@@ -7553,10 +7580,33 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
     ghProsesBatchDariGuruHub(d.soal || [], ev.origin);
   });
 
-  // Kabari parent (kalau memang dibuka di dalam iframe oleh Guru Hub) bahwa
-  // aplikasi ini sudah siap menerima permintaan klasifikasi.
+  // FITUR-FIX (2026-09): dulu READY dikirim langsung saat event 'load' --
+  // tapi pemuatan Database Materi (DB) dari localStorage ternyata terjadi
+  // di dalam listener DOMContentLoaded terpisah, jadi ADA KEMUNGKINAN race
+  // condition: Guru Hub sudah kirim soal sebelum DB benar-benar siap dibaca.
+  // Sekarang ditunggu dulu sampai DB nyata siap (maksimal 5 detik -- lebih
+  // dari cukup karena ini cuma baca+parse localStorage, bukan panggilan
+  // jaringan). Catatan: API key SENGAJA TIDAK ditunggu di sini -- kalau
+  // memang belum diisi, menunggu tidak akan membuatnya terisi sendiri
+  // (tidak ada interaksi guru di dalam iframe tersembunyi ini), jadi lebih
+  // baik langsung lanjut & biarkan pesan error yang jelas ("API key belum
+  // diisi") muncul cepat lewat handler GH_KLASIFIKASI_REQUEST, bukan
+  // ditahan tanpa guna.
+  function ghTungguSiapLaluKirimReady() {
+    var percobaan = 0, maxPercobaan = 33; // 33 x 150ms = maksimal 5 detik
+    (function cek() {
+      percobaan++;
+      var dbSiap = (typeof DB !== 'undefined') && DB && DB.mapel && Object.keys(DB.mapel).length > 0;
+      if (dbSiap || percobaan >= maxPercobaan) {
+        ghKirimKeParent('GH_KLASIFIKASI_READY', {}, '*');
+      } else {
+        setTimeout(cek, 150);
+      }
+    })();
+  }
+
   if (window.parent !== window) {
-    window.addEventListener('load', function () { ghKirimKeParent('GH_KLASIFIKASI_READY', {}, '*'); });
+    window.addEventListener('load', ghTungguSiapLaluKirimReady);
   }
 })();
 </script>
