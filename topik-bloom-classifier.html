@@ -7442,4 +7442,121 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
 // The original aKelas listener in DOMContentLoaded binds to onAKelasChange
 // which is now overridden above — no additional binding needed.
 
+// ════════════════════════════════════════════════════════════════
+//  BRIDGE ke Guru Hub (2026-09)
+//  ------------------------------------------------------------------
+//  Terima daftar soal dari Guru Hub lewat postMessage (aplikasi ini
+//  bisa dibuka Guru Hub di dalam <iframe>, beda domain sekalipun --
+//  postMessage memang dirancang untuk itu). Soal diproses memakai
+//  mesin klasifikasi yang SUDAH ADA di app ini (callGemini + Database
+//  Materi + API key milik app ini sendiri), lalu hasil {topik, bloom,
+//  kesulitan} dikirim balik. TIDAK menyentuh resultData/sheetData/UI
+//  utama app ini -- proses ini sepenuhnya terpisah, supaya tidak
+//  bentrok dengan alur Excel/manual yang sudah ada.
+//
+//  Protokol pesan:
+//   Guru Hub -> sini : {type:'GH_KLASIFIKASI_REQUEST', soal:[{ref, mapel,
+//                       kelas, tipe, pertanyaan, opsi_a..d, kunci, url_gambar}]}
+//   sini -> Guru Hub : {type:'GH_KLASIFIKASI_READY'}               (saat siap)
+//                      {type:'GH_KLASIFIKASI_PROGRESS', selesai, total, label}
+//                      {type:'GH_KLASIFIKASI_HASIL', hasil:[{ref, topik,
+//                       bloom, kesulitan} atau {ref, error}]}
+//                      {type:'GH_KLASIFIKASI_ERROR', pesan}        (gagal total)
+// ════════════════════════════════════════════════════════════════
+(function () {
+  function ghKirimKeParent(type, data, targetOrigin) {
+    if (window.parent === window) return; // tidak sedang dibuka sebagai iframe -- abaikan
+    window.parent.postMessage(Object.assign({ type: type, _sumber: 'topik-bloom-classifier' }, data), targetOrigin || '*');
+  }
+
+  async function ghProsesBatchDariGuruHub(daftarSoal, replyOrigin) {
+    var apiKey = (localStorage.getItem('gemini_api_key') || '').trim();
+    if (!apiKey) {
+      ghKirimKeParent('GH_KLASIFIKASI_ERROR', { pesan: 'API key Gemini belum diisi di aplikasi Klasifikasi ini. Buka aplikasi ini langsung, isi API key-nya dulu, baru coba lagi dari Guru Hub.' }, replyOrigin);
+      return;
+    }
+    var model = (document.getElementById('sModel') && document.getElementById('sModel').value) || activeModel || 'gemini-2.5-flash';
+
+    // Kelompokkan per Mapel+Kelas -- Database Materi & prompt Gemini
+    // memang bekerja per satu kombinasi Mapel+Kelas sekaligus (sama seperti
+    // alur "Analisis Batch" bawaan aplikasi ini).
+    var grup = {};
+    daftarSoal.forEach(function (s) {
+      var k = (s.mapel || '') + '||' + (s.kelas || '');
+      (grup[k] = grup[k] || []).push(s);
+    });
+
+    var hasilSemua = [], totalSoal = daftarSoal.length, selesai = 0;
+    ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: 0, total: totalSoal, label: 'Memulai...' }, replyOrigin);
+
+    for (var k in grup) {
+      var parts = k.split('||'), mapel = parts[0], kelas = parts[1];
+      var soalGrup = grup[k];
+      var materiList = getMateriListForKelas(mapel, kelas);
+      if (!materiList.length) {
+        soalGrup.forEach(function (s) { hasilSemua.push({ ref: s.ref, error: 'Belum ada Database Materi untuk ' + mapel + ' kelas ' + kelas + ' di aplikasi ini.' }); selesai++; });
+        ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: selesai, total: totalSoal, label: 'Lewati ' + mapel + ' kelas ' + kelas + ' (Database Materi kosong)' }, replyOrigin);
+        continue;
+      }
+      var BATCH = 8;
+      for (var i = 0; i < soalGrup.length; i += BATCH) {
+        var potongan = soalGrup.slice(i, i + BATCH);
+        var rows = potongan.map(function (s) {
+          var row = { tipe: s.tipe || '', pertanyaan: s.pertanyaan || '', kunci: s.kunci || '' };
+          if (s.url_gambar) row.vrl_gambar = s.url_gambar; // nama field 'vrl_gambar' memang begitu di buildPayload()
+          ['a', 'b', 'c', 'd'].forEach(function (h) { if (s['opsi_' + h]) row['opsi_' + h] = s['opsi_' + h]; });
+          return row;
+        });
+        try {
+          var hasilBatch = await callGemini(apiKey, model, rows, mapel, kelas, materiList);
+          // FITUR-FIX: pakai for-loop biasa (bukan .forEach) supaya kalau ada
+          // satu index bermasalah, tidak menghentikan loop di tengah lalu
+          // "jatuh" ke catch di bawah yang bakal mendorong ULANG seluruh
+          // potongan sebagai gagal (dobel-catat soal yang sebenarnya sudah
+          // sukses). Juga ditangani eksplisit kalau AI mengembalikan jumlah
+          // hasil yang TIDAK SESUAI jumlah yang diminta (jarang, tapi model
+          // AI kadang tidak konsisten) -- soal yang tak kebagian hasil
+          // ditandai gagal SEKALI, bukan diam-diam dilewati atau diulang.
+          var n = Math.min(hasilBatch.length, potongan.length);
+          for (var ri = 0; ri < n; ri++) {
+            var ref = potongan[ri].ref, res = hasilBatch[ri];
+            if (res.error) { hasilSemua.push({ ref: ref, error: res.error }); }
+            else {
+              var kesulitan3 = (KD_MAP[res.kesulitan] || res.kesulitan || '').toLowerCase();
+              hasilSemua.push({ ref: ref, topik: res.topik, bloom: res.bloom, kesulitan: kesulitan3 });
+            }
+            selesai++;
+          }
+          for (var sisa = n; sisa < potongan.length; sisa++) {
+            hasilSemua.push({ ref: potongan[sisa].ref, error: 'Jumlah hasil dari AI tidak sesuai jumlah soal yang diminta pada batch ini.' });
+            selesai++;
+          }
+        } catch (e) {
+          potongan.forEach(function (s) { hasilSemua.push({ ref: s.ref, error: (e && e.message) || 'Gagal memproses.' }); selesai++; });
+        }
+        ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: selesai, total: totalSoal, label: 'Memproses ' + mapel + ' kelas ' + kelas + ' (' + selesai + '/' + totalSoal + ')' }, replyOrigin);
+        if (i + BATCH < soalGrup.length) await sleep(1200); // jeda antar-batch, sama seperti alur bawaan
+      }
+    }
+
+    ghKirimKeParent('GH_KLASIFIKASI_HASIL', { hasil: hasilSemua }, replyOrigin);
+  }
+
+  window.addEventListener('message', function (ev) {
+    var d = ev.data;
+    if (!d || d.type !== 'GH_KLASIFIKASI_REQUEST') return;
+    // Catatan keamanan: kedua aplikasi ini dibuat & dipakai oleh orang yang
+    // sama (bukan layanan publik multi-pengguna), jadi validasi origin di
+    // sini sengaja dibuat longgar (terima dari origin manapun yang mengirim
+    // format pesan yang benar/dikenali). Kalau nanti dipakai lintas pihak
+    // lain, ketatkan dengan daftar origin yang diizinkan di sini.
+    ghProsesBatchDariGuruHub(d.soal || [], ev.origin);
+  });
+
+  // Kabari parent (kalau memang dibuka di dalam iframe oleh Guru Hub) bahwa
+  // aplikasi ini sudah siap menerima permintaan klasifikasi.
+  if (window.parent !== window) {
+    window.addEventListener('load', function () { ghKirimKeParent('GH_KLASIFIKASI_READY', {}, '*'); });
+  }
+})();
 </script>
