@@ -5,7 +5,6 @@
   "start_url": "./guruai_builder_v1.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0F1B2D",
   "theme_color": "#2DD4BF",
   "icons": [

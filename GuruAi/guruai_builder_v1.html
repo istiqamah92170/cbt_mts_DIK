@@ -8842,15 +8842,15 @@ function _atpRenderTimeline() {
                   style="font-size:10px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--bg-surface);color:var(--text-secondary);cursor:pointer;white-space:nowrap;">📝 Soal</button>
               </div>
              </div>`
-          : `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-              <button class="btn-buat-rppm" ${isCurrent?'':'style="opacity:.6;"'}
-                onclick="atpBuatRPPM(${s.ke})">
-                ${isCurrent ? '📝 Buat RPPM' : '📝 Buat'}
+          : `<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:flex-end;">
+              ${isCurrent ? '<span class="badge badge-amber" style="font-size:9px;">→ Berikutnya</span>' : ''}
+              <button class="btn-buat-rppm" onclick="atpBuatRPPM(${s.ke})">
+                📝 Buat RPPM
               </button>
-              ${isCurrent ? '' : `<button onclick="atpTandaiSelesai('${key}')"
+              <button onclick="atpTandaiSelesai('${key}')"
                 style="font-size:10px;color:var(--text-muted);border:1px solid var(--border);border-radius:4px;padding:2px 6px;">
                 ✓ Tandai selesai
-              </button>`}
+              </button>
              </div>`}
       </div>`;
   });
