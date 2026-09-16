@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan Presensi — SmartPresensi QR</title>
+<style>
+  :root{
+    --color-primary: #10b981;
+    --color-primary-dark: #059669;
+    --color-primary-light: #d1fae5;
+    --color-bg: #f8faf9;
+    --color-surface: #ffffff;
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+    --color-border: #e2e8f0;
+    --color-danger: #ef4444;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+  .shell { max-width: 480px; margin: 0 auto; padding: 16px; min-height: 100vh; }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn {
+    font-family: inherit; font-weight: 600; font-size: 14px;
+    border-radius: var(--radius-sm); padding: 10px 20px; border: none;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--color-primary); color: #fff; width: 100%; }
+  .btn-primary:disabled { opacity: 0.6; }
+  .btn-ghost { background: transparent; color: var(--color-text-muted); }
+  .input {
+    font-family: inherit; font-size: 14px; padding: 12px 14px;
+    border-radius: var(--radius-sm); border: 1px solid var(--color-border);
+    width: 100%;
+  }
+  .input:focus { outline: none; border-color: var(--color-primary); }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--color-text-muted); }
+
+  /* Login */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .login-card { width: 100%; padding: 32px 28px; }
+  .login-logo {
+    width: 56px; height: 56px; border-radius: var(--radius-md);
+    background: var(--color-primary); display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 22px; margin: 0 auto 16px;
+  }
+  .login-title { text-align: center; font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  .login-subtitle { text-align: center; font-size: 13px; color: var(--color-text-muted); margin: 0 0 24px; }
+  .login-error {
+    font-size: 13px; color: var(--color-danger); text-align: center; margin: 0 0 16px; display: none;
+  }
+  .login-error.show { display: block; }
+
+  /* Scan */
+  .scan-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .scan-topbar .title { font-size: 16px; font-weight: 700; margin: 0; }
+  #reader {
+    border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--color-border);
+    background: #000; min-height: 240px;
+  }
+  .scan-status {
+    margin-top: 14px; padding: 14px 16px; border-radius: var(--radius-md);
+    font-size: 14px; font-weight: 600; text-align: center;
+    background: var(--color-surface); border: 1px solid var(--color-border); min-height: 20px;
+  }
+  .scan-status.ok { background: var(--color-primary-light); color: var(--color-primary-dark); border-color: var(--color-primary); }
+  .scan-status.fail { background: #fee2e2; color: var(--color-danger); border-color: var(--color-danger); }
+  .scan-counter, .gps-note { margin-top: 10px; font-size: 12px; color: var(--color-text-muted); text-align: center; }
+  .user-note { font-size: 12px; color: var(--color-text-muted); text-align: center; margin-bottom: 12px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div id="view-login" class="view active">
+    <div class="login-wrap">
+      <form class="card login-card" id="loginForm">
+        <div class="login-logo">SP</div>
+        <p class="login-title">Scan Presensi</p>
+        <p class="login-subtitle">Masuk sebagai guru/petugas untuk mulai scan</p>
+        <p class="login-error" id="loginError"></p>
+        <div class="field">
+          <label for="username">Username</label>
+          <input class="input" type="text" id="username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" type="password" id="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="loginBtn">Masuk</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="view-scan" class="view">
+    <div class="scan-topbar">
+      <p class="title">Scan Presensi</p>
+      <button class="btn btn-ghost" id="btnLogout">Keluar</button>
+    </div>
+    <p class="user-note" id="userNote"></p>
+
+    <div id="reader"></div>
+
+    <div class="scan-status" id="scanStatus">Memuat pustaka pemindai QR...</div>
+    <div class="scan-counter" id="scanCounter">Total scan berhasil hari ini di sesi ini: 0</div>
+    <div class="gps-note" id="gpsNote">Mengambil lokasi GPS...</div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   KONFIGURASI — WAJIB DIISI
+   ========================================================= */
+// URL Web App SmartPresensi QR (Apps Script), berakhiran /exec.
+const API_URL = "GANTI_DENGAN_URL_WEBAPP_APPS_SCRIPT_ANDA";
+
+/* =========================================================
+   STATE & HELPER
+   ========================================================= */
+const State = {
+  token: null,
+  lokasi: null,
+  scanner: null,
+  scannerAktif: false,
+  sedangProsesScan: false,
+  jumlahScanSukses: 0
+};
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+}
+
+function setScanStatus(text, kind) {
+  const el = document.getElementById('scanStatus');
+  el.textContent = text;
+  el.className = 'scan-status' + (kind ? ' ' + kind : '');
+}
+
+function beep(sukses) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = sukses ? 880 : 300;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {}
+}
+
+async function panggilApi(action, params) {
+  const body = new URLSearchParams({ action, ...params });
+  const response = await fetch(API_URL, { method: 'POST', body });
+  if (!response.ok) throw new Error('Server merespons dengan error.');
+  return response.json();
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+function cekApiUrlTerkonfigurasi() {
+  if (!API_URL || API_URL.indexOf('GANTI_DENGAN') === 0) {
+    setScanStatus('Konfigurasi API_URL belum diisi. Hubungi pengelola sistem.', 'fail');
+    return false;
+  }
+  return true;
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const errorEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errorEl.classList.remove('show');
+
+  if (!cekApiUrlTerkonfigurasi()) return;
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+
+  try {
+    const res = await panggilApi('login', { username, password });
+    if (res.success) {
+      masukKeScan(res.token, res.nama);
+    } else {
+      errorEl.textContent = res.message;
+      errorEl.classList.add('show');
+    }
+  } catch (err) {
+    errorEl.textContent = 'Gagal menghubungi server. Periksa koneksi internet.';
+    errorEl.classList.add('show');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', function () {
+  if (State.token) {
+    panggilApi('logout', { token: State.token }).catch(() => {});
+  }
+  if (State.scanner && State.scannerAktif) {
+    State.scanner.stop().catch(() => {});
+    State.scannerAktif = false;
+  }
+  State.token = null;
+  sessionStorage.removeItem('sp_scan_token');
+  showView('login');
+});
+
+function masukKeScan(token, nama) {
+  State.token = token;
+  sessionStorage.setItem('sp_scan_token', token);
+  document.getElementById('userNote').textContent = nama ? ('Masuk sebagai: ' + nama) : '';
+  showView('scan');
+  mulaiAlurScan();
+}
+
+/* =========================================================
+   ALUR SCAN
+   ========================================================= */
+function mulaiAlurScan() {
+  if (!cekApiUrlTerkonfigurasi()) return;
+
+  ambilLokasi();
+  muatPustakaScanner(
+    () => mulaiScanner(),
+    () => setScanStatus('Gagal memuat pustaka pemindai QR dari semua sumber. Periksa koneksi internet.', 'fail')
+  );
+}
+
+function muatPustakaScanner(onSiap, onGagalTotal) {
+  const sumberCdn = [
+    'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'
+  ];
+
+  function cobaMuat(index) {
+    if (index >= sumberCdn.length) { onGagalTotal(); return; }
+
+    const script = document.createElement('script');
+    script.src = sumberCdn[index];
+
+    const batasWaktu = setTimeout(() => {
+      script.onerror = script.onload = null;
+      cobaMuat(index + 1);
+    }, 8000);
+
+    script.onload = () => {
+      clearTimeout(batasWaktu);
+      if (typeof Html5Qrcode !== 'undefined') onSiap();
+      else cobaMuat(index + 1);
+    };
+    script.onerror = () => {
+      clearTimeout(batasWaktu);
+      cobaMuat(index + 1);
+    };
+
+    document.head.appendChild(script);
+  }
+
+  cobaMuat(0);
+}
+
+function ambilLokasi() {
+  const gpsNoteEl = document.getElementById('gpsNote');
+  if (!navigator.geolocation) {
+    gpsNoteEl.textContent = 'Perangkat tidak mendukung GPS. Validasi radius akan gagal.';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      State.lokasi = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
+      };
+      gpsNoteEl.textContent = 'Lokasi didapat (akurasi ~' + Math.round(pos.coords.accuracy) + ' m). Siap scan.';
+    },
+    () => { gpsNoteEl.textContent = 'Gagal mengambil lokasi GPS. Izinkan akses lokasi lalu coba lagi.'; },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+async function onScanSukses(decodedText) {
+  if (State.sedangProsesScan) return;
+  if (!State.lokasi) {
+    setScanStatus('Lokasi GPS belum siap, tunggu sebentar lalu coba lagi.', 'fail');
+    beep(false);
+    return;
+  }
+
+  State.sedangProsesScan = true;
+  setScanStatus('Memeriksa...', null);
+
+  try {
+    const res = await panggilApi('recordAttendance', {
+      token: State.token,
+      qrPayload: decodedText,
+      lat: State.lokasi.lat,
+      lng: State.lokasi.lng,
+      accuracy: State.lokasi.accuracy,
+      device: navigator.userAgent.substring(0, 120)
+    });
+
+    if (res.success) {
+      State.jumlahScanSukses++;
+      document.getElementById('scanCounter').textContent =
+        'Total scan berhasil hari ini di sesi ini: ' + State.jumlahScanSukses;
+      setScanStatus(res.message, 'ok');
+      beep(true);
+    } else {
+      setScanStatus(res.message || 'TOKEN TIDAK VALID', 'fail');
+      beep(false);
+    }
+  } catch (err) {
+    setScanStatus('Terjadi kesalahan server. Coba scan ulang.', 'fail');
+    beep(false);
+    console.error(err);
+  } finally {
+    State.sedangProsesScan = false;
+  }
+}
+
+function mulaiScanner() {
+  if (typeof Html5Qrcode === 'undefined') {
+    setScanStatus('Pustaka pemindai QR gagal dimuat. Periksa koneksi internet perangkat ini.', 'fail');
+    return;
+  }
+  if (State.scannerAktif) return;
+
+  if (!State.scanner) {
+    State.scanner = new Html5Qrcode('reader');
+  }
+
+  State.scanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 240, height: 240 } },
+    onScanSukses
+  ).then(() => {
+    State.scannerAktif = true;
+    setScanStatus('Arahkan kamera ke QR kartu siswa.', null);
+  }).catch((err) => {
+    setScanStatus('Gagal membuka kamera: ' + err + '. Pastikan izin kamera diberikan.', 'fail');
+  });
+}
+
+/* =========================================================
+   START
+   ========================================================= */
+(function start() {
+  const params = new URLSearchParams(window.location.search);
+  const tokenDariUrl = params.get('token');
+
+  if (tokenDariUrl) {
+    // Datang dari tombol "Scan Presensi ↗" di dashboard — langsung
+    // validasi token, tidak perlu login manual lagi.
+    if (!cekApiUrlTerkonfigurasi()) return;
+    panggilApi('validateSession', { token: tokenDariUrl }).then((res) => {
+      if (res.valid) {
+        masukKeScan(tokenDariUrl, res.nama);
+      } else {
+        showView('login');
+      }
+    }).catch(() => showView('login'));
+    return;
+  }
+
+  const tokenTersimpan = sessionStorage.getItem('sp_scan_token');
+  if (tokenTersimpan) {
+    panggilApi('validateSession', { token: tokenTersimpan }).then((res) => {
+      if (res.valid) {
+        masukKeScan(tokenTersimpan, res.nama);
+      } else {
+        sessionStorage.removeItem('sp_scan_token');
+        showView('login');
+      }
+    }).catch(() => showView('login'));
+  } else {
+    showView('login');
+  }
+})();
+</script>
+
+</body>
+</html>
