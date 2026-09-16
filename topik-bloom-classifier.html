@@ -7448,16 +7448,18 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
 //  Terima daftar soal dari Guru Hub lewat postMessage (aplikasi ini
 //  bisa dibuka Guru Hub di dalam <iframe>, beda domain sekalipun --
 //  postMessage memang dirancang untuk itu). Soal diproses memakai
-//  mesin klasifikasi yang SUDAH ADA di app ini (callGemini + Database
-//  Materi + API key milik app ini sendiri), lalu hasil {topik, bloom,
-//  kesulitan} dikirim balik. TIDAK menyentuh resultData/sheetData/UI
-//  utama app ini -- proses ini sepenuhnya terpisah, supaya tidak
-//  bentrok dengan alur Excel/manual yang sudah ada.
+//  mesin klasifikasi yang SUDAH ADA di app ini (callGemini/localAnalyze
+//  + Database Materi), lalu hasil {topik, bloom, kesulitan} dikirim
+//  balik. TIDAK menyentuh resultData/sheetData/UI utama app ini --
+//  proses ini sepenuhnya terpisah, supaya tidak bentrok dengan alur
+//  Excel/manual yang sudah ada.
 //
 //  Protokol pesan:
-//   Guru Hub -> sini : {type:'GH_KLASIFIKASI_REQUEST', soal:[{ref, mapel,
+//   Guru Hub -> sini : {type:'GH_KLASIFIKASI_REQUEST', mode:'lokal'|'gemini',
+//                       apiKey (kalau mode gemini -- dikirim Guru Hub, BUKAN
+//                       dibaca dari localStorage app ini), soal:[{ref, mapel,
 //                       kelas, tipe, pertanyaan, opsi_a..d, kunci, url_gambar}]}
-//   sini -> Guru Hub : {type:'GH_KLASIFIKASI_READY'}               (saat siap)
+//   sini -> Guru Hub : {type:'GH_KLASIFIKASI_READY', keAktif, jumlahModulKE}
 //                      {type:'GH_KLASIFIKASI_PROGRESS', selesai, total, label}
 //                      {type:'GH_KLASIFIKASI_HASIL', hasil:[{ref, topik,
 //                       bloom, kesulitan} atau {ref, error}]}
@@ -7496,11 +7498,31 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
     window.parent.postMessage(Object.assign({ type: type, _sumber: 'topik-bloom-classifier' }, data), targetOrigin || '*');
   }
 
-  async function ghProsesBatchDariGuruHub(daftarSoal, replyOrigin) {
-    var apiKey = (localStorage.getItem('gemini_api_key') || '').trim();
-    if (!apiKey) {
-      ghKirimKeParent('GH_KLASIFIKASI_ERROR', { pesan: 'API key Gemini belum diisi di aplikasi Klasifikasi ini. Buka aplikasi ini langsung, isi API key-nya dulu, baru coba lagi dari Guru Hub.' }, replyOrigin);
-      return;
+  // FITUR (2026-09): status Knowledge Engine ditentukan dari registry
+  // KELoader yang sudah ada di app ini -- dilaporkan APA ADANYA ke Guru
+  // Hub (aktif kalau ada minimal 1 modul TERMUAT, tidak dikarang).
+  function ghStatusKnowledgeEngine() {
+    try {
+      var jumlah = Object.keys(KELoader.registry).length;
+      return { keAktif: jumlah > 0, jumlahModulKE: jumlah };
+    } catch (e) {
+      return { keAktif: false, jumlahModulKE: 0 };
+    }
+  }
+
+  async function ghProsesBatchDariGuruHub(daftarSoal, replyOrigin, mode, apiKeyDikirim) {
+    mode = (mode === 'lokal') ? 'lokal' : 'gemini';
+    var apiKey = '';
+    if (mode === 'gemini') {
+      // FITUR (2026-09): API key sekarang dikirim LANGSUNG oleh Guru Hub tiap
+      // eksekusi (guru pilih & isi di panel Guru Hub) -- bukan lagi dibaca
+      // diam-diam dari localStorage app ini, supaya guru sadar & bisa ganti
+      // key kapan saja dari Guru Hub tanpa perlu buka app ini sama sekali.
+      apiKey = (apiKeyDikirim || '').trim();
+      if (!apiKey) {
+        ghKirimKeParent('GH_KLASIFIKASI_ERROR', { pesan: 'Mode Gemini AI dipilih tapi API key kosong.' }, replyOrigin);
+        return;
+      }
     }
     var model = (document.getElementById('sModel') && document.getElementById('sModel').value) || activeModel || 'gemini-2.5-flash';
 
@@ -7514,7 +7536,7 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
     });
 
     var hasilSemua = [], totalSoal = daftarSoal.length, selesai = 0;
-    ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: 0, total: totalSoal, label: 'Memulai...' }, replyOrigin);
+    ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: 0, total: totalSoal, label: 'Memulai (' + (mode === 'lokal' ? 'AI Lokal' : 'Gemini AI') + ')...' }, replyOrigin);
 
     for (var k in grup) {
       var parts = k.split('||'), mapel = parts[0], kelas = parts[1];
@@ -7525,6 +7547,26 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
         ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: selesai, total: totalSoal, label: 'Lewati ' + mapel + ' kelas ' + kelas + ' (Database Materi kosong)' }, replyOrigin);
         continue;
       }
+
+      // ── MODE AI LOKAL: sinkron, instan, tanpa panggilan jaringan ──
+      if (mode === 'lokal') {
+        soalGrup.forEach(function (s) {
+          var row = { tipe: s.tipe || '', pertanyaan: s.pertanyaan || '', kunci: s.kunci || '' };
+          ['a', 'b', 'c', 'd'].forEach(function (h) { if (s['opsi_' + h]) row['opsi_' + h] = s['opsi_' + h]; });
+          try {
+            var res = localAnalyze(row, mapel, kelas, materiList);
+            var kesulitan3 = (KD_MAP[res.kesulitan] || res.kesulitan || '').toLowerCase();
+            hasilSemua.push({ ref: s.ref, topik: res.topik, bloom: res.bloom, kesulitan: kesulitan3 });
+          } catch (e) {
+            hasilSemua.push({ ref: s.ref, error: (e && e.message) || 'Gagal memproses (AI Lokal).' });
+          }
+          selesai++;
+        });
+        ghKirimKeParent('GH_KLASIFIKASI_PROGRESS', { selesai: selesai, total: totalSoal, label: 'Selesai ' + mapel + ' kelas ' + kelas + ' (AI Lokal, ' + selesai + '/' + totalSoal + ')' }, replyOrigin);
+        continue;
+      }
+
+      // ── MODE GEMINI AI: batch + jeda, sama seperti alur bawaan ──
       var BATCH = 8;
       for (var i = 0; i < soalGrup.length; i += BATCH) {
         var potongan = soalGrup.slice(i, i + BATCH);
@@ -7577,7 +7619,7 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
     // sini sengaja dibuat longgar (terima dari origin manapun yang mengirim
     // format pesan yang benar/dikenali). Kalau nanti dipakai lintas pihak
     // lain, ketatkan dengan daftar origin yang diizinkan di sini.
-    ghProsesBatchDariGuruHub(d.soal || [], ev.origin);
+    ghProsesBatchDariGuruHub(d.soal || [], ev.origin, d.mode, d.apiKey);
   });
 
   // FITUR-FIX (2026-09): dulu READY dikirim langsung saat event 'load' --
@@ -7586,19 +7628,17 @@ callGemini = async function(apiKey, model, rows, mapel, kelas, materiList) {
   // condition: Guru Hub sudah kirim soal sebelum DB benar-benar siap dibaca.
   // Sekarang ditunggu dulu sampai DB nyata siap (maksimal 5 detik -- lebih
   // dari cukup karena ini cuma baca+parse localStorage, bukan panggilan
-  // jaringan). Catatan: API key SENGAJA TIDAK ditunggu di sini -- kalau
-  // memang belum diisi, menunggu tidak akan membuatnya terisi sendiri
-  // (tidak ada interaksi guru di dalam iframe tersembunyi ini), jadi lebih
-  // baik langsung lanjut & biarkan pesan error yang jelas ("API key belum
-  // diisi") muncul cepat lewat handler GH_KLASIFIKASI_REQUEST, bukan
-  // ditahan tanpa guna.
+  // jaringan). Catatan: API key TIDAK relevan lagi di sini karena sekarang
+  // dikirim Guru Hub sendiri per eksekusi (lihat ghProsesBatchDariGuruHub).
+  // Status Knowledge Engine ikut dilaporkan bersama READY supaya Guru Hub
+  // bisa menampilkannya SEBELUM guru memutuskan mulai memproses.
   function ghTungguSiapLaluKirimReady() {
     var percobaan = 0, maxPercobaan = 33; // 33 x 150ms = maksimal 5 detik
     (function cek() {
       percobaan++;
       var dbSiap = (typeof DB !== 'undefined') && DB && DB.mapel && Object.keys(DB.mapel).length > 0;
       if (dbSiap || percobaan >= maxPercobaan) {
-        ghKirimKeParent('GH_KLASIFIKASI_READY', {}, '*');
+        ghKirimKeParent('GH_KLASIFIKASI_READY', ghStatusKnowledgeEngine(), '*');
       } else {
         setTimeout(cek, 150);
       }
