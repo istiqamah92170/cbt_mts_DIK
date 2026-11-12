@@ -1,0 +1,2980 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="artifact-type" content="tool">
+  <meta name="design-style" content="charter">
+  <title>Review Pembahasan PKN Kelas 9 Semester 1</title>
+
+  <!-- Google Fonts: Charter Style (Libre Caslon Text + Inter + JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      color-scheme: light;
+
+      /* Charter Style Tokens */
+      --background: #f7f4ec;               /* Warm cream paper */
+      --surface-container-low: #fffdf8;    /* Bright leaf card */
+      --surface-container: #ece5d4;        /* Deeper cream */
+      --surface-container-high: #e3dac4;   /* Header band, hover fill */
+
+      /* Ink */
+      --on-surface: #1c1f26;               /* Near-black ink */
+      --on-surface-variant: #4f5360;       /* Graphite text */
+
+      /* Rules & Borders */
+      --outline: #b08d57;                  /* Burnished brass */
+      --outline-variant: #d9cfb8;          /* Pale brass divider */
+
+      /* Accents */
+      --primary: #14213d;                  /* Deep navy */
+      --on-primary: #f7f4ec;               /* Cream on navy */
+      --primary-container: #e3e6ee;        /* Pale navy tint */
+      --on-primary-container: #14213d;
+      --secondary: #2d5a4a;                /* Bottle green */
+      --on-secondary: #f7f4ec;
+      --tertiary: #8a6a35;                 /* Dark brass */
+      --error: #9b2c2c;                    /* Deep crimson */
+      --on-error: #f7f4ec;
+      --positive: #246a48;                 /* Muted emerald */
+      --warning: #a36116;                  /* Warm amber */
+      --focus: #14213d;
+
+      /* Matching Badge Palettes */
+      --badge-1-bg: #1e3a8a;
+      --badge-1-light: #eff6ff;
+      --badge-2-bg: #166534;
+      --badge-2-light: #f0fdf4;
+      --badge-3-bg: #92400e;
+      --badge-3-light: #fefce8;
+      --badge-4-bg: #6b21a8;
+      --badge-4-light: #faf5ff;
+      --badge-distractor: #4b5563;
+
+      /* Typography Tokens */
+      --font-headline: 'Libre Caslon Text', Georgia, serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-label: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Sizing Scale */
+      --display-size: clamp(1.65rem, 1.3rem + 1.2vw, 2.2rem);
+      --headline-size: clamp(1.2rem, 1.05rem + 0.5vw, 1.45rem);
+      --subhead-size: clamp(1.02rem, 0.95rem + 0.2vw, 1.15rem);
+      --body-size: clamp(0.92rem, 0.88rem + 0.12vw, 0.98rem);
+      --label-size: 0.75rem;
+
+      /* Spacing Scale */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2.25rem;
+      --space-2xl: 3.5rem;
+
+      /* Transitions */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --dur-micro: 120ms;
+      --dur-short: 200ms;
+      --dur-long: 380ms;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      background-color: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.55;
+      overflow-x: clip;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Accessibility Focus Ring */
+    :focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    /* Container Architecture */
+    .app-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navy Charter Band */
+    .header-banner {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border-bottom: 3px solid var(--outline);
+      padding: var(--space-md) var(--space-lg);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      box-shadow: 0 4px 12px rgba(20, 33, 61, 0.08);
+    }
+
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .brand-emblem {
+      width: 34px;
+      height: 34px;
+      background: var(--outline);
+      color: var(--primary);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-family: var(--font-headline);
+      font-size: 1.15rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .brand-title {
+      font-family: var(--font-headline);
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--on-primary);
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .badge-score-live {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--outline);
+      color: #fff;
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .badge-score-live strong {
+      color: #fce79a;
+      font-size: 0.95rem;
+    }
+
+    /* Main Stage */
+    .main-container {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: var(--space-lg) var(--space-md) var(--space-2xl);
+    }
+
+    /* Common Card Styling */
+    .charter-card {
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(28, 31, 38, 0.04);
+      padding: var(--space-xl);
+      position: relative;
+    }
+
+    .charter-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--outline), transparent);
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      font-family: var(--font-headline);
+      color: var(--primary);
+      line-height: 1.25;
+    }
+
+    h1 {
+      font-size: var(--display-size);
+      margin-bottom: var(--space-xs);
+    }
+
+    h2 {
+      font-size: var(--headline-size);
+      margin-bottom: var(--space-sm);
+    }
+
+    h3 {
+      font-size: var(--subhead-size);
+      margin-bottom: var(--space-xs);
+    }
+
+    p {
+      margin-bottom: var(--space-md);
+      color: var(--on-surface);
+    }
+
+    .text-graphite {
+      color: var(--on-surface-variant);
+    }
+
+    .text-brass {
+      color: var(--tertiary);
+    }
+
+    /* Button System */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.35rem;
+      font-family: var(--font-label);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background-color var(--dur-short) var(--ease-out),
+                  border-color var(--dur-short) var(--ease-out),
+                  box-shadow var(--dur-short) var(--ease-out),
+                  transform var(--dur-micro) var(--ease-out);
+      min-height: 44px;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: #1e3159;
+      border-color: var(--outline);
+    }
+
+    .btn-brass {
+      background-color: var(--outline);
+      color: #14213d;
+      font-weight: 700;
+      border-color: #8a6a35;
+    }
+
+    .btn-brass:hover:not(:disabled) {
+      background-color: #c4a16b;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border-color: var(--outline);
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background-color: var(--surface-container);
+    }
+
+    .btn-secondary {
+      background: var(--surface-container);
+      color: var(--on-surface);
+      border-color: var(--outline-variant);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface-container-high);
+    }
+
+    /* Start Screen */
+    .start-screen-hero {
+      text-align: center;
+      padding: var(--space-xl) var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--outline-variant);
+      margin-bottom: var(--space-xl);
+    }
+
+    .start-eyebrow {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--tertiary);
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+    }
+
+    .start-desc {
+      max-width: 680px;
+      margin: 0 auto var(--space-md);
+      font-size: 1.05rem;
+      color: var(--on-surface-variant);
+    }
+
+    .game-modes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-md);
+      margin: var(--space-xl) 0;
+    }
+
+    .game-mode-card {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      transition: border-color var(--dur-short) var(--ease-out),
+                  transform var(--dur-micro) var(--ease-out);
+    }
+
+    .game-mode-card:hover {
+      border-color: var(--outline);
+      transform: translateY(-2px);
+    }
+
+    .mode-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      background: var(--primary-container);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .mode-title {
+      font-family: var(--font-headline);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .mode-desc {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .info-metrics-row {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-xl);
+      margin: var(--space-lg) 0 var(--space-xl);
+      flex-wrap: wrap;
+    }
+
+    .metric-pill {
+      background: var(--surface-container-high);
+      border: 1px solid var(--outline);
+      padding: 0.6rem 1.4rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: var(--font-label);
+      font-size: 0.9rem;
+      color: var(--primary);
+    }
+
+    .metric-pill strong {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      color: var(--primary);
+    }
+
+    /* Challenge Top Navigation & Progress */
+    .challenge-progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: var(--outline-variant);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: var(--space-md);
+    }
+
+    .challenge-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--tertiary), var(--primary));
+      width: 0%;
+      transition: width var(--dur-long) var(--ease-out);
+    }
+
+    .challenge-header-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    .challenge-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border: 1px solid rgba(20, 33, 61, 0.2);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-label);
+    }
+
+    .challenge-number-badge {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--on-surface-variant);
+    }
+
+    /* Pembahasan / Discussion Drawer */
+    .explanation-box {
+      margin-top: var(--space-lg);
+      padding: var(--space-md) var(--space-lg);
+      background: #fdfbf7;
+      border-left: 4px solid var(--outline);
+      border-radius: 0 6px 6px 0;
+      border-top: 1px solid var(--outline-variant);
+      border-right: 1px solid var(--outline-variant);
+      border-bottom: 1px solid var(--outline-variant);
+      display: none;
+      animation: fadeIn var(--dur-short) var(--ease-out);
+    }
+
+    .explanation-title {
+      font-family: var(--font-headline);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .explanation-text {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--on-surface);
+      margin: 0;
+    }
+
+    /* Actions Footer inside Question */
+    .challenge-actions-footer {
+      margin-top: var(--space-lg);
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    /* Pilihan Ganda (PG) Module */
+    .pg-stem {
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--on-surface);
+      margin-bottom: var(--space-lg);
+      line-height: 1.6;
+    }
+
+    .pg-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .pg-option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      text-align: left;
+      font-family: var(--font-body);
+      font-size: 0.93rem;
+      color: var(--on-surface);
+      cursor: pointer;
+      transition: background-color var(--dur-short) var(--ease-out),
+                  border-color var(--dur-short) var(--ease-out),
+                  box-shadow var(--dur-short) var(--ease-out);
+      width: 100%;
+      min-height: 48px;
+    }
+
+    .pg-option-btn:hover:not(:disabled) {
+      background: var(--surface-container);
+      border-color: var(--outline);
+    }
+
+    .pg-option-btn.selected {
+      background: var(--primary-container);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .pg-option-btn.correct {
+      background: #ecfdf5 !important;
+      border-color: var(--positive) !important;
+      box-shadow: 0 0 0 1px var(--positive) !important;
+    }
+
+    .pg-option-btn.wrong {
+      background: #fef2f2 !important;
+      border-color: var(--error) !important;
+      box-shadow: 0 0 0 1px var(--error) !important;
+    }
+
+    .option-key-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      border-radius: 4px;
+      background: var(--surface-container);
+      border: 1px solid var(--outline);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--primary);
+    }
+
+    .pg-option-btn.selected .option-key-badge {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+
+    .pg-option-btn.correct .option-key-badge {
+      background: var(--positive);
+      color: #fff;
+      border-color: var(--positive);
+    }
+
+    .pg-option-btn.wrong .option-key-badge {
+      background: var(--error);
+      color: #fff;
+      border-color: var(--error);
+    }
+
+    /* Pasangkan Kartu Module */
+    .matching-instruction {
+      font-size: 0.95rem;
+      color: var(--on-surface-variant);
+      margin-bottom: var(--space-md);
+    }
+
+    .matching-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+    }
+
+    @media (max-width: 680px) {
+      .matching-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .matching-column {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .column-title {
+      font-family: var(--font-headline);
+      font-size: 0.92rem;
+      color: var(--primary);
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid var(--outline-variant);
+      margin-bottom: 0.25rem;
+    }
+
+    .matching-card {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      min-height: 52px;
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-sm);
+      transition: background-color var(--dur-short) var(--ease-out),
+                  border-color var(--dur-short) var(--ease-out),
+                  transform var(--dur-micro) var(--ease-out);
+      position: relative;
+    }
+
+    .matching-card:hover:not(:disabled) {
+      background: var(--surface-container);
+      border-color: var(--outline);
+    }
+
+    .matching-card.active-selected {
+      background: #fdf6ec !important;
+      border: 2px solid var(--outline) !important;
+      box-shadow: 0 2px 6px rgba(176, 141, 87, 0.25);
+    }
+
+    .matching-card.paired-1 {
+      border: 2px solid var(--badge-1-bg);
+      background: var(--badge-1-light);
+    }
+    .matching-card.paired-2 {
+      border: 2px solid var(--badge-2-bg);
+      background: var(--badge-2-light);
+    }
+    .matching-card.paired-3 {
+      border: 2px solid var(--badge-3-bg);
+      background: var(--badge-3-light);
+    }
+    .matching-card.paired-4 {
+      border: 2px solid var(--badge-4-bg);
+      background: var(--badge-4-light);
+    }
+
+    .matching-card.eval-correct {
+      background: #ecfdf5 !important;
+      border: 2px solid var(--positive) !important;
+    }
+
+    .matching-card.eval-wrong {
+      background: #fef2f2 !important;
+      border: 2px solid var(--error) !important;
+    }
+
+    .matching-card.eval-distractor {
+      background: #f3f4f6 !important;
+      border: 1px dashed var(--badge-distractor) !important;
+      opacity: 0.7;
+    }
+
+    .pair-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      color: #fff;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .pair-badge.badge-1 { background-color: var(--badge-1-bg); }
+    .pair-badge.badge-2 { background-color: var(--badge-2-bg); }
+    .pair-badge.badge-3 { background-color: var(--badge-3-bg); }
+    .pair-badge.badge-4 { background-color: var(--badge-4-bg); }
+
+    /* Tebak Kata Module */
+    .wordguess-dashboard {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      padding: var(--space-md);
+      margin-bottom: var(--space-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+    }
+
+    .calm-timer-box {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface-container-low);
+      padding: 0.45rem 0.9rem;
+      border-radius: 4px;
+      border: 1px solid var(--outline-variant);
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      color: var(--primary);
+    }
+
+    .calm-timer-box .timer-icon {
+      color: var(--tertiary);
+    }
+
+    .quota-box {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--font-label);
+      font-size: 0.85rem;
+      color: var(--on-surface);
+    }
+
+    .quota-hearts {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .quota-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--positive);
+      transition: background-color var(--dur-short) var(--ease-out);
+    }
+
+    .quota-dot.used {
+      background: #cbd5e1;
+    }
+
+    .timer-scoring-rule-note {
+      font-size: 0.78rem;
+      color: var(--on-surface-variant);
+      font-family: var(--font-label);
+      width: 100%;
+      text-align: center;
+      padding-top: 0.25rem;
+      border-top: 1px dashed var(--outline-variant);
+      margin-top: 0.25rem;
+    }
+
+    .wordguess-clue-card {
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline);
+      border-radius: 6px;
+      padding: var(--space-md) var(--space-lg);
+      margin-bottom: var(--space-lg);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .word-letters-display {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: var(--space-xl) 0;
+    }
+
+    .letter-slot {
+      width: 40px;
+      height: 52px;
+      background: var(--surface-container-low);
+      border-bottom: 3px solid var(--primary);
+      border-radius: 4px 4px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-headline);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    @media (max-width: 480px) {
+      .letter-slot {
+        width: 28px;
+        height: 42px;
+        font-size: 1.2rem;
+      }
+    }
+
+    .virtual-keyboard {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      align-items: center;
+      margin-top: var(--space-md);
+    }
+
+    .kb-row {
+      display: flex;
+      gap: 0.35rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .key-btn {
+      min-width: 34px;
+      height: 42px;
+      padding: 0 0.4rem;
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: 4px;
+      font-family: var(--font-label);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color var(--dur-micro) var(--ease-out),
+                  border-color var(--dur-micro) var(--ease-out),
+                  transform var(--dur-micro) var(--ease-out);
+    }
+
+    .key-btn:hover:not(:disabled) {
+      background: var(--surface-container-high);
+      border-color: var(--outline);
+    }
+
+    .key-btn.hit {
+      background: var(--positive) !important;
+      color: #fff !important;
+      border-color: var(--positive) !important;
+      opacity: 0.85;
+      cursor: default;
+    }
+
+    .key-btn.miss {
+      background: #e2e8f0 !important;
+      color: #94a3b8 !important;
+      border-color: #cbd5e1 !important;
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    /* Urutkan Hierarki Module */
+    .ordering-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin: var(--space-md) 0 var(--space-lg);
+    }
+
+    .ordering-item-card {
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      padding: var(--space-sm) var(--space-md);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      transition: background-color var(--dur-short) var(--ease-out),
+                  border-color var(--dur-short) var(--ease-out),
+                  transform var(--dur-short) var(--ease-out);
+    }
+
+    .ordering-content-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      flex: 1;
+    }
+
+    .order-position-badge {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      border-radius: 50%;
+      background: var(--surface-container-high);
+      border: 1px solid var(--outline);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .order-item-text {
+      font-size: 0.92rem;
+      color: var(--on-surface);
+      line-height: 1.45;
+    }
+
+    .order-control-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .order-nav-btn {
+      width: 32px;
+      height: 28px;
+      background: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 0.75rem;
+      transition: background-color var(--dur-micro) var(--ease-out),
+                  border-color var(--dur-micro) var(--ease-out);
+    }
+
+    .order-nav-btn:hover:not(:disabled) {
+      background: var(--surface-container-high);
+      border-color: var(--outline);
+    }
+
+    .order-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .ordering-item-card.eval-correct {
+      background: #f0fdf4;
+      border-color: var(--positive);
+    }
+
+    .ordering-item-card.eval-wrong {
+      background: #fef2f2;
+      border-color: var(--error);
+    }
+
+    /* Results / Hasil Akhir Screen */
+    .results-hero {
+      text-align: center;
+      padding: var(--space-xl) var(--space-md) var(--space-lg);
+    }
+
+    .results-score-card {
+      max-width: 440px;
+      margin: var(--space-lg) auto var(--space-xl);
+      background: #14213d;
+      color: #f7f4ec;
+      border: 2px solid var(--outline);
+      border-radius: 8px;
+      padding: var(--space-xl) var(--space-lg);
+      box-shadow: 0 10px 25px rgba(20, 33, 61, 0.2);
+    }
+
+    .results-score-value {
+      font-family: var(--font-headline);
+      font-size: 3.8rem;
+      font-weight: 700;
+      color: #fce79a;
+      line-height: 1;
+      margin: var(--space-sm) 0;
+    }
+
+    .results-score-max {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      color: var(--outline-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .results-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(36, 106, 72, 0.3);
+      border: 1px solid #34d399;
+      color: #a7f3d0;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      margin-top: var(--space-sm);
+    }
+
+    .stats-breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--space-md);
+      margin: var(--space-xl) 0;
+    }
+
+    .stat-card {
+      background: var(--surface-container);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      padding: var(--space-md);
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: var(--font-headline);
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+    }
+
+    .values-integration-card {
+      background: #faf7f0;
+      border: 1px solid var(--outline);
+      border-radius: 6px;
+      padding: var(--space-lg);
+      margin: var(--space-xl) 0;
+    }
+
+    .values-title {
+      font-family: var(--font-headline);
+      font-size: 1.15rem;
+      color: var(--primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .values-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: var(--space-sm);
+      font-size: 0.88rem;
+    }
+
+    .values-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      line-height: 1.45;
+    }
+
+    .values-bullet {
+      color: var(--tertiary);
+      font-weight: bold;
+    }
+
+    /* Review Accordion */
+    .review-accordion-section {
+      margin-top: var(--space-2xl);
+    }
+
+    .review-accordion-title {
+      font-family: var(--font-headline);
+      font-size: 1.25rem;
+      color: var(--primary);
+      margin-bottom: var(--space-md);
+      border-bottom: 2px solid var(--outline);
+      padding-bottom: 0.4rem;
+    }
+
+    .review-item {
+      background: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      margin-bottom: var(--space-sm);
+      overflow: hidden;
+    }
+
+    .review-item-header {
+      padding: var(--space-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      background: var(--surface-container);
+      font-size: 0.92rem;
+      font-weight: 600;
+      gap: var(--space-sm);
+    }
+
+    .review-item-header:hover {
+      background: var(--surface-container-high);
+    }
+
+    .review-item-body {
+      padding: var(--space-md);
+      font-size: 0.88rem;
+      display: none;
+      border-top: 1px solid var(--outline-variant);
+      line-height: 1.6;
+    }
+
+    .review-item.expanded .review-item-body {
+      display: block;
+    }
+
+    /* Utilities */
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Print / Responsive tweaks */
+    @media (max-width: 640px) {
+      .charter-card {
+        padding: var(--space-md);
+      }
+      .btn {
+        width: 100%;
+      }
+      .challenge-actions-footer {
+        flex-direction: column;
+      }
+      .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- Header Band (Charter Navy & Brass) -->
+    <header class="header-banner">
+      <div class="header-inner">
+        <div class="brand-group">
+          <div class="brand-emblem" aria-hidden="true">§</div>
+          <div>
+            <div class="brand-title">Pendidikan Pancasila &amp; Kewarganegaraan</div>
+            <div style="font-size: 0.75rem; color: var(--outline); font-family: var(--font-label); letter-spacing: 0.05em; text-transform: uppercase;">
+              Kelas 9 • Evaluasi Semester 1
+            </div>
+          </div>
+        </div>
+        <div class="header-meta">
+          <div class="badge-score-live" id="liveScoreBadge">
+            <span>Skor:</span>
+            <strong id="liveScoreDisplay">0</strong>
+            <span style="opacity: 0.7;">/ 100</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Canvas -->
+    <main class="main-container">
+
+      <!-- ========================================== -->
+      <!-- VIEW 1: LAYAR AWAL (START SCREEN)         -->
+      <!-- ========================================== -->
+      <section id="startScreen" class="charter-card">
+        <div class="start-screen-hero">
+          <div class="start-eyebrow">Modul Evaluasi Komprehensif Berbasis HOTS</div>
+          <h1>Review Pembahasan PKN Kelas 9</h1>
+          <p class="start-desc">
+            Uji penguasaan konsep esensial Dinamika Pancasila, Pembukaan UUD NRI 1945, dan Hakikat Kedaulatan Negara melalui penalaran analitis, studi kasus ketatanegaraan, dan pemecahan miskonsepsi hukum.
+          </p>
+
+          <div class="info-metrics-row">
+            <div class="metric-pill">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>Total Beban: <strong>15 Tantangan</strong></span>
+            </div>
+            <div class="metric-pill">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+              <span>Skor Maksimal: <strong>100 Poin</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: var(--space-md);">
+          <h2 style="font-size: 1.15rem; text-align: center;">4 Format Tantangan Pembelajaran</h2>
+          <p style="text-align: center; font-size: 0.9rem; color: var(--on-surface-variant); margin-bottom: var(--space-md);">
+            Dirancang dengan pengacakan Fisher-Yates mutlak dan prinsip anti-tebak ketat.
+          </p>
+        </div>
+
+        <div class="game-modes-grid">
+          <!-- 1. Pilihan Ganda HOTS -->
+          <div class="game-mode-card">
+            <div class="mode-icon">1</div>
+            <div class="mode-title">Pilihan Ganda HOTS</div>
+            <p class="mode-desc">
+              Analisis studi kasus perwujudan Pancasila, pemisahan nilai dasar vs instrumental, dan pencegahan anarki demokrasi.
+            </p>
+          </div>
+
+          <!-- 2. Pasangkan Kartu -->
+          <div class="game-mode-card">
+            <div class="mode-icon">2</div>
+            <div class="mode-title">Pasangkan Kartu</div>
+            <p class="mode-desc">
+              Pencocokan kartu berwarna dengan badge identitas (● 1 s.d. ● 4) disertai kartu pengecoh (distractor) yang menuntut kejelian.
+            </p>
+          </div>
+
+          <!-- 3. Tebak Kata -->
+          <div class="game-mode-card">
+            <div class="mode-icon">3</div>
+            <div class="mode-title">Tebak Kata</div>
+            <p class="mode-desc">
+              Penebakan istilah kunci tata negara dengan kuota kesalahan dan timer count-up tenang (30 detik pertama potensi 10 poin penuh).
+            </p>
+          </div>
+
+          <!-- 4. Urutkan Hierarki -->
+          <div class="game-mode-card">
+            <div class="mode-icon">4</div>
+            <div class="mode-title">Urutkan Hierarki</div>
+            <p class="mode-desc">
+              Penyusunan urutan logis kronologi sejarah, sistematika tujuan negara, dan pokok pikiran menggunakan navigasi naik/turun.
+            </p>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: var(--space-xl);">
+          <button id="btnStartGame" class="btn btn-primary" style="padding: 0.85rem 2.5rem; font-size: 1.05rem;" onclick="handleStartGameClick()">
+            Mulai Tantangan Evaluasi
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- VIEW 2: GAMEPLAY CONTAINER (15 TANTANGAN)  -->
+      <!-- ========================================== -->
+      <section id="gameplayScreen" class="charter-card hidden">
+        <!-- Progress Bar -->
+        <div class="challenge-progress-bar-container">
+          <div id="challengeProgressFill" class="challenge-progress-fill"></div>
+        </div>
+
+        <!-- Meta Header -->
+        <div class="challenge-header-meta">
+          <div class="challenge-type-badge" id="challengeTypeBadge">
+            <span id="challengeTypeIcon">✦</span>
+            <span id="challengeTypeLabel">Pilihan Ganda HOTS</span>
+          </div>
+          <div class="challenge-number-badge" id="challengeNumberBadge">
+            Tantangan 1 dari 15
+          </div>
+        </div>
+
+        <!-- Dynamic Question Area Containers (Ensures static DOM IDs for all modules) -->
+        <div id="dynamicChallengeArea">
+          <!-- 1. Pilihan Ganda Container -->
+          <div id="pgContainer" class="hidden">
+            <div id="pgStem" class="pg-stem"></div>
+            <div id="pgOptionsList" class="pg-options-list"></div>
+          </div>
+
+          <!-- 2. Pasangkan Kartu Container -->
+          <div id="matchContainer" class="hidden">
+            <div id="matchInstruction" class="matching-instruction"></div>
+            <div class="matching-grid">
+              <div class="matching-column" id="matchLeftColumn">
+                <div class="column-title">Kolom A: Istilah / Konsep</div>
+              </div>
+              <div class="matching-column" id="matchRightColumn">
+                <div class="column-title">Kolom B: Makna / Penerapan (+ Distractor)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Tebak Kata Container -->
+          <div id="wordContainer" class="hidden">
+            <div class="wordguess-dashboard">
+              <div class="calm-timer-box" id="calmTimerBox">
+                <span class="timer-icon" aria-hidden="true">⏱️</span>
+                <span id="wordTimerDisplay">Waktu: 00:00</span>
+              </div>
+              <div style="font-size: 0.85rem; font-family: var(--font-mono); color: var(--primary);">
+                Potensi Nilai: <strong id="wordPotentialDisplay" style="color: var(--positive);">10</strong> / 10 Poin
+              </div>
+              <div class="quota-box">
+                <span>Kuota Peluang:</span>
+                <div class="quota-hearts" id="quotaHeartsContainer">
+                  <div class="quota-dot"></div>
+                  <div class="quota-dot"></div>
+                  <div class="quota-dot"></div>
+                  <div class="quota-dot"></div>
+                  <div class="quota-dot"></div>
+                </div>
+              </div>
+              <div class="timer-scoring-rule-note">
+                Aturan Skor: 30 detik pertama potensi 10 poin penuh (jika kuota utuh). Setelah 30 detik, berkurang 1 poin setiap 10 detik berikutnya.
+              </div>
+            </div>
+
+            <div class="wordguess-clue-card" id="wordClueCard"></div>
+            <div class="word-letters-display" id="wordLettersDisplay"></div>
+            <div class="virtual-keyboard" id="virtualKeyboard"></div>
+            <div style="text-align: center; margin-top: var(--space-md);">
+              <button type="button" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.9rem;" onclick="handleSurrenderWord()">
+                Menyerah &amp; Buka Jawaban
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. Urutkan Hierarki Container -->
+          <div id="orderContainer" class="hidden">
+            <div id="orderInstruction" class="matching-instruction"></div>
+            <div class="ordering-container" id="orderingContainer"></div>
+          </div>
+        </div>
+
+        <!-- Pembahasan Drawer -->
+        <div id="explanationDrawer" class="explanation-box">
+          <div class="explanation-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Pembahasan &amp; Landasan Yuridis:
+          </div>
+          <p id="explanationContent" class="explanation-text"></p>
+        </div>
+
+        <!-- Actions Footer -->
+        <div class="challenge-actions-footer">
+          <div id="challengeFeedbackSnippet" style="font-size: 0.88rem; font-weight: 600; margin-right: auto;"></div>
+          <button id="btnLockAnswer" class="btn btn-brass" onclick="handleLockAnswerClick()">
+            Kunci Jawaban
+          </button>
+          <button id="btnNextChallenge" class="btn btn-primary hidden" onclick="handleNextChallengeClick()">
+            Tantangan Berikutnya
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- VIEW 3: HASIL AKHIR (RESULTS SCREEN)       -->
+      <!-- ========================================== -->
+      <section id="resultsScreen" class="charter-card hidden">
+        <div class="results-hero">
+          <div class="start-eyebrow">Laporan Capaian Belajar Siswa</div>
+          <h2>Hasil Evaluasi Review PKN Semester 1</h2>
+          <p class="text-graphite">
+            Penilaian autentik penguasaan materi Pancasila, Pembukaan UUD 1945, dan Kedaulatan Hukum &amp; Rakyat.
+          </p>
+
+          <div class="results-score-card">
+            <div class="results-score-max">Skor Akhir Capaian</div>
+            <div class="results-score-value" id="finalScoreNumber">0</div>
+            <div style="font-size: 0.95rem; color: #d9cfb8; margin-bottom: 0.5rem;" id="finalScorePredicate">
+              Memproses Penilaian...
+            </div>
+            <div class="results-status-badge" id="syncStatusBadge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Skor Terkirim ke Portal Guru</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Breakdown Grid -->
+        <div class="stats-breakdown-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="statPgCorrect">0 / 4</div>
+            <div class="stat-label">Pilihan Ganda HOTS</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statMatchCorrect">0 / 4</div>
+            <div class="stat-label">Pasangkan Kartu</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statWordCorrect">0 / 4</div>
+            <div class="stat-label">Tebak Kata Kunci</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statOrderCorrect">0 / 3</div>
+            <div class="stat-label">Urutkan Hierarki</div>
+          </div>
+        </div>
+
+        <!-- Nilai Cinta Profil Pelajar -->
+        <div class="values-integration-card">
+          <div class="values-title">Integrasi Nilai Karakter Kebangsaan</div>
+          <p style="font-size: 0.88rem; color: var(--on-surface-variant); margin-bottom: 0.5rem;">
+            Refleksi nilai luhur yang ditumbuhkan melalui penuntasan materi PKN semester ini:
+          </p>
+          <ul class="values-list">
+            <li>
+              <span class="values-bullet">❖</span>
+              <span><strong>Cinta kepada Allah SWT &amp; Rasul-Nya:</strong> Mengakui dengan keikhlasan batin bahwa kemerdekaan Indonesia merupakan karunia dan Rahmat Allah SWT (Alinea III UUD 1945).</span>
+            </li>
+            <li>
+              <span class="values-bullet">❖</span>
+              <span><strong>Cinta Bangsa &amp; Negara (Hubbul Wathan):</strong> Menjaga keutuhan NKRI, mentaati konstitusi hukum, dan menghormati hak asasi manusia dalam musyawarah.</span>
+            </li>
+            <li>
+              <span class="values-bullet">❖</span>
+              <span><strong>Cinta kepada Ilmu Pengetahuan:</strong> Berpikir kritis (Mindful) dalam memilah kebenaran informasi dan menolak hoaks di era keterbukaan ideologi.</span>
+            </li>
+            <li>
+              <span class="values-bullet">❖</span>
+              <span><strong>Cinta kepada Sesama &amp; Lingkungan:</strong> Mencegah perundungan, menghargai perbedaan latar belakang, dan menjaga kelestarian ekosistem sekitar.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Detailed Review of All 15 Items -->
+        <div class="review-accordion-section">
+          <h3 class="review-accordion-title">Rangkuman Pembahasan 15 Tantangan</h3>
+          <p style="font-size: 0.85rem; color: var(--on-surface-variant); margin-bottom: var(--space-sm);">
+            Klik masing-masing butir di bawah ini untuk meninjau kembali landasan hukum dan pembahasannya secara lengkap:
+          </p>
+          <div id="reviewAccordionList">
+            <!-- Injected via JavaScript -->
+          </div>
+        </div>
+
+        <!-- Reset / Main Lagi Button -->
+        <div style="text-align: center; margin-top: var(--space-2xl);">
+          <button id="btnRestartGame" class="btn btn-primary" style="padding: 0.85rem 2.2rem; font-size: 1rem;" onclick="handleRestartGameClick()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Main Lagi (Acak Ulang Soal &amp; Sesi Baru)
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <api-shim></api-shim>
+  <script>
+    /* ==========================================================================
+       DATA BANK: 15 TANTANGAN HOTS PKN KELAS 9 SEMESTER 1
+       Strict Anti-Tebak: No answers or articles in stems; law details in explanation.
+       ========================================================================== */
+    const MASTER_CHALLENGES = [
+      // ----------------------------------------------------
+      // 1. PILIHAN GANDA HOTS: Bab 1 (Nilai Dasar vs Instrumental)
+      // ----------------------------------------------------
+      {
+        id: "pg-1",
+        type: "pg",
+        category: "Bab 1: Dinamika Pancasila",
+        typeLabel: "Pilihan Ganda HOTS",
+        stem: "Dalam sebuah forum diskusi kelas mengenai keterbukaan ideologi bangsa, seorang siswa berpendapat bahwa keterbukaan Pancasila memberi ruang bagi generasi masa kini untuk merevisi prinsip keadilan sosial dan kebebasan beragama agar selaras dengan tuntutan tren global modern. Berdasarkan hakikat struktur nilai ideologi terbuka, bagaimanakah penilaian yang paling tepat terhadap argumen siswa tersebut?",
+        options: [
+          {
+            id: "opt-1",
+            text: "Argumen tersebut keliru, karena status ideologi terbuka hanya mengizinkan penyesuaian pada aspek operasional (nilai instrumental dan praksis), sementara nilai-nilai fundamental (nilai dasar) bersifat abadi dan mutlak tidak boleh diubah.",
+            isCorrect: true
+          },
+          {
+            id: "opt-2",
+            text: "Argumen tersebut tepat, karena keterbukaan ideologi mensyaratkan setiap sila ditafsirkan ulang secara berkala demi menjamin elastisitas doktrin negara menghadapi pengaruh asing.",
+            isCorrect: false
+          },
+          {
+            id: "opt-3",
+            text: "Argumen tersebut keliru, karena perubahan nilai instrumental sama sekali dilarang demi menjaga keaslian teks konsensus kebangsaan tanpa kompromi sejak awal kemerdekaan.",
+            isCorrect: false
+          },
+          {
+            id: "opt-4",
+            text: "Argumen tersebut tepat, asalkan perubahan substansi prinsip moral dan etika ketuhanan disepakati oleh mayoritas perwakilan partai di parlemen.",
+            isCorrect: false
+          }
+        ],
+        explanation: "Nilai dasar Pancasila (Ketuhanan, Kemanusiaan, Persatuan, Kerakyatan, Keadilan) bersifat tetap, abadi, dan tidak boleh diubah siapapun karena merupakan konsensus fundamental berdirinya negara. Sifat keterbukaan Pancasila hanya berlaku pada nilai instrumental (seperti regulasi Undang-Undang dan ketetapan) serta nilai praksis (penerapan nyata sehari-hari) yang adaptif terhadap dinamika zaman. Anggapan bahwa ideologi terbuka bebas mengubah nilai dasar adalah miskonsepsi yang keliru fatal."
+      },
+
+      // ----------------------------------------------------
+      // 2. PILIHAN GANDA HOTS: Bab 2 (Staatsfundamentalnorm)
+      // ----------------------------------------------------
+      {
+        id: "pg-2",
+        type: "pg",
+        category: "Bab 2: Pembukaan UUD 1945",
+        typeLabel: "Pilihan Ganda HOTS",
+        stem: "Menjelang agenda pembahasan pembaruan konstitusi di sebuah negara hukum, muncul usulan dari kelompok tertentu untuk menata ulang teks mukadimah atau pembukaan konstitusi guna menyesuaikan naskah tersebut dengan dinamika geopolitik terkini. Berdasarkan kedudukan norma fundamental ketatanegaraan Indonesia, apakah konsekuensi yuridis jika usulan tersebut dilaksanakan?",
+        options: [
+          {
+            id: "opt-1",
+            text: "Usulan tersebut secara yuridis membubarkan eksistensi negara proklamasi, karena Pembukaan UUD berkedudukan sebagai staatsfundamentalnorm yang memuat fondasi dan cita-cita berdirinya Republik.",
+            isCorrect: true
+          },
+          {
+            id: "opt-2",
+            text: "Usulan tersebut sah dilakukan oleh majelis permusyawaratan rakyat asalkan disetujui sekurang-kurangnya dua pertiga suara dari seluruh anggota dewan.",
+            isCorrect: false
+          },
+          {
+            id: "opt-3",
+            text: "Usulan tersebut hanya berakibat pada penundaan program pembangunan nasional tanpa menyentuh status hukum kedaulatan negara.",
+            isCorrect: false
+          },
+          {
+            id: "opt-4",
+            text: "Usulan tersebut dibenarkan secara konstitusional karena kedudukan hukum pembukaan setara derajatnya dengan pasal-pasal batang tubuh regulasi teknis biasa.",
+            isCorrect: false
+          }
+        ],
+        explanation: "Pembukaan UUD NRI Tahun 1945 berkedudukan sebagai Staatsfundamentalnorm atau pokok kaidah negara yang fundamental. Para pendiri bangsa dan kesepakatan Majelis Permusyawaratan Rakyat menegaskan bahwa Pembukaan UUD 1945 tidak dapat diubah oleh siapapun. Mengubah Pembukaan UUD 1945 sama maknanya dengan membubarkan Negara Kesatuan Republik Indonesia yang diproklamasikan pada 17 Agustus 1945."
+      },
+
+      // ----------------------------------------------------
+      // 3. PILIHAN GANDA HOTS: Bab 3 (Kedaulatan Rakyat vs Hukum)
+      // ----------------------------------------------------
+      {
+        id: "pg-3",
+        type: "pg",
+        category: "Bab 3: Kedaulatan NKRI",
+        typeLabel: "Pilihan Ganda HOTS",
+        stem: "Sekelompok massa demonstran menduduki fasilitas publik vital dan menolak mematuhi batas jam penyampaian pendapat dengan dalih bahwa suara rakyat adalah kekuasaan tertinggi di republik ini yang tidak boleh dibatasi oleh aparatur sipil maupun aturan manapun. Ditinjau dari prinsip ketatanegaraan Indonesia, mengapa tindakan tersebut bertentangan dengan desain kedaulatan negara?",
+        options: [
+          {
+            id: "opt-1",
+            text: "Karena Indonesia memadukan kedaulatan rakyat dengan kedaulatan hukum, di mana pelaksanaan aspirasi rakyat harus tunduk pada norma hukum yang berkeadilan demi mencegah lahirnya anarki.",
+            isCorrect: true
+          },
+          {
+            id: "opt-2",
+            text: "Karena dalam sistem republik, kedaulatan negara sepenuhnya dipegang oleh aparatur militer dan kepolisian sebagai pemegang otoritas tunggal penegak tertib sosial.",
+            isCorrect: false
+          },
+          {
+            id: "opt-3",
+            text: "Karena kebebasan mengemukakan pendapat di muka umum sepenuhnya dibatasi oleh persetujuan tertulis kepala daerah sebelum unjuk rasa dimulai.",
+            isCorrect: false
+          },
+          {
+            id: "opt-4",
+            text: "Karena kedaulatan hukum hanya diberlakukan ketika negara dalam kondisi darurat militer atau saat stabilitas nasional terancam krisis internasional.",
+            isCorrect: false
+          }
+        ],
+        explanation: "Berdasarkan Pasal 1 Ayat 2 dan Ayat 3 UUD 1945, kedaulatan berada di tangan rakyat dan dilaksanakan menurut Undang-Undang Dasar, serta Negara Indonesia adalah negara hukum (rechtsstaat). Prinsip kedaulatan rakyat tidak bermakna kebebasan mutlak tanpa batas, melainkan diarahkan oleh hukum yang adil. Sinergi ini mencegah timbulnya kesewenang-wenangan (tirani) sekaligus anarki massa di ruang publik."
+      },
+
+      // ----------------------------------------------------
+      // 4. PILIHAN GANDA HOTS: Bab 1 (Sishankamrata)
+      // ----------------------------------------------------
+      {
+        id: "pg-4",
+        type: "pg",
+        category: "Bab 1: Dinamika Pancasila",
+        typeLabel: "Pilihan Ganda HOTS",
+        stem: "Sebuah kawasan perbatasan negara menghadapi potensi ancaman penyelundupan barang terlarang dan perambahan wilayah secara ilegal. Dalam kerangka doktrin sistem pertahanan dan keamanan nasional, bagaimanakah pembagian peran yang tepat antara aparatur negara dan warga masyarakat setempat?",
+        options: [
+          {
+            id: "opt-1",
+            text: "Aparat TNI dan Kepolisian bertindak sebagai kekuatan inti pertahanan-keamanan, sementara warga masyarakat berperan aktif sebagai kekuatan pendukung melalui kewaspadaan lingkungan dan kesadaran bela negara.",
+            isCorrect: true
+          },
+          {
+            id: "opt-2",
+            text: "Seluruh warga perbatasan dipersenjatai setara aparat militer untuk mengambil alih tugas operasi pertempuran garis terdepan tanpa koordinasi hierarkis.",
+            isCorrect: false
+          },
+          {
+            id: "opt-3",
+            text: "Aparat negara membebankan seluruh pengamanan pos perbatasan kepada warga lokal agar tercipta kemandirian wilayah secara absolut.",
+            isCorrect: false
+          },
+          {
+            id: "opt-4",
+            text: "Warga masyarakat dibebaskan dari segala bentuk kepedulian teritorial karena urusan keamanan perbatasan mutlak tanggung jawab eksklusif instansi bersenjata.",
+            isCorrect: false
+          }
+        ],
+        explanation: "Indonesia menganut Sistem Pertahanan dan Keamanan Rakyat Semesta (Sishankamrata) sebagaimana diatur dalam Pasal 30 UUD 1945. Dalam sistem ini, Tentara Nasional Indonesia (TNI) dan Kepolisian Negara Republik Indonesia (POLRI) berperan sebagai kekuatan utama, sedangkan rakyat berfungsi sebagai kekuatan pendukung. Bagi pelajar dan masyarakat, perwujudan ini diwujudkan melalui kesadaran menjaga kerukunan, ketertiban, dan kepekaan bela negara."
+      },
+
+      // ----------------------------------------------------
+      // 5. PASANGKAN KARTU: Bab 2 (Alinea I - IV)
+      // ----------------------------------------------------
+      {
+        id: "match-1",
+        type: "match",
+        category: "Bab 2: Pembukaan UUD 1945",
+        typeLabel: "Pasangkan Kartu Berwarna",
+        instruction: "Pasangkan masing-masing alinea Pembukaan UUD 1945 dengan inti nilai filosofis yang dikandungnya secara cermat! Waspadai kartu pengecoh (distractor) di sisi kanan.",
+        pairs: [
+          {
+            id: "p1",
+            left: "Alinea Pertama",
+            right: "Penegasan hak asasi kemerdekaan setiap bangsa serta penolakan terhadap kolonialisme demi peri-kemanusiaan dan peri-keadilan"
+          },
+          {
+            id: "p2",
+            left: "Alinea Kedua",
+            right: "Momentum perjuangan pergerakan yang telah mengantarkan bangsa menuju cita-cita negara merdeka, bersatu, berdaulat, adil, dan makmur"
+          },
+          {
+            id: "p3",
+            left: "Alinea Ketiga",
+            right: "Pernyataan pengakuan spiritual mendalam bahwa kemerdekaan diraih atas berkat rahmat Tuhan Yang Maha Kuasa dan ikhtiar luhur"
+          },
+          {
+            id: "p4",
+            left: "Alinea Keempat",
+            right: "Penjabaran empat tujuan bernegara, mandat penyusunan undang-undang dasar, bentuk negara republik, dan fondasi lima prinsip falsafah negara"
+          }
+        ],
+        distractor: "Pengukuhan hak istimewa monarki feodal untuk membagi kekuasaan wilayah tanpa terikat peradilan hukum tertulis",
+        explanation: "Alinea I menegaskan anti-penjajahan dan hak asasi kemerdekaan bangsa. Alinea II mencerminkan cita-cita perjuangan kemerdekaan (merdeka, bersatu, berdaulat, adil, makmur). Alinea III mengabadikan motivasi religius-spiritual (Rahmat Allah SWT), dan Alinea IV memuat 4 tujuan negara, mandat konstitusi, bentuk republik, serta rumusan resmi kelima sila Pancasila."
+      },
+
+      // ----------------------------------------------------
+      // 6. PASANGKAN KARTU: Bab 3 (4 Sifat Pokok Kedaulatan)
+      // ----------------------------------------------------
+      {
+        id: "match-2",
+        type: "match",
+        category: "Bab 3: Kedaulatan NKRI",
+        typeLabel: "Pasangkan Kartu Berwarna",
+        instruction: "Pasangkan istilah sifat hakiki kedaulatan negara berikut dengan batasan pengertian ketatanegaraannya yang tepat! Hati-hati memilih kartu kanan karena terdapat pengecoh.",
+        pairs: [
+          {
+            id: "p1",
+            left: "Sifat Asli",
+            right: "Otoritas kekuasaan tertinggi tersebut tidak diturunkan atau bersumber dari kekuasaan lain yang lebih tinggi derajatnya"
+          },
+          {
+            id: "p2",
+            left: "Sifat Permanen",
+            right: "Otoritas kekuasaan tertinggi tetap melekat pada eksistensi negara selama negara yang bersangkutan masih terus berdiri"
+          },
+          {
+            id: "p3",
+            left: "Sifat Tunggal",
+            right: "Merupakan satu-satunya otoritas puncak dalam sistem kenegaraan dan tidak terbagi kepada badan tandingan lain"
+          },
+          {
+            id: "p4",
+            left: "Sifat Tidak Terbatas",
+            right: "Otoritas kekuasaan tertinggi tidak dikekang atau dibatasi oleh kekuasaan lain di atasnya yang dapat membatalkan wewenangnya"
+          }
+        ],
+        distractor: "Otoritas kekuasaan tertinggi dapat didelegasikan secara permanen kepada persekutuan dagang asing tanpa batas waktu",
+        explanation: "Jean Bodin merumuskan empat sifat hakiki kedaulatan negara: Asli (tidak lahir dari kekuasaan lain), Permanen/Abadi (berlangsung selama negara berdiri), Tunggal/Bulat (satu-satunya kekuasaan tertinggi, tidak terbagi), dan Tidak Terbatas (tidak ada kekuasaan lain di atasnya yang membatasinya)."
+      },
+
+      // ----------------------------------------------------
+      // 7. PASANGKAN KARTU: Bab 2 (4 Pokok Pikiran Pembukaan)
+      // ----------------------------------------------------
+      {
+        id: "match-3",
+        type: "match",
+        category: "Bab 2: Pembukaan UUD 1945",
+        typeLabel: "Pasangkan Kartu Berwarna",
+        instruction: "Pasangkan pokok-pokok pikiran Pembukaan UUD 1945 dengan pancaran nilai sila Pancasila yang dialirkannya ke batang tubuh konstitusi!",
+        pairs: [
+          {
+            id: "p1",
+            left: "Pokok Pikiran Persatuan",
+            right: "Negara memayungi dan melindungi segenap tumpah darah dengan mengutamakan ikatan kebangsaan di atas golongan (Pancaran Sila Ketiga)"
+          },
+          {
+            id: "p2",
+            left: "Pokok Pikiran Keadilan Sosial",
+            right: "Negara hendak mewujudkan kemakmuran bersama yang merata disertai keseimbangan hak dan kewajiban warga (Pancaran Sila Kelima)"
+          },
+          {
+            id: "p3",
+            left: "Pokok Pikiran Kedaulatan Rakyat",
+            right: "Negara berlandaskan atas sistem kedaulatan rakyat melalui permusyawaratan perwakilan dan demokrasi mufakat (Pancaran Sila Keempat)"
+          },
+          {
+            id: "p4",
+            left: "Pokok Pikiran Ketuhanan & Kemanusiaan",
+            right: "Negara mewajibkan pemerintah dan warga memelihara budi pekerti luhur serta etika moral religius (Pancaran Sila Pertama & Kedua)"
+          }
+        ],
+        distractor: "Negara melegalkan dominasi ekonomi pasar bebas kapitalistik mutlak tanpa peran jaminan perlindungan sosial oleh negara",
+        explanation: "Empat pokok pikiran Pembukaan UUD 1945 memancarkan nilai dasar Pancasila yang kemudian dialirkan ke pasal-pasal batang tubuh: Pokok Pikiran I memancarkan Sila ke-3, Pokok Pikiran II memancarkan Sila ke-5, Pokok Pikiran III memancarkan Sila ke-4, dan Pokok Pikiran IV memancarkan Sila ke-1 dan ke-2."
+      },
+
+      // ----------------------------------------------------
+      // 8. PASANGKAN KARTU: Bab 1 (Perwujudan 4 Bidang)
+      // ----------------------------------------------------
+      {
+        id: "match-4",
+        type: "match",
+        category: "Bab 1: Dinamika Pancasila",
+        typeLabel: "Pasangkan Kartu Berwarna",
+        instruction: "Pasangkan pilar bidang kehidupan berbangsa dengan contoh wujud praksis pengamalan nilai-nilai Pancasila yang relevan dalam kehidupan madrasah/sekolah!",
+        pairs: [
+          {
+            id: "p1",
+            left: "Bidang Politik",
+            right: "Pelaksanaan pemilihan ketua OSIS secara demokratis dan jujur serta pembiasaan musyawarah mufakat dalam pengambilan keputusan"
+          },
+          {
+            id: "p2",
+            left: "Bidang Ekonomi",
+            right: "Pengelolaan koperasi sekolah berbasis asas gotong royong dan kekeluargaan demi pemerataan kesejahteraan anggota"
+          },
+          {
+            id: "p3",
+            left: "Bidang Sosial Budaya",
+            right: "Apresiasi terhadap kemajemukan adat nusantara serta penyaringan kritis terhadap budaya asing yang individualistis"
+          },
+          {
+            id: "p4",
+            left: "Bidang Pertahanan Keamanan",
+            right: "Partisipasi aktif menjaga keamanan lingkungan sekolah dan ronda malam di lingkungan pemukiman secara gotong royong"
+          }
+        ],
+        distractor: "Penolakan terhadap seluruh perkembangan sains teknologi modern internasional atas nama pelestarian tradisi lama",
+        explanation: "Perwujudan nilai Pancasila mencakup empat pilar: Bidang Politik (demokrasi musyawarah & pemilu jujur), Bidang Ekonomi (Pasal 33 UUD 1945, koperasi & gotong royong), Bidang Sosial Budaya (toleransi kemajemukan adat nusantara), serta Bidang Pertahanan Keamanan (Sishankamrata sebagaimana diatur pada Pasal 30 UUD 1945)."
+      },
+
+      // ----------------------------------------------------
+      // 9. TEBAK KATA: Bab 1 (SISHANKAMRATA)
+      // ----------------------------------------------------
+      {
+        id: "word-1",
+        type: "word",
+        category: "Bab 1: Dinamika Pancasila",
+        typeLabel: "Tebak Kata Kunci",
+        targetWord: "SISHANKAMRATA",
+        clue: "Doktrin sistem pertahanan dan keamanan nasional Indonesia yang menempatkan TNI dan POLRI sebagai kekuatan utama, serta melibatkan segenap komponen warga negara sebagai kekuatan pendukung demi menjaga kedaulatan tumpah darah.",
+        explanation: "Sishankamrata (Sistem Pertahanan dan Keamanan Rakyat Semesta) diatur secara tegas dalam Pasal 30 UUD 1945. Doktrin ini menempatkan TNI dan POLRI sebagai kekuatan utama pertahanan dan ketertiban umum, sedangkan seluruh rakyat Indonesia berperan sebagai kekuatan pendukung dalam kesadaran bela negara."
+      },
+
+      // ----------------------------------------------------
+      // 10. TEBAK KATA: Bab 2 (FUNDAMENTAL)
+      // ----------------------------------------------------
+      {
+        id: "word-2",
+        type: "word",
+        category: "Bab 2: Pembukaan UUD 1945",
+        typeLabel: "Tebak Kata Kunci",
+        targetWord: "FUNDAMENTAL",
+        clue: "Istilah yuridis ketatanegaraan yang merujuk pada kedudukan Pembukaan UUD 1945 sebagai pokok kaidah bernegara yang paling mendasar (Staatsfundamentalnorm), yang mengikat dan mutlak tidak boleh diubah oleh siapapun.",
+        explanation: "Pembukaan UUD NRI 1945 berkedudukan sebagai Staatsfundamentalnorm atau pokok kaidah negara yang fundamental. Kedudukan ini menempatkannya di atas pasal-pasal konstitusi biasa, sehingga mengubah Pembukaan sama artinya dengan membubarkan fondasi proklamasi kemerdekaan Republik Indonesia tahun 1945."
+      },
+
+      // ----------------------------------------------------
+      // 11. TEBAK KATA: Bab 3 (KEDAULATAN)
+      // ----------------------------------------------------
+      {
+        id: "word-3",
+        type: "word",
+        category: "Bab 3: Kedaulatan NKRI",
+        typeLabel: "Tebak Kata Kunci",
+        targetWord: "KEDAULATAN",
+        clue: "Kekuasaan tertinggi untuk menentukan dan menegakkan tata hukum dalam batas-batas teritorial suatu negara berdaulat, yang di Indonesia bersumber dari rakyat dan dipadukan dengan kepatuhan hukum.",
+        explanation: "Kedaulatan berasal dari kata Arab 'Daulah' yang bermakna kekuasaan tertinggi. Pasal 1 Ayat 2 UUD 1945 menegaskan bahwa kedaulatan berada di tangan rakyat dan dilaksanakan menurut Undang-Undang Dasar, yang dipadukan dengan Pasal 1 Ayat 3 bahwa Negara Indonesia adalah negara hukum (rechtsstaat)."
+      },
+
+      // ----------------------------------------------------
+      // 12. TEBAK KATA: Bab 1 (INSTRUMENTAL)
+      // ----------------------------------------------------
+      {
+        id: "word-4",
+        type: "word",
+        category: "Bab 1: Dinamika Pancasila",
+        typeLabel: "Tebak Kata Kunci",
+        targetWord: "INSTRUMENTAL",
+        clue: "Tingkatan nilai dalam ideologi terbuka yang berperan sebagai arahan operasional dinamis, berupa penjabaran nilai-nilai dasar ke dalam bentuk perundang-undangan dan kebijakan lembaga negara.",
+        explanation: "Ideologi Pancasila memiliki tiga tingkatan nilai: Nilai Dasar (abadi pada Sila 1-5), Nilai Instrumental (penjabaran berupa UU, peraturan, ketetapan), dan Nilai Praksis (realisasi nyata tingkah laku sehari-hari). Nilai instrumental inilah yang fleksibel berkembang sesuai zaman tanpa merusak kemurnian nilai dasar."
+      },
+
+      // ----------------------------------------------------
+      // 13. URUTKAN HIERARKI: Bab 1 (Kronologi Dinamika Pancasila)
+      // ----------------------------------------------------
+      {
+        id: "order-1",
+        type: "order",
+        category: "Bab 1: Dinamika Pancasila",
+        typeLabel: "Urutkan Hierarki & Kronologi",
+        instruction: "Susunlah alur fase dinamika penerapan Pancasila berikut secara kronologis mulai dari babak awal kemerdekaan hingga era kontemporer!",
+        items: [
+          {
+            id: "o1",
+            text: "Fase awal proklamasi yang diwarnai pergolakan bersenjata dan upaya separatis mengganti ideologi negara"
+          },
+          {
+            id: "o2",
+            text: "Fase penerapan demokrasi yang bertumpu kuat pada kepemimpinan terpusat lembaga kepresidenan"
+          },
+          {
+            id: "o3",
+            text: "Fase tekad pengamalan ideologi secara konsekuen namun terdistorsi oleh penafsiran tunggal kekuasaan"
+          },
+          {
+            id: "o4",
+            text: "Fase kebebasan demokratis terbuka yang menghadapi tantangan radikalisme serta ideologi transnasional"
+          }
+        ],
+        explanation: "Kronologi dinamika penerapan Pancasila terbagi dalam empat babak sejarah: Awal Kemerdekaan 1945–1959 (pemberontakan PKI Madiun 1948 & DI/TII), Orde Lama 1959–1965 (Demokrasi Terpimpin yang sentralistis), Orde Baru 1966–1998 (penafsiran tunggal ideologi untuk hegemoni kekuasaan), serta Era Reformasi 1998–sekarang (kebebasan demokratis dengan tantangan radikalisme transnasional)."
+      },
+
+      // ----------------------------------------------------
+      // 14. URUTKAN HIERARKI: Bab 2 (Alur Pokok Pikiran I - IV)
+      // ----------------------------------------------------
+      {
+        id: "order-2",
+        type: "order",
+        category: "Bab 2: Pembukaan UUD 1945",
+        typeLabel: "Urutkan Hierarki & Kronologi",
+        instruction: "Susunlah pokok-pokok pikiran Pembukaan UUD 1945 secara berurutan mulai dari Pokok Pikiran Pertama hingga Pokok Pikiran Keempat!",
+        items: [
+          {
+            id: "o1",
+            text: "Prinsip perlindungan segenap tumpah darah dengan mengutamakan ikatan persatuan di atas kepentingan golongan"
+          },
+          {
+            id: "o2",
+            text: "Cita-cita perwujudan kesejahteraan lahir batin yang berkeadilan bagi seluruh lapisan masyarakat"
+          },
+          {
+            id: "o3",
+            text: "Penegasan bangunan sistem kenegaraan yang bersumber dari daulat rakyat melalui permusyawaratan"
+          },
+          {
+            id: "o4",
+            text: "Kewajiban luhur memelihara budi pekerti kemanusiaan yang beradab berlandaskan nilai religius ketuhanan"
+          }
+        ],
+        explanation: "Sistematika pokok pikiran Pembukaan UUD 1945 tersusun secara hierarkis: Pokok Pikiran I (Persatuan / Sila 3), Pokok Pikiran II (Keadilan Sosial / Sila 5), Pokok Pikiran III (Kedaulatan Rakyat / Sila 4), dan Pokok Pikiran IV (Ketuhanan Yang Maha Esa dan Kemanusiaan yang Adil dan Beradab / Sila 1 dan 2)."
+      },
+
+      // ----------------------------------------------------
+      // 15. URUTKAN HIERARKI: Bab 2 (Empat Tujuan Negara Alinea IV)
+      // ----------------------------------------------------
+      {
+        id: "order-3",
+        type: "order",
+        category: "Bab 2: Pembukaan UUD 1945",
+        typeLabel: "Urutkan Hierarki & Kronologi",
+        instruction: "Susunlah empat tujuan nasional bangsa Indonesia sebagaimana tercantum secara berurutan dalam teks Alinea Keempat Pembukaan UUD NRI 1945!",
+        items: [
+          {
+            id: "o1",
+            text: "Perlindungan terhadap segenap tumpah darah dan eksistensi keselamatan bangsa dari segala ancaman"
+          },
+          {
+            id: "o2",
+            text: "Peningkatan taraf kemakmuran lahir batin dan pemerataan taraf ekonomi seluruh masyarakat"
+          },
+          {
+            id: "o3",
+            text: "Pencerdasan daya nalar serta pembinaan kualitas peradaban dan kebudayaan generasi bangsa"
+          },
+          {
+            id: "o4",
+            text: "Partisipasi aktif dalam memelihara ketertiban internasional, perdamaian abadi, dan keadilan global"
+          }
+        ],
+        explanation: "Alinea Keempat Pembukaan UUD 1945 merumuskan empat tujuan bernegara secara berurutan: pertama melindungi segenap bangsa Indonesia dan seluruh tumpah darah Indonesia, kedua memajukan kesejahteraan umum, ketiga mencerdaskan kehidupan bangsa, dan keempat ikut melaksanakan ketertiban dunia yang berdasarkan kemerdekaan, perdamaian abadi, dan keadilan sosial."
+      }
+    ];
+
+    /* ==========================================================================
+       APPLICATION STATE MANAGEMENT
+       ========================================================================== */
+    const state = {
+      challenges: [],
+      currentIndex: 0,
+      totalRawScore: 0, // Sum of earned challenge points (each out of 10, max 150)
+      isCurrentLocked: false,
+      hasSentScore: false,
+      userAnswers: [], // History record for review
+
+      // Module-specific active runtime state
+      activePgSelection: null,
+      activeMatchingPairs: {}, // { leftId: rightId }
+      activeSelectedLeft: null,
+      activeOrderItems: [],
+      wordGuessState: {
+        timerSeconds: 0,
+        timerInterval: null,
+        guessedLetters: new Set(),
+        remainingQuota: 5,
+        isCompleted: false
+      }
+    };
+
+    /* ==========================================================================
+       FISHER-YATES SHUFFLE ALGORITHM
+       ========================================================================== */
+    function fisherYatesShuffle(array) {
+      const arr = array.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+      }
+      return arr;
+    }
+
+    /* Initialize game challenges with deep Fisher-Yates randomization */
+    function initChallenges() {
+      // 1. Shuffle order of the 15 questions
+      const shuffledMaster = fisherYatesShuffle(MASTER_CHALLENGES);
+
+      // 2. Deep copy & shuffle options/items inside each question
+      state.challenges = shuffledMaster.map(ch => {
+        const copy = JSON.parse(JSON.stringify(ch));
+        if (copy.type === "pg") {
+          copy.options = fisherYatesShuffle(copy.options);
+        } else if (copy.type === "match") {
+          copy.shuffledLeft = fisherYatesShuffle(copy.pairs);
+          // Combine 4 correct right descriptions + 1 distractor, then shuffle
+          const rightItems = copy.pairs.map(p => ({
+            id: p.id,
+            text: p.right,
+            isDistractor: false
+          }));
+          rightItems.push({
+            id: "distractor",
+            text: copy.distractor,
+            isDistractor: true
+          });
+          copy.shuffledRight = fisherYatesShuffle(rightItems);
+        } else if (copy.type === "order") {
+          // Shuffle initial order, making sure it doesn't match target order on initial render
+          let shuffled;
+          let attempts = 0;
+          do {
+            shuffled = fisherYatesShuffle(copy.items);
+            attempts++;
+          } while (attempts < 10 && shuffled.every((item, idx) => item.id === copy.items[idx].id));
+          copy.initialItems = shuffled;
+        }
+        return copy;
+      });
+
+      state.currentIndex = 0;
+      state.totalRawScore = 0;
+      state.isCurrentLocked = false;
+      state.hasSentScore = false;
+      state.userAnswers = [];
+      updateLiveScoreDisplay();
+    }
+
+    /* Compute current final normalized score (0 - 100) */
+    function getNormalizedScore() {
+      // Total max raw score is 15 questions * 10 points = 150 points
+      const normalized = Math.round((state.totalRawScore / 150) * 100);
+      return Math.min(100, Math.max(0, normalized));
+    }
+
+    function updateLiveScoreDisplay() {
+      const displayElem = document.getElementById("liveScoreDisplay");
+      if (displayElem) {
+        displayElem.textContent = String(getNormalizedScore());
+      }
+    }
+
+    /* ==========================================================================
+       VIEW TRANSITIONS & NAVIGATION
+       ========================================================================== */
+    function showStartScreen() {
+      const start = document.getElementById("startScreen");
+      const gameplay = document.getElementById("gameplayScreen");
+      const results = document.getElementById("resultsScreen");
+      if (start) start.classList.remove("hidden");
+      if (gameplay) gameplay.classList.add("hidden");
+      if (results) results.classList.add("hidden");
+      stopWordTimer();
+    }
+
+    function showGameplayScreen() {
+      const start = document.getElementById("startScreen");
+      const gameplay = document.getElementById("gameplayScreen");
+      const results = document.getElementById("resultsScreen");
+      if (start) start.classList.add("hidden");
+      if (gameplay) gameplay.classList.remove("hidden");
+      if (results) results.classList.add("hidden");
+      renderCurrentChallenge();
+    }
+
+    function showResultsScreen() {
+      const start = document.getElementById("startScreen");
+      const gameplay = document.getElementById("gameplayScreen");
+      const results = document.getElementById("resultsScreen");
+      if (start) start.classList.add("hidden");
+      if (gameplay) gameplay.classList.add("hidden");
+      if (results) results.classList.remove("hidden");
+      stopWordTimer();
+      renderResultsSummary();
+    }
+
+    /* ==========================================================================
+       CHALLENGE RENDERERS
+       ========================================================================== */
+    function renderCurrentChallenge() {
+      const currentCh = state.challenges[state.currentIndex];
+      if (!currentCh) return;
+
+      state.isCurrentLocked = false;
+      state.activePgSelection = null;
+      state.activeMatchingPairs = {};
+      state.activeSelectedLeft = null;
+      state.activeOrderItems = [];
+      stopWordTimer();
+
+      // Update progress bar & header metadata
+      const progressFill = document.getElementById("challengeProgressFill");
+      if (progressFill) {
+        const pct = ((state.currentIndex) / state.challenges.length) * 100;
+        progressFill.style.width = pct + "%";
+      }
+
+      const numBadge = document.getElementById("challengeNumberBadge");
+      if (numBadge) {
+        numBadge.textContent = "Tantangan " + (state.currentIndex + 1) + " dari " + state.challenges.length;
+      }
+
+      const typeBadgeLabel = document.getElementById("challengeTypeLabel");
+      if (typeBadgeLabel) {
+        typeBadgeLabel.textContent = currentCh.typeLabel + " (" + currentCh.category + ")";
+      }
+
+      // Reset explanation drawer and buttons
+      const drawer = document.getElementById("explanationDrawer");
+      if (drawer) drawer.style.display = "none";
+
+      const btnLock = document.getElementById("btnLockAnswer");
+      if (btnLock) {
+        btnLock.classList.remove("hidden");
+        btnLock.disabled = true; // disabled until player makes required action
+      }
+
+      const btnNext = document.getElementById("btnNextChallenge");
+      if (btnNext) btnNext.classList.add("hidden");
+
+      const feedback = document.getElementById("challengeFeedbackSnippet");
+      if (feedback) feedback.textContent = "";
+
+      // Render content by challenge type: toggle appropriate static module container
+      const pgBox = document.getElementById("pgContainer");
+      const matchBox = document.getElementById("matchContainer");
+      const wordBox = document.getElementById("wordContainer");
+      const orderBox = document.getElementById("orderContainer");
+
+      if (pgBox) pgBox.classList.add("hidden");
+      if (matchBox) matchBox.classList.add("hidden");
+      if (wordBox) wordBox.classList.add("hidden");
+      if (orderBox) orderBox.classList.add("hidden");
+
+      if (currentCh.type === "pg") {
+        if (pgBox) pgBox.classList.remove("hidden");
+        renderPgChallenge(currentCh);
+      } else if (currentCh.type === "match") {
+        if (matchBox) matchBox.classList.remove("hidden");
+        renderMatchChallenge(currentCh);
+      } else if (currentCh.type === "word") {
+        if (wordBox) wordBox.classList.remove("hidden");
+        renderWordChallenge(currentCh);
+      } else if (currentCh.type === "order") {
+        if (orderBox) orderBox.classList.remove("hidden");
+        renderOrderChallenge(currentCh);
+      }
+    }
+
+    /* ----------------------------------------------------
+       1. PILIHAN GANDA (PG) RENDERER
+       ---------------------------------------------------- */
+    function renderPgChallenge(ch) {
+      const stemElem = document.getElementById("pgStem");
+      if (stemElem) stemElem.textContent = ch.stem;
+
+      const listElem = document.getElementById("pgOptionsList");
+      if (!listElem) return;
+      listElem.innerHTML = "";
+
+      const optionKeys = ["A", "B", "C", "D"];
+      ch.options.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "pg-option-btn";
+        btn.id = "pg-opt-" + opt.id;
+        btn.onclick = function() { selectPgOption(opt.id); };
+
+        const keyBadge = document.createElement("span");
+        keyBadge.className = "option-key-badge";
+        keyBadge.textContent = optionKeys[idx] || String(idx + 1);
+
+        const textSpan = document.createElement("span");
+        textSpan.style.flex = "1";
+        textSpan.textContent = opt.text;
+
+        btn.appendChild(keyBadge);
+        btn.appendChild(textSpan);
+        listElem.appendChild(btn);
+      });
+    }
+
+    function selectPgOption(optId) {
+      if (state.isCurrentLocked) return;
+      state.activePgSelection = optId;
+
+      const ch = state.challenges[state.currentIndex];
+      ch.options.forEach(opt => {
+        const btn = document.getElementById("pg-opt-" + opt.id);
+        if (btn) {
+          if (opt.id === optId) {
+            btn.classList.add("selected");
+          } else {
+            btn.classList.remove("selected");
+          }
+        }
+      });
+
+      const btnLock = document.getElementById("btnLockAnswer");
+      if (btnLock) btnLock.disabled = false;
+    }
+
+    /* ----------------------------------------------------
+       2. PASANGKAN KARTU (MATCHING) RENDERER
+       Badge Colors: ● 1, ● 2, ● 3, ● 4
+       ---------------------------------------------------- */
+    function renderMatchChallenge(ch) {
+      const instr = document.getElementById("matchInstruction");
+      if (instr) instr.textContent = ch.instruction;
+
+      // Left Column
+      const leftCol = document.getElementById("matchLeftColumn");
+      if (leftCol) {
+        leftCol.innerHTML = '<div class="column-title">Kolom A: Istilah / Konsep</div>';
+        ch.shuffledLeft.forEach(item => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "matching-card";
+          card.id = "match-left-" + item.id;
+          card.onclick = function() { handleMatchingLeftClick(item.id); };
+
+          const textSpan = document.createElement("span");
+          textSpan.id = "match-left-text-" + item.id;
+          textSpan.style.flex = "1";
+          textSpan.textContent = item.left;
+
+          card.appendChild(textSpan);
+          leftCol.appendChild(card);
+        });
+      }
+
+      // Right Column
+      const rightCol = document.getElementById("matchRightColumn");
+      if (rightCol) {
+        rightCol.innerHTML = '<div class="column-title">Kolom B: Makna / Penerapan (+ Distractor)</div>';
+        ch.shuffledRight.forEach(item => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "matching-card";
+          card.id = "match-right-" + item.id;
+          card.onclick = function() { handleMatchingRightClick(item.id); };
+
+          const textSpan = document.createElement("span");
+          textSpan.id = "match-right-text-" + item.id;
+          textSpan.style.flex = "1";
+          textSpan.textContent = item.text;
+
+          card.appendChild(textSpan);
+          rightCol.appendChild(card);
+        });
+      }
+    }
+
+    function handleMatchingLeftClick(leftId) {
+      if (state.isCurrentLocked) return;
+
+      // If already paired, unpair it!
+      if (state.activeMatchingPairs[leftId]) {
+        delete state.activeMatchingPairs[leftId];
+        state.activeSelectedLeft = null;
+        refreshMatchingUI();
+        return;
+      }
+
+      // If clicking same left, toggle off
+      if (state.activeSelectedLeft === leftId) {
+        state.activeSelectedLeft = null;
+      } else {
+        state.activeSelectedLeft = leftId;
+      }
+      refreshMatchingUI();
+    }
+
+    function handleMatchingRightClick(rightId) {
+      if (state.isCurrentLocked) return;
+
+      // Check if this rightId is already paired with another leftId
+      let existingLeft = null;
+      for (const [lId, rId] of Object.entries(state.activeMatchingPairs)) {
+        if (rId === rightId) {
+          existingLeft = lId;
+          break;
+        }
+      }
+
+      // If clicking an already paired right card, unpair that pair!
+      if (existingLeft) {
+        delete state.activeMatchingPairs[existingLeft];
+        refreshMatchingUI();
+        return;
+      }
+
+      // If a left card is actively selected, pair them up!
+      if (state.activeSelectedLeft) {
+        state.activeMatchingPairs[state.activeSelectedLeft] = rightId;
+        state.activeSelectedLeft = null;
+        refreshMatchingUI();
+      }
+    }
+
+    function refreshMatchingUI() {
+      const ch = state.challenges[state.currentIndex];
+      if (ch.type !== "match") return;
+
+      // Clear all active/paired classes and badges first
+      ch.shuffledLeft.forEach(l => {
+        const card = document.getElementById("match-left-" + l.id);
+        if (card) {
+          card.className = "matching-card";
+          const oldBadge = card.querySelector(".pair-badge");
+          if (oldBadge) oldBadge.remove();
+        }
+      });
+
+      ch.shuffledRight.forEach(r => {
+        const card = document.getElementById("match-right-" + r.id);
+        if (card) {
+          card.className = "matching-card";
+          const oldBadge = card.querySelector(".pair-badge");
+          if (oldBadge) oldBadge.remove();
+        }
+      });
+
+      // Highlight active selected left card
+      if (state.activeSelectedLeft) {
+        const activeCard = document.getElementById("match-left-" + state.activeSelectedLeft);
+        if (activeCard) activeCard.classList.add("active-selected");
+      }
+
+      // Render assigned color badges for pairs
+      const pairKeys = Object.keys(state.activeMatchingPairs);
+      pairKeys.forEach((leftId, idx) => {
+        const rightId = state.activeMatchingPairs[leftId];
+        const pairNum = (idx % 4) + 1; // 1 to 4
+
+        const leftCard = document.getElementById("match-left-" + leftId);
+        const rightCard = document.getElementById("match-right-" + rightId);
+
+        if (leftCard) {
+          leftCard.classList.add("paired-" + pairNum);
+          const badge = document.createElement("span");
+          badge.className = "pair-badge badge-" + pairNum;
+          badge.textContent = "● " + pairNum;
+          leftCard.prepend(badge);
+        }
+
+        if (rightCard) {
+          rightCard.classList.add("paired-" + pairNum);
+          const badge = document.createElement("span");
+          badge.className = "pair-badge badge-" + pairNum;
+          badge.textContent = "● " + pairNum;
+          rightCard.prepend(badge);
+        }
+      });
+
+      // Enable lock button once all 4 left items are paired
+      const btnLock = document.getElementById("btnLockAnswer");
+      if (btnLock) {
+        btnLock.disabled = pairKeys.length < ch.pairs.length;
+      }
+    }
+
+    /* ----------------------------------------------------
+       3. TEBAK KATA (WORD GUESS) RENDERER
+       Revisi Spesifikasi:
+       - Tampilan timer tenang (count-up biasa, tidak kedip panik)
+       - 30 detik pertama potensi 10 poin penuh (jika kuota utuh)
+       - Lewat 30 detik: -1 poin per 10 detik
+       - Kuota salah tebak: 5 nyawa
+       ---------------------------------------------------- */
+    function renderWordChallenge(ch) {
+      state.wordGuessState = {
+        timerSeconds: 0,
+        timerInterval: null,
+        guessedLetters: new Set(),
+        remainingQuota: 5,
+        isCompleted: false
+      };
+
+      // Set Clue Text
+      const clueCard = document.getElementById("wordClueCard");
+      if (clueCard) {
+        clueCard.innerHTML = `<strong>Petunjuk Konsep:</strong> ${ch.clue}`;
+      }
+
+      // Reset Quota Dots
+      updateQuotaDotsUI();
+
+      // Render Virtual Keyboard
+      const kbContainer = document.getElementById("virtualKeyboard");
+      if (kbContainer) {
+        kbContainer.innerHTML = "";
+        const rows = [
+          ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+          ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+          ["Z", "X", "C", "V", "B", "N", "M"]
+        ];
+
+        rows.forEach(row => {
+          const rowElem = document.createElement("div");
+          rowElem.className = "kb-row";
+          row.forEach(char => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "key-btn";
+            btn.id = "kb-key-" + char;
+            btn.textContent = char;
+            btn.onclick = function() { handleGuessLetter(char); };
+            rowElem.appendChild(btn);
+          });
+          kbContainer.appendChild(rowElem);
+        });
+      }
+
+      // Render blank letter slots
+      updateWordSlots();
+
+      // Start calm count-up timer
+      startWordTimer();
+
+      // Lock answer button not needed for word guess (auto-evaluates upon completion or quota run out)
+      const btnLock = document.getElementById("btnLockAnswer");
+      if (btnLock) btnLock.classList.add("hidden");
+    }
+
+    function startWordTimer() {
+      stopWordTimer();
+      state.wordGuessState.timerSeconds = 0;
+      updateWordTimerUI();
+
+      state.wordGuessState.timerInterval = setInterval(() => {
+        if (state.wordGuessState.isCompleted || state.isCurrentLocked) {
+          stopWordTimer();
+          return;
+        }
+        state.wordGuessState.timerSeconds++;
+        updateWordTimerUI();
+      }, 1000);
+    }
+
+    function stopWordTimer() {
+      if (state.wordGuessState && state.wordGuessState.timerInterval) {
+        clearInterval(state.wordGuessState.timerInterval);
+        state.wordGuessState.timerInterval = null;
+      }
+    }
+
+    function calculateWordPoints() {
+      const s = state.wordGuessState;
+      const t = s.timerSeconds;
+
+      // Time penalty: 30s free, then -1 point every 10s
+      let timePenalty = 0;
+      if (t > 30) {
+        timePenalty = Math.floor((t - 31) / 10) + 1;
+      }
+
+      // Quota penalty: each wrong letter guess deducts 1 point
+      const quotaPenalty = 5 - s.remainingQuota;
+
+      const raw = 10 - timePenalty - quotaPenalty;
+      return Math.max(0, raw);
+    }
+
+    function updateWordTimerUI() {
+      const timerDisplay = document.getElementById("wordTimerDisplay");
+      if (timerDisplay) {
+        const secs = state.wordGuessState.timerSeconds;
+        const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+        const ss = String(secs % 60).padStart(2, '0');
+        timerDisplay.textContent = "Waktu: " + mm + ":" + ss;
+      }
+
+      const potDisplay = document.getElementById("wordPotentialDisplay");
+      if (potDisplay) {
+        const pts = calculateWordPoints();
+        potDisplay.textContent = String(pts);
+        if (pts <= 3) {
+          potDisplay.style.color = "var(--error)";
+        } else if (pts <= 7) {
+          potDisplay.style.color = "var(--warning)";
+        } else {
+          potDisplay.style.color = "var(--positive)";
+        }
+      }
+    }
+
+    function updateWordSlots() {
+      const ch = state.challenges[state.currentIndex];
+      const container = document.getElementById("wordLettersDisplay");
+      if (!container || !ch) return;
+
+      container.innerHTML = "";
+      const target = ch.targetWord.toUpperCase();
+      let allRevealed = true;
+
+      for (let i = 0; i < target.length; i++) {
+        const letter = target[i];
+        const slot = document.createElement("div");
+        slot.className = "letter-slot";
+
+        if (state.wordGuessState.guessedLetters.has(letter) || state.wordGuessState.isCompleted) {
+          slot.textContent = letter;
+        } else {
+          slot.textContent = "";
+          allRevealed = false;
+        }
+        container.appendChild(slot);
+      }
+
+      // Check win condition
+      if (allRevealed && !state.wordGuessState.isCompleted && !state.isCurrentLocked) {
+        finishWordGuess(true);
+      }
+    }
+
+    function handleGuessLetter(letter) {
+      letter = letter.toUpperCase();
+      if (state.isCurrentLocked || state.wordGuessState.isCompleted) return;
+      if (state.wordGuessState.guessedLetters.has(letter)) return;
+
+      state.wordGuessState.guessedLetters.add(letter);
+      const ch = state.challenges[state.currentIndex];
+      const target = ch.targetWord.toUpperCase();
+
+      const btn = document.getElementById("kb-key-" + letter);
+      if (target.includes(letter)) {
+        if (btn) btn.classList.add("hit");
+      } else {
+        if (btn) btn.classList.add("miss");
+        state.wordGuessState.remainingQuota--;
+        updateQuotaDotsUI();
+
+        if (state.wordGuessState.remainingQuota <= 0) {
+          finishWordGuess(false);
+          return;
+        }
+      }
+
+      updateWordSlots();
+      updateWordTimerUI();
+    }
+
+    function updateQuotaDotsUI() {
+      const container = document.getElementById("quotaHeartsContainer");
+      if (!container) return;
+      const dots = container.querySelectorAll(".quota-dot");
+      const remaining = state.wordGuessState.remainingQuota;
+      dots.forEach((dot, idx) => {
+        if (idx < remaining) {
+          dot.classList.remove("used");
+        } else {
+          dot.classList.add("used");
+        }
+      });
+    }
+
+    function handleSurrenderWord() {
+      if (state.isCurrentLocked || state.wordGuessState.isCompleted) return;
+      state.wordGuessState.remainingQuota = 0;
+      updateQuotaDotsUI();
+      finishWordGuess(false);
+    }
+
+    function finishWordGuess(isSuccess) {
+      state.wordGuessState.isCompleted = true;
+      state.isCurrentLocked = true;
+      stopWordTimer();
+
+      // Reveal full word
+      updateWordSlots();
+
+      // Disable virtual keyboard
+      const keys = document.querySelectorAll(".key-btn");
+      keys.forEach(k => k.disabled = true);
+
+      let earnedPoints = 0;
+      const ch = state.challenges[state.currentIndex];
+      const feedback = document.getElementById("challengeFeedbackSnippet");
+
+      if (isSuccess) {
+        // Successful guess! Player receives calculated points (min 1 pt for completing)
+        earnedPoints = Math.max(1, calculateWordPoints());
+        if (feedback) {
+          feedback.innerHTML = `<span style="color: var(--positive);">✓ Selesai Tertebak! Skor diperoleh: +${earnedPoints} Poin</span>`;
+        }
+      } else {
+        earnedPoints = 0;
+        if (feedback) {
+          feedback.innerHTML = `<span style="color: var(--error);">✕ Kesempatan habis. Kata kunci: <strong>${ch.targetWord}</strong></span>`;
+        }
+      }
+
+      state.totalRawScore += earnedPoints;
+      updateLiveScoreDisplay();
+
+      // Record answer history
+      state.userAnswers.push({
+        id: ch.id,
+        category: ch.category,
+        typeLabel: ch.typeLabel,
+        isCorrect: isSuccess,
+        earnedPoints: earnedPoints,
+        explanation: ch.explanation
+      });
+
+      // Show Explanation and Next Button
+      const drawer = document.getElementById("explanationDrawer");
+      const expContent = document.getElementById("explanationContent");
+      if (drawer && expContent) {
+        expContent.textContent = ch.explanation;
+        drawer.style.display = "block";
+      }
+
+      const btnNext = document.getElementById("btnNextChallenge");
+      if (btnNext) btnNext.classList.remove("hidden");
+    }
+
+    /* ----------------------------------------------------
+       4. URUTKAN HIERARKI (ORDERING) RENDERER
+       Navigasi Naik (▲) dan Turun (▼)
+       Anti-Tebak: No numbers or leaked answers in item texts
+       ---------------------------------------------------- */
+    function renderOrderChallenge(ch) {
+      state.activeOrderItems = JSON.parse(JSON.stringify(ch.initialItems));
+
+      const instr = document.getElementById("orderInstruction");
+      if (instr) instr.textContent = ch.instruction;
+
+      refreshOrderingUI();
+
+      // Enable lock answer button
+      const btnLock = document.getElementById("btnLockAnswer");
+      if (btnLock) {
+        btnLock.disabled = false;
+        btnLock.textContent = "Kunci Urutan";
+      }
+    }
+
+    function refreshOrderingUI() {
+      const container = document.getElementById("orderingContainer");
+      if (!container) return;
+      container.innerHTML = "";
+
+      state.activeOrderItems.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "ordering-item-card";
+        card.id = "order-card-" + item.id;
+
+        const contentGroup = document.createElement("div");
+        contentGroup.className = "ordering-content-group";
+
+        const posBadge = document.createElement("div");
+        posBadge.className = "order-position-badge";
+        posBadge.textContent = String(index + 1);
+
+        const textSpan = document.createElement("div");
+        textSpan.className = "order-item-text";
+        textSpan.textContent = item.text;
+
+        contentGroup.appendChild(posBadge);
+        contentGroup.appendChild(textSpan);
+
+        const controls = document.createElement("div");
+        controls.className = "order-control-buttons";
+
+        const btnUp = document.createElement("button");
+        btnUp.type = "button";
+        btnUp.className = "order-nav-btn";
+        btnUp.title = "Pindah ke atas";
+        btnUp.innerHTML = "▲";
+        btnUp.disabled = state.isCurrentLocked || index === 0;
+        btnUp.onclick = function() { moveOrderItem(index, -1); };
+
+        const btnDown = document.createElement("button");
+        btnDown.type = "button";
+        btnDown.className = "order-nav-btn";
+        btnDown.title = "Pindah ke bawah";
+        btnDown.innerHTML = "▼";
+        btnDown.disabled = state.isCurrentLocked || index === state.activeOrderItems.length - 1;
+        btnDown.onclick = function() { moveOrderItem(index, 1); };
+
+        controls.appendChild(btnUp);
+        controls.appendChild(btnDown);
+
+        card.appendChild(contentGroup);
+        card.appendChild(controls);
+        container.appendChild(card);
+      });
+    }
+
+    function moveOrderItem(fromIdx, delta) {
+      if (state.isCurrentLocked) return;
+      const targetIdx = fromIdx + delta;
+      if (targetIdx < 0 || targetIdx >= state.activeOrderItems.length) return;
+
+      const temp = state.activeOrderItems[fromIdx];
+      state.activeOrderItems[fromIdx] = state.activeOrderItems[targetIdx];
+      state.activeOrderItems[targetIdx] = temp;
+
+      refreshOrderingUI();
+    }
+
+    /* ==========================================================================
+       LOCK ANSWER & EVALUATION HANDLERS
+       ========================================================================== */
+    function handleLockAnswerClick() {
+      if (state.isCurrentLocked) return;
+      const currentCh = state.challenges[state.currentIndex];
+      if (!currentCh) return;
+
+      state.isCurrentLocked = true;
+      const btnLock = document.getElementById("btnLockAnswer");
+      if (btnLock) btnLock.classList.add("hidden");
+
+      let earnedPoints = 0;
+      let isCorrect = false;
+      const feedback = document.getElementById("challengeFeedbackSnippet");
+
+      // Evaluation according to module type:
+      if (currentCh.type === "pg") {
+        const selectedOpt = currentCh.options.find(o => o.id === state.activePgSelection);
+        const correctOpt = currentCh.options.find(o => o.isCorrect);
+
+        // Highlight options
+        currentCh.options.forEach(opt => {
+          const btn = document.getElementById("pg-opt-" + opt.id);
+          if (btn) {
+            btn.disabled = true;
+            if (opt.isCorrect) {
+              btn.classList.add("correct");
+            } else if (opt.id === state.activePgSelection) {
+              btn.classList.add("wrong");
+            }
+          }
+        });
+
+        if (selectedOpt && selectedOpt.isCorrect) {
+          earnedPoints = 10;
+          isCorrect = true;
+          if (feedback) feedback.innerHTML = `<span style="color: var(--positive);">✓ Jawaban Tepat! (+10 Poin)</span>`;
+        } else {
+          earnedPoints = 0;
+          isCorrect = false;
+          if (feedback) feedback.innerHTML = `<span style="color: var(--error);">✕ Jawaban Kurang Tepat. (0 Poin)</span>`;
+        }
+
+      } else if (currentCh.type === "match") {
+        // Disable cards
+        const allCards = document.querySelectorAll(".matching-card");
+        allCards.forEach(c => c.disabled = true);
+
+        let correctMatchesCount = 0;
+        currentCh.pairs.forEach(pair => {
+          const chosenRightId = state.activeMatchingPairs[pair.id];
+          const leftCard = document.getElementById("match-left-" + pair.id);
+          const rightCard = document.getElementById("match-right-" + chosenRightId);
+
+          if (chosenRightId === pair.id) {
+            correctMatchesCount++;
+            if (leftCard) leftCard.classList.add("eval-correct");
+            if (rightCard) rightCard.classList.add("eval-correct");
+          } else {
+            if (leftCard) leftCard.classList.add("eval-wrong");
+            if (rightCard) {
+              if (chosenRightId === "distractor") {
+                rightCard.classList.add("eval-distractor");
+              } else {
+                rightCard.classList.add("eval-wrong");
+              }
+            }
+          }
+        });
+
+        // 4 pairs total: 2.5 pts each = 10 pts max
+        earnedPoints = Math.round(correctMatchesCount * 2.5);
+        isCorrect = (correctMatchesCount === currentCh.pairs.length);
+
+        if (feedback) {
+          if (isCorrect) {
+            feedback.innerHTML = `<span style="color: var(--positive);">✓ Sempurna! Seluruh pasangan tepat. (+${earnedPoints} Poin)</span>`;
+          } else {
+            feedback.innerHTML = `<span style="color: var(--warning);">Berhasil memasangkan ${correctMatchesCount} dari ${currentCh.pairs.length} kartu. (+${earnedPoints} Poin)</span>`;
+          }
+        }
+
+      } else if (currentCh.type === "order") {
+        // Evaluate order sequence
+        let exactMatches = 0;
+        state.activeOrderItems.forEach((item, idx) => {
+          const card = document.getElementById("order-card-" + item.id);
+          if (item.id === currentCh.items[idx].id) {
+            exactMatches++;
+            if (card) card.classList.add("eval-correct");
+          } else {
+            if (card) card.classList.add("eval-wrong");
+          }
+        });
+
+        // Disable nav buttons
+        const navBtns = document.querySelectorAll(".order-nav-btn");
+        navBtns.forEach(b => b.disabled = true);
+
+        if (exactMatches === currentCh.items.length) {
+          earnedPoints = 10;
+          isCorrect = true;
+          if (feedback) feedback.innerHTML = `<span style="color: var(--positive);">✓ Susunan hierarki 100% tepat! (+10 Poin)</span>`;
+        } else if (exactMatches >= 2) {
+          earnedPoints = 5;
+          isCorrect = false;
+          if (feedback) feedback.innerHTML = `<span style="color: var(--warning);">Urutan sebagian tepat (${exactMatches}/${currentCh.items.length}). (+5 Poin)</span>`;
+        } else {
+          earnedPoints = 0;
+          isCorrect = false;
+          if (feedback) feedback.innerHTML = `<span style="color: var(--error);">✕ Urutan belum tepat. (0 Poin)</span>`;
+        }
+      }
+
+      state.totalRawScore += earnedPoints;
+      updateLiveScoreDisplay();
+
+      // Record answer history
+      state.userAnswers.push({
+        id: currentCh.id,
+        category: currentCh.category,
+        typeLabel: currentCh.typeLabel,
+        isCorrect: isCorrect,
+        earnedPoints: earnedPoints,
+        explanation: currentCh.explanation
+      });
+
+      // Show Explanation drawer
+      const drawer = document.getElementById("explanationDrawer");
+      const expContent = document.getElementById("explanationContent");
+      if (drawer && expContent) {
+        expContent.textContent = currentCh.explanation;
+        drawer.style.display = "block";
+      }
+
+      // Show Next button
+      const btnNext = document.getElementById("btnNextChallenge");
+      if (btnNext) btnNext.classList.remove("hidden");
+    }
+
+    function handleNextChallengeClick() {
+      if (state.currentIndex + 1 < state.challenges.length) {
+        state.currentIndex++;
+        renderCurrentChallenge();
+      } else {
+        showResultsScreen();
+      }
+    }
+
+    /* ==========================================================================
+       RESULTS SUMMARY & SCORE INTEGRATION (parent.postMessage)
+       ========================================================================== */
+    function renderResultsSummary() {
+      const finalScore = getNormalizedScore();
+
+      // Display Final Score
+      const scoreElem = document.getElementById("finalScoreNumber");
+      if (scoreElem) scoreElem.textContent = String(finalScore);
+
+      // Predicate
+      const predicateElem = document.getElementById("finalScorePredicate");
+      if (predicateElem) {
+        if (finalScore >= 90) {
+          predicateElem.textContent = "Sangat Istimewa (Penguasaan Konsep Paripurna)";
+        } else if (finalScore >= 80) {
+          predicateElem.textContent = "Tuntas Amat Baik (Pemahaman Mendalam)";
+        } else if (finalScore >= 70) {
+          predicateElem.textContent = "Tuntas Cukup Baik (Perlu Penguatan Sebagian)";
+        } else {
+          predicateElem.textContent = "Perlu Bimbingan & Remedi Pemahaman";
+        }
+      }
+
+      // Breakdown by question type
+      let pgCorrect = 0;
+      let matchCorrect = 0;
+      let wordCorrect = 0;
+      let orderCorrect = 0;
+
+      state.challenges.forEach(ch => {
+        const hist = state.userAnswers.find(a => a.id === ch.id);
+        if (hist && hist.earnedPoints >= 7) {
+          if (ch.type === "pg") pgCorrect++;
+          else if (ch.type === "match") matchCorrect++;
+          else if (ch.type === "word") wordCorrect++;
+          else if (ch.type === "order") orderCorrect++;
+        }
+      });
+
+      const pgStat = document.getElementById("statPgCorrect");
+      if (pgStat) pgStat.textContent = pgCorrect + " / 4";
+
+      const matchStat = document.getElementById("statMatchCorrect");
+      if (matchStat) matchStat.textContent = matchCorrect + " / 4";
+
+      const wordStat = document.getElementById("statWordCorrect");
+      if (wordStat) wordStat.textContent = wordCorrect + " / 4";
+
+      const orderStat = document.getElementById("statOrderCorrect");
+      if (orderStat) orderStat.textContent = orderCorrect + " / 3";
+
+      // Render 15 review accordion items
+      const reviewContainer = document.getElementById("reviewAccordionList");
+      if (reviewContainer) {
+        reviewContainer.innerHTML = "";
+        state.challenges.forEach((ch, idx) => {
+          const hist = state.userAnswers.find(a => a.id === ch.id);
+          const pointsAwarded = hist ? hist.earnedPoints : 0;
+
+          const itemElem = document.createElement("div");
+          itemElem.className = "review-item";
+
+          const headerElem = document.createElement("div");
+          headerElem.className = "review-item-header";
+          headerElem.onclick = function() {
+            itemElem.classList.toggle("expanded");
+          };
+
+          const titleSpan = document.createElement("span");
+          titleSpan.textContent = "Tantangan " + (idx + 1) + ": " + ch.typeLabel + " (" + ch.category + ")";
+
+          const scoreBadge = document.createElement("span");
+          scoreBadge.style.fontFamily = "var(--font-mono)";
+          scoreBadge.style.fontSize = "0.82rem";
+          if (pointsAwarded >= 7) {
+            scoreBadge.style.color = "var(--positive)";
+            scoreBadge.textContent = "+" + pointsAwarded + " Poin (Tuntas)";
+          } else {
+            scoreBadge.style.color = "var(--error)";
+            scoreBadge.textContent = "+" + pointsAwarded + " Poin";
+          }
+
+          headerElem.appendChild(titleSpan);
+          headerElem.appendChild(scoreBadge);
+
+          const bodyElem = document.createElement("div");
+          bodyElem.className = "review-item-body";
+          bodyElem.innerHTML = `
+            <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">Landasan Yuridis &amp; Pembahasan:</div>
+            <div>${ch.explanation}</div>
+          `;
+
+          itemElem.appendChild(headerElem);
+          itemElem.appendChild(bodyElem);
+          reviewContainer.appendChild(itemElem);
+        });
+      }
+
+      // ----------------------------------------------------
+      // INTEGRASI SKOR GURU (parent.postMessage)
+      // Dikirim TEPAT SEKALI saat layar hasil akhir muncul!
+      // ----------------------------------------------------
+      if (!state.hasSentScore) {
+        try {
+          if (window.parent && window.parent.postMessage) {
+            window.parent.postMessage({
+              mi: "skor",
+              skor: finalScore,
+              maks: 100
+            }, "*");
+          }
+        } catch (err) {
+          console.warn("postMessage ke portal guru:", err);
+        }
+        state.hasSentScore = true;
+      }
+    }
+
+    /* ==========================================================================
+       USER EVENT HANDLERS
+       ========================================================================== */
+    function handleStartGameClick() {
+      initChallenges();
+      showGameplayScreen();
+    }
+
+    function handleRestartGameClick() {
+      // Complete state reset and Fisher-Yates reshuffle
+      initChallenges();
+      showStartScreen();
+    }
+
+    /* Listen for physical keyboard input on word guess module */
+    window.addEventListener("keydown", function(event) {
+      const currentCh = state.challenges[state.currentIndex];
+      if (!currentCh || currentCh.type !== "word" || state.isCurrentLocked) return;
+
+      const key = event.key.toUpperCase();
+      if (/^[A-Z]$/.test(key)) {
+        handleGuessLetter(key);
+      }
+    });
+
+    /* App Ready Notification */
+    window.addEventListener("DOMContentLoaded", function() {
+      try {
+        if (window.notebookAppApi && typeof window.notebookAppApi.notifyAppReady === "function") {
+          window.notebookAppApi.notifyAppReady();
+        }
+      } catch (e) {
+        // API shim graceful fallback
+      }
+    });
+  </script>
+</body>
+</html>
